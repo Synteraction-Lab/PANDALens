@@ -1,4 +1,4 @@
-# RepositoryName
+# UbiWriter-Paperthon
 Description of the repository
 
 ## Publications
