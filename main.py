@@ -5,12 +5,16 @@ import whisper
 import ssl
 import openai
 from AudioCapture import AudioCapture
-from utilities import append_data, read_file
+from utilities import append_data
 import os
+from gtts import gTTS
+from playsound import playsound
+
 
 LOW_INTELLIGENCE = "low"
-
 HIGH_INTELLIGENCE = "high"
+VISUAL_OUTPUT = "visual"
+AUDIO_OUTPUT = "audio"
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -22,9 +26,10 @@ SUMMARIZE_KEY = 'key.up'
 
 
 class App:
-    def __init__(self, user_id="u01", level=HIGH_INTELLIGENCE):
+    def __init__(self, user_id="u01", output_mode=VISUAL_OUTPUT, level=HIGH_INTELLIGENCE):
         self.is_recording = False
         self.folder_path = os.path.join("data", user_id)
+        self.output_mode = output_mode
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
         self.chat_history_file_name = os.path.join(self.folder_path, chat_file)
         self.intelligent_level = level
@@ -128,7 +133,7 @@ class App:
                 response = self.get_response_from_gpt(command="", prefix=command_type)
                 self.store(response)
                 self.chat_history = self.chat_history + response
-                print(response.lstrip())
+                self.render_response(response)
 
             if str(key).strip("''").lower() == NEW_ITEM_KEY or str(key).strip("''").lower() == REVISE_KEY:
                 if not self.is_recording:
@@ -147,11 +152,22 @@ class App:
                             command_type = "I want to elaborate more on this topic."
                         elif self.intelligent_level == LOW_INTELLIGENCE:
                             command_type = "Not correct. I want to clarify that: "
-                    response_text = self.transcribe_and_send_to_gpt(command_type)
-                    print(response_text.lstrip())
+                    response = self.transcribe_and_send_to_gpt(command_type)
+                    self.render_response(response)
                     self.is_recording = False
         except Exception as e:
             print(e.__class__)
+
+    def render_response(self, response):
+        if self.output_mode == AUDIO_OUTPUT:
+            response = response.replace("AI:", "")
+            voice_response = gTTS(text=response, lang='en', slow=False)
+            save_path = os.path.join(self.folder_path, "voice_reponse.mp3")
+            voice_response.save(save_path)
+            # Playing the converted file
+            playsound(save_path)
+
+        print(response.lstrip())
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -170,6 +186,7 @@ class App:
 
 if __name__ == '__main__':
     uid = input("Please enter the user id: ")
-    intelligence_level = input("Please enter the intelligence of the AI ({} or {}): ".format(HIGH_INTELLIGENCE,
-                                                                                             LOW_INTELLIGENCE))
-    App(uid, intelligence_level)
+    output_mode = input("Please enter the output mode ({} or {}): ".format(VISUAL_OUTPUT, AUDIO_OUTPUT))
+    intelligence_level = input("Please enter the AI intelligence level ({} or {}): ".format(HIGH_INTELLIGENCE,
+                                                                                            LOW_INTELLIGENCE))
+    App(uid, output_mode, intelligence_level)
