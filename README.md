@@ -26,6 +26,7 @@ Description of the repository
 ## Installation
 - Run ``pip install -r requirement.txt``
 - Run ``python App.py``
+- If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in 'data/task_description' folder.
 
 
 ## References

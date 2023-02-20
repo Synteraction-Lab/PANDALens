@@ -294,5 +294,5 @@ if __name__ == '__main__':
         App("test", AUDIO_OUTPUT, JOURNAL)
     else:
         output_mode = input("Please enter the output mode ({} or {}): ".format(VISUAL_OUTPUT, AUDIO_OUTPUT))
-        task_type = input("Please enter the task ({} or {} or {}): ".format(SELF_REFLECTION, JOURNAL, PAPER))
+        task_type = input("Please enter the task ({} or {} or {} or others (create a .txt file under data/task_description and add the description first.): ".format(SELF_REFLECTION, JOURNAL, PAPER))
         App(uid, output_mode, task_type)
