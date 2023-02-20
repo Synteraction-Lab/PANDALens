@@ -9,6 +9,7 @@ from utilities import append_data
 import os
 from gtts import gTTS
 from playsound import playsound
+from pynput.mouse import Listener as MouseListener
 
 
 LOW_INTELLIGENCE = "low"
@@ -27,6 +28,7 @@ SUMMARIZE_KEY = 'key.up'
 
 class App:
     def __init__(self, user_id="u01", output_mode=VISUAL_OUTPUT, level=HIGH_INTELLIGENCE):
+        self.chat_history = None
         self.is_recording = False
         self.folder_path = os.path.join("data", user_id)
         self.output_mode = output_mode
@@ -35,6 +37,13 @@ class App:
         self.intelligent_level = level
 
         self.audio_capture = None
+        self.setup_chat_gpt(level)
+        # self.store(response)
+
+        with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
+            listener.join()
+
+    def setup_chat_gpt(self, level):
         if level == HIGH_INTELLIGENCE:
             task_description = 'You are my intelligent diary notebook. ' \
                                'I will have some self-reflections in my everyday activities. ' \
@@ -75,14 +84,8 @@ class App:
                                'I will remember all the corrected self-reflection.' \
                                'At the end of each day, I will present you with a record of ' \
                                'your self-reflections using first-person narration for that day.'
-
         self.chat_history = task_description
-
         _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
-        # self.store(response)
-
-        with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
-            listener.join()
 
     def store(self, text):
         data = str(datetime.now()) + ": " + text.lstrip() + "\n"
@@ -156,7 +159,7 @@ class App:
                     self.render_response(response)
                     self.is_recording = False
         except Exception as e:
-            print(e.__class__)
+            print(e)
 
     def render_response(self, response):
         if self.output_mode == AUDIO_OUTPUT:
