@@ -5,9 +5,11 @@ from UI.entry_with_placeholder import EntryWithPlaceholder
 import UI.UI_config
 from PIL import Image, ImageTk
 
+
 def get_circular_button(root, text=None, command=None):
     return CTkButton(root, text=text, fg_color=UI.UI_config.BUTTON_FG_COLOR,
-                     hover_color=UI.UI_config.BUTTON_HOVER_COLOR, height=UI.UI_config.CIRCULAR_BUTTON_HEIGHT, width=UI.UI_config.CIRCULAR_BUTTON_WIDTH,
+                     hover_color=UI.UI_config.BUTTON_HOVER_COLOR, height=UI.UI_config.CIRCULAR_BUTTON_HEIGHT,
+                     width=UI.UI_config.CIRCULAR_BUTTON_WIDTH,
                      corner_radius=50, text_color=UI.UI_config.BUTTON_TEXT_COLOR,
                      command=command, font=(None, UI.UI_config.CIRCULAR_BUTTON_FONT_SIZE))
 
@@ -47,7 +49,8 @@ def get_button(root, text=None, command=None, fg_color=UI.UI_config.BUTTON_FG_CO
 
     return CTkButton(root, text=text, fg_color=fg_color,
                      hover_color=UI.UI_config.BUTTON_HOVER_COLOR, height=height, width=width, border_width=0,
-                     border_color=UI.UI_config.BUTTON_BORDER_COLOR, corner_radius=corner_radius, text_color=UI.UI_config.BUTTON_TEXT_COLOR,
+                     border_color=UI.UI_config.BUTTON_BORDER_COLOR, corner_radius=corner_radius,
+                     text_color=UI.UI_config.BUTTON_TEXT_COLOR,
                      command=command, font=(None, font_size))
 
 
@@ -58,30 +61,35 @@ def get_checkbutton(root, text=None, variable=None, command=None, fg_color=UI.UI
 
 
 def get_dropdown_menu(root, command=None, variable=None, values=None, fg_color=UI.UI_config.DROPDOWN_MENU_FG_COLOR,
-                      button_color=UI.UI_config.DROPDOWN_MENU_BUTTON_COLOR, button_hover_color=UI.UI_config.DROPDOWN_MENU_HOVER_COLOR,
+                      button_color=UI.UI_config.DROPDOWN_MENU_BUTTON_COLOR,
+                      button_hover_color=UI.UI_config.DROPDOWN_MENU_HOVER_COLOR,
                       font=UI.UI_config.LABEL_0_FONT, width=UI.UI_config.DROPDOWN_MENU_WIDTH):
     return CTkOptionMenu(root, width=width, values=values,
                          variable=variable, dropdown_fg_color=UI.UI_config.DROPDOWN_COLOR, font=font,
                          fg_color=fg_color, button_color=button_color, button_hover_color=button_hover_color,
-                         dropdown_text_color=UI.UI_config.DROPDOWN_TEXT_COLOR, text_color=UI.UI_config.DROPDOWN_MENU_TEXT_COLOR, command=command)
+                         dropdown_text_color=UI.UI_config.DROPDOWN_TEXT_COLOR,
+                         text_color=UI.UI_config.DROPDOWN_MENU_TEXT_COLOR, command=command)
 
 
 def get_bordered_frame(root, border_color=UI.UI_config.BORDERED_FRAME_BORDER_COLOR):
-    return tk.Frame(root, highlightthickness=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS, highlightbackground=border_color,
+    return tk.Frame(root, highlightthickness=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS,
+                    highlightbackground=border_color,
                     highlightcolor=border_color)
 
 
 def get_bordered_label_frame(root, text, border_color=UI.UI_config.BORDERED_FRAME_BORDER_COLOR):
     s = ttk.Style()
     # note must use relief='solid' to let borderwidth to show its actual width
-    s.configure("Custom.TLabelframe", bordercolor=border_color, borderwidth=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS,
+    s.configure("Custom.TLabelframe", bordercolor=border_color,
+                borderwidth=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS,
                 relief='solid')
     s.configure("Custom.TLabelframe.Label", font=UI.UI_config.LABEL_0_FONT)
     return ttk.LabelFrame(root, text=text, style="Custom.TLabelframe")
 
 
 def get_entry_with_placeholder(master, placeholder, hightlightcolor=UI.UI_config.ENTRY_HIGHLIGHT_COLOR, width=None):
-    return EntryWithPlaceholder(master=master, placeholder=placeholder, highlightcolor=hightlightcolor, font=UI.UI_config.MAIN_FONT,
+    return EntryWithPlaceholder(master=master, placeholder=placeholder, highlightcolor=hightlightcolor,
+                                font=UI.UI_config.MAIN_FONT,
                                 width=width)
 
 
@@ -109,14 +117,10 @@ def get_label(root, textvariable=None, text=None, pattern=0):
         return tk.Label(root, text=text, font=font)
 
 
-def get_messagebox(root, text, font=UI.UI_config.MESSAGEBOX_FONT, workflow=None):
-    from UI.messagebox import MessageBox
-    return MessageBox(root, text, font=font, workflow=workflow)
-
-
 def get_slider(root, command, variable, orient):
     return CTkSlider(master=root, command=command, variable=variable, orientation=orient, from_=0, to=100,
                      button_color=UI.UI_config.MAIN_COLOR_LIGHT, height=UI.UI_config.ANALYZER_TIMELINE_THICKNESS)
+
 
 def get_image(root, path, resize_width=24, resize_height=24):
     lbl = tk.Label(root)
@@ -126,4 +130,3 @@ def get_image(root, path, resize_width=24, resize_height=24):
     lbl.configure(image=imgtk)
     lbl.image = imgtk
     return lbl
-
