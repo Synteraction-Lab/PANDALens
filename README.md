@@ -9,7 +9,7 @@ Description of the repository
 ```
 
 ## Contact person
-- [Name](personal_website)
+- [Runze Cai](runzecai.com)
 
 
 ## Project links
@@ -19,11 +19,13 @@ Description of the repository
 
 
 ## Requirements
-- 
+- Python 3.9
+- [FFmpeg](https://ffmpeg.org/)
 
 
 ## Installation
-- 
+- Run ``pip install -r requirement.txt``
+- Run ``python App.py``
 
 
 ## References
