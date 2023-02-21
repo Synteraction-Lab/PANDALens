@@ -1,6 +1,8 @@
 import subprocess
 import threading
 import tkinter as tk
+from multiprocessing import Process
+
 from UI.widget_generator import get_button
 
 from datetime import datetime
@@ -15,12 +17,21 @@ import os
 from gtts import gTTS
 from playsound import playsound
 from pynput.mouse import Listener as MouseListener
+from pynput.keyboard import Key, Controller, Listener as KeyboardListener
+import pyttsx3
+
+CONCISE_THRESHOLD = 8000
 
 JOURNAL = "journal"
 PAPER = "paper"
 SELF_REFLECTION = "reflection"
+PAPER_REVIEW = "paper_review"
 VISUAL_OUTPUT = "visual"
 AUDIO_OUTPUT = "audio"
+
+ALL_HISTORY = "all"
+AI_HISTORY = "ai"
+HUMAN_HISTORY = "human"
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -38,16 +49,28 @@ def load_task_description(task_type):
         return task_description
 
 
+def play_audio_response(response):
+    response = response.replace("AI:", "")
+    speech_engine = pyttsx3.init(debug=True)
+    speech_engine.setProperty('rate', 120)
+    speech_engine.say(response)
+    speech_engine.runAndWait()
+
+
 class App:
     def __init__(self, user_id="u01", output_mode=VISUAL_OUTPUT, task_type=SELF_REFLECTION):
+        self.slim_history = ""
+        self.ai_history = ""
+        self.human_history = ""
+        self.chat_history = ""
         self.stored_text_widget_content = ""
-        self.chat_history = None
         self.is_recording = False
         self.folder_path = os.path.join(os.path.join("data", "recordings"), user_id)
         self.output_mode = output_mode
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
         self.chat_history_file_name = os.path.join(self.folder_path, chat_file)
         self.task_type = task_type
+        self.send_history_mode = ALL_HISTORY
 
         self.audio_capture = None
         self.setup_chat_gpt(task_type)
@@ -60,11 +83,22 @@ class App:
         self.start_listener()
         self.root.mainloop()
 
+    def on_press(self, key):
+        if str(key) == "'.'":
+            keyboard = Controller()
+            keyboard.press(Key.cmd)
+            keyboard.press(Key.tab)
+            keyboard.release(Key.tab)
+            keyboard.release(Key.cmd)
+
     def start_listener(self):
         self.root.bind("<Button-1>", self.on_click)
         # self.mouse_listener = MouseListener(
         #     on_click=self.on_click)
         # self.mouse_listener.start()
+        self.keyboard_listener = KeyboardListener(
+            on_press=self.on_press)
+        self.keyboard_listener.start()
 
     def on_mouse_move(self, event):
         cur_y = event.y
@@ -131,6 +165,7 @@ class App:
 
     def on_close(self):
         self.root.destroy()
+        self.keyboard_listener.stop()
 
     def on_summarize(self):
         self.notification.config(text="Summarizing...")
@@ -203,8 +238,10 @@ class App:
             t.start()
 
     def setup_chat_gpt(self, task_type):
-        task_description = load_task_description(task_type)
-        self.chat_history = task_description
+        self.task_description = load_task_description(task_type)
+        self.chat_history = self.task_description
+        self.human_history = self.task_description
+        self.ai_history = self.task_description
         _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
 
     def store(self, text):
@@ -225,53 +262,88 @@ class App:
 
     def get_response_from_gpt(self, command, is_stored=True, role="Human: ", prefix=""):
         # Define OpenAI API key
-        openai.api_key = "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"
+        response = ""
+        try:
+            openai.api_key = "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"
 
-        # Set up the model and prompt
-        model_engine = "text-davinci-003"
-        prompt = role + prefix + " " + command
-        if is_stored:
-            self.store(prompt)
-        print(prompt)
-        self.chat_history = self.chat_history + prompt
+            # Set up the model and prompt
+            model_engine = "text-davinci-003"
+            prompt = role + prefix + " " + command
+            if is_stored:
+                self.store(prompt)
+            print(prompt)
+            self.chat_history = self.chat_history + prompt
+            self.human_history = self.human_history + prompt
 
-        # Generate a response
-        completion = openai.Completion.create(
-            engine=model_engine,
-            prompt=self.chat_history,
-            max_tokens=2048,
-            n=1,
-            stop=None,
-            temperature=0.6,
-        )
-        response = completion.choices[0].text
-        return response
+            if self.send_history_mode == ALL_HISTORY:
+                sent_prompt = self.chat_history + prompt
+            elif self.send_history_mode == AI_HISTORY:
+                sent_prompt = self.ai_history + prompt
+            else:
+                sent_prompt = self.human_history + prompt
+
+            # Generate a response
+            completion = openai.Completion.create(
+                engine=model_engine,
+                prompt=sent_prompt,
+                max_tokens=1024,
+                n=1,
+                stop=None,
+                temperature=0.6,
+            )
+            response = completion.choices[0].text
+
+            self.ai_history = self.ai_history + response
+            print("ai:", len(self.ai_history), "human: ", len(self.human_history), "total: ", len(self.chat_history))
+            if len(self.chat_history) > CONCISE_THRESHOLD:
+                t = threading.Thread(target=self.concise_history, daemon=True)
+                t.start()
+
+        except Exception as e:
+            print(e)
+            response = "No Response from GPT."
+            if self.chat_history > CONCISE_THRESHOLD:
+                self.chat_history = self.task_description + self.slim_history
+            # self.send_history_mode = AI_HISTORY
+        finally:
+            return response
+
+    def concise_history(self):
+        response = ""
+        try:
+            openai.api_key = "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"
+
+            # Set up the model and prompt
+            model_engine = "text-davinci-003"
+
+            prompt = load_task_description(task_type)
+            sent_prompt = prompt + self.chat_history
+
+            # Generate a response
+            completion = openai.Completion.create(
+                engine=model_engine,
+                prompt=sent_prompt,
+                max_tokens=1024,
+                n=1,
+                stop=None,
+                temperature=0.6,
+            )
+            response = completion.choices[0].text
+            self.slim_history = self.task_description + response.lstrip()
+            print(self.slim_history)
+
+        except Exception as e:
+            print(e)
+            self.send_history_mode = AI_HISTORY
+
 
     def render_response(self, response):
         print(response.lstrip())
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, response.lstrip())
         if self.output_mode == AUDIO_OUTPUT:
-            # response = self.play_audio_response(response)
-            t1 = threading.Thread(target=self.play_audio_response, args=(response,), daemon=True)
-            t1.start()
-
-    def play_audio_response(self, response):
-        response = response.replace("AI:", "")
-        voice_response = gTTS(text=response, lang='en', slow=False)
-        voice_response.speed = 1.5
-        save_path = os.path.join(self.folder_path, "voice_reponse.mp3")
-        voice_response.save(save_path)
-        # speed_up_path = os.path.join(self.folder_path, "voice_reponse_2x.mp3")
-        # remove_file(speed_up_path)
-        # self.recording_cmd = 'ffmpeg -i {} -filter:a "atempo=2.0" -vn {}'.format(
-        #     save_path, speed_up_path)
-        # self.process = subprocess.Popen(self.recording_cmd, stdin=subprocess.PIPE, shell=True)
-        # while not os.path.exists(speed_up_path):
-        #     True
-        # Playing the converted file
-        playsound(save_path)
-        return response
+            p = Process(target=play_audio_response, args=(response,))
+            p.start()
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -291,8 +363,10 @@ class App:
 if __name__ == '__main__':
     uid = input("Please enter the user id: ")
     if uid == "test":
-        App("test", AUDIO_OUTPUT, JOURNAL)
+        App("test", AUDIO_OUTPUT, PAPER_REVIEW)
     else:
         output_mode = input("Please enter the output mode ({} or {}): ".format(VISUAL_OUTPUT, AUDIO_OUTPUT))
-        task_type = input("Please enter the task ({} or {} or {} or others (create a .txt file under data/task_description and add the description first.): ".format(SELF_REFLECTION, JOURNAL, PAPER))
+        task_type = input(
+            "Please enter the task ({} or {} or {} or others (create a .txt file under data/task_description and add the description first.): ".format(
+                SELF_REFLECTION, JOURNAL, PAPER_REVIEW))
         App(uid, output_mode, task_type)
