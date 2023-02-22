@@ -14,9 +14,6 @@ import openai
 from AudioCapture import AudioCapture
 from utilities import append_data, remove_file
 import os
-from gtts import gTTS
-from playsound import playsound
-from pynput.mouse import Listener as MouseListener
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 import pyttsx3
 
@@ -156,12 +153,13 @@ class App:
         self.root.bind('<Down>', lambda event: self.bottom_button.invoke())
         self.root.bind('<Left>', lambda event: self.left_button.invoke())
         # self.root.bind('<Right>', lambda event: self.right_button.invoke())
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-
-        # set the dimensions of the window to match the screen
-        self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+        # screen_width = self.root.winfo_screenwidth()
+        # screen_height = self.root.winfo_screenheight()
+        #
+        # # set the dimensions of the window to match the screen
+        # self.root.geometry(f"{screen_width}x{screen_height}+0+0")
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.attributes("-fullscreen", True)
 
     def on_close(self):
         self.root.destroy()
@@ -289,7 +287,7 @@ class App:
                 max_tokens=1024,
                 n=1,
                 stop=None,
-                temperature=0.6,
+                temperature=0.7,
             )
             response = completion.choices[0].text
 
@@ -326,7 +324,7 @@ class App:
                 max_tokens=1024,
                 n=1,
                 stop=None,
-                temperature=0.6,
+                temperature=0.7,
             )
             response = completion.choices[0].text
             self.slim_history = self.task_description + response.lstrip()
