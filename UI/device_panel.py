@@ -4,7 +4,7 @@ import subprocess
 import pandas
 import tkinter as tk
 
-from UI.widget_generator import get_button, get_dropdown_menu, get_bordered_frame, get_entry_with_placeholder, get_label
+from UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label
 from Utilities.utilities import get_system_name, record_device_config, get_second_monitor_original_pos, \
     get_possible_tasks
 
