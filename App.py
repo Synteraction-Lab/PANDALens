@@ -154,15 +154,16 @@ class App:
         self.keyboard_listener.start()
 
     def on_mouse_move(self, event):
-        cur_y = event.y
-        if self.last_y is not None:
-            if cur_y < self.last_y:
-                # mouse moved up
-                self.text_widget.yview_scroll(-1, "units")
-            elif cur_y > self.last_y:
-                # mouse moved down
-                self.text_widget.yview_scroll(1, "units")
-        self.last_y = cur_y
+        pass
+        # cur_y = event.y
+        # if self.last_y is not None:
+        #     if cur_y < self.last_y:
+        #         # mouse moved up
+        #         self.text_widget.yview_scroll(-1, "units")
+        #     elif cur_y > self.last_y:
+        #         # mouse moved down
+        #         self.text_widget.yview_scroll(1, "units")
+        # self.last_y = cur_y
 
     def on_click(self, *args):
         self.hide_show_text()
