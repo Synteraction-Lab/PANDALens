@@ -1,6 +1,5 @@
 import tkinter as tk
 from customtkinter import CTkOptionMenu, CTkCheckBox, CTkButton, CTkSlider
-import ttkbootstrap as ttk
 from UI.entry_with_placeholder import EntryWithPlaceholder
 import UI.UI_config
 from PIL import Image, ImageTk
@@ -77,14 +76,14 @@ def get_bordered_frame(root, border_color=UI.UI_config.BORDERED_FRAME_BORDER_COL
                     highlightcolor=border_color)
 
 
-def get_bordered_label_frame(root, text, border_color=UI.UI_config.BORDERED_FRAME_BORDER_COLOR):
-    s = ttk.Style()
-    # note must use relief='solid' to let borderwidth to show its actual width
-    s.configure("Custom.TLabelframe", bordercolor=border_color,
-                borderwidth=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS,
-                relief='solid')
-    s.configure("Custom.TLabelframe.Label", font=UI.UI_config.LABEL_0_FONT)
-    return ttk.LabelFrame(root, text=text, style="Custom.TLabelframe")
+# def get_bordered_label_frame(root, text, border_color=UI.UI_config.BORDERED_FRAME_BORDER_COLOR):
+#     s = ttk.Style()
+#     # note must use relief='solid' to let borderwidth to show its actual width
+#     s.configure("Custom.TLabelframe", bordercolor=border_color,
+#                 borderwidth=UI.UI_config.BORDERED_FRAME_HIGHLIGHT_THICKNESS,
+#                 relief='solid')
+#     s.configure("Custom.TLabelframe.Label", font=UI.UI_config.LABEL_0_FONT)
+#     return ttk.LabelFrame(root, text=text, style="Custom.TLabelframe")
 
 
 def get_entry_with_placeholder(master, placeholder, hightlightcolor=UI.UI_config.ENTRY_HIGHLIGHT_COLOR, width=None):

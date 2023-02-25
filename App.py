@@ -1,8 +1,10 @@
-import subprocess
 import threading
 import tkinter as tk
 from multiprocessing import Process
 
+import pandas
+
+from UI.device_panel import DevicePanel, VISUAL_OUTPUT, AUDIO_OUTPUT, CONFIG_FILE_NAME
 from UI.widget_generator import get_button
 
 from datetime import datetime
@@ -12,19 +14,17 @@ import whisper
 import ssl
 import openai
 from AudioCapture import AudioCapture
-from utilities import append_data, remove_file
+from Utilities.utilities import append_data
 import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 import pyttsx3
 
-CONCISE_THRESHOLD = 8000
+CONCISE_THRESHOLD = 7000
 
 JOURNAL = "journal"
-PAPER = "paper"
+PAPER = "paper_writing"
 SELF_REFLECTION = "reflection"
 PAPER_REVIEW = "paper_review"
-VISUAL_OUTPUT = "visual"
-AUDIO_OUTPUT = "audio"
 
 ALL_HISTORY = "all"
 AI_HISTORY = "ai"
@@ -34,10 +34,13 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 audio_file = "command.mp3"
 chat_file = "chat_history.txt"
+slim_history_file = "slim_history.txt"
 task_description_path = os.path.join("data", "task_description")
 NEW_ITEM_KEY = 'key.down'
 REVISE_KEY = 'key.right'
 SUMMARIZE_KEY = 'key.up'
+
+config_path = os.path.join("data", CONFIG_FILE_NAME)
 
 
 def load_task_description(task_type):
@@ -55,30 +58,66 @@ def play_audio_response(response):
 
 
 class App:
-    def __init__(self, user_id="u01", output_mode=VISUAL_OUTPUT, task_type=SELF_REFLECTION):
+    def __init__(self):
+        self.root = tk.Tk()
+
+        # Open Setup panel
+        DevicePanel(self.root, parent_object_save_command=self.update_config)
+
+        # Set up voice recording
+        self.audio_capture = None
+        self.is_recording = False
+
+        # Set up conversation history
         self.slim_history = ""
         self.ai_history = ""
         self.human_history = ""
         self.chat_history = ""
         self.stored_text_widget_content = ""
-        self.is_recording = False
-        self.folder_path = os.path.join(os.path.join("data", "recordings"), user_id)
-        self.output_mode = output_mode
-        self.audio_file_name = os.path.join(self.folder_path, audio_file)
-        self.chat_history_file_name = os.path.join(self.folder_path, chat_file)
-        self.task_type = task_type
+
         self.send_history_mode = ALL_HISTORY
 
-        self.audio_capture = None
-        self.setup_chat_gpt(task_type)
-
-        # with keyboard.Listener(on_release=self.on_release) as listener:
-        #     listener.join()
-
-        self.root = tk.Tk()
-        self.pack_layout()
+        # Set up keyboard and mouse listener
         self.start_listener()
+
+        # Pack and run the main UI
+        self.pack_layout()
+
         self.root.mainloop()
+
+    def update_config(self):
+        if not os.path.isfile(config_path):
+            pid_num = os.path.join("p1", "01")
+            task_name = "paper_review"
+            output_modality = AUDIO_OUTPUT
+            audio_device_idx = 0
+        else:
+            try:
+                df = pandas.read_csv(config_path)
+                pid_num = df[df['item'] == 'pid']['details'].item()
+                task_name = df[df['item'] == 'task']['details'].item()
+                output_modality = df[df['item'] == 'output']['details'].item()
+                audio_device_idx = df[df['item'] == 'audio_device']['details'].item()
+            except:
+                pid_num = os.path.join("p1", "01")
+                task_name = "paper_review"
+                output_modality = AUDIO_OUTPUT
+                audio_device_idx = 0
+                print("Config file has an error!")
+
+        # Set up path
+        self.folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
+        self.audio_file_name = os.path.join(self.folder_path, audio_file)
+        self.chat_history_file_name = os.path.join(self.folder_path, chat_file)
+        self.slim_history_file_name = os.path.join(self.folder_path, slim_history_file)
+        self.task_type = task_name
+
+        # Set up output modality
+        self.output_mode = output_modality
+        self.audio_device_idx = audio_device_idx
+
+        # Initiate the conversation
+        self.setup_chat_gpt(self.task_type)
 
     def on_press(self, key):
         if str(key) == "'.'":
@@ -88,13 +127,30 @@ class App:
             keyboard.release(Key.tab)
             keyboard.release(Key.cmd)
 
+    def on_release(self, key):
+        # Resume Previous conversation
+        if key == keyboard.Key.esc:
+            chat_history = None
+            print("Resuming the conversation: ", self.slim_history_file_name)
+            with open(self.slim_history_file_name) as f:
+                chat_history = f.read()
+            if len(chat_history) == 0:
+                with open(self.chat_history_file_name) as f:
+                    chat_history = f.read()
+            response = self.get_response_from_gpt(command=chat_history,
+                                                  prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
+                                                  is_stored=False)
+            self.store(response)
+            self.chat_history = self.chat_history + response
+            print(response.lstrip())
+
     def start_listener(self):
         self.root.bind("<Button-1>", self.on_click)
         # self.mouse_listener = MouseListener(
         #     on_click=self.on_click)
         # self.mouse_listener.start()
         self.keyboard_listener = KeyboardListener(
-            on_press=self.on_press)
+            on_press=self.on_press, on_release=self.on_release)
         self.keyboard_listener.start()
 
     def on_mouse_move(self, event):
@@ -121,7 +177,7 @@ class App:
         self.manipulation_frame.grid_rowconfigure(0, weight=0)
         self.manipulation_frame.grid_rowconfigure(2, weight=1)
         self.manipulation_frame.grid_rowconfigure(1, weight=2)
-        self.text_frame = tk.Frame(self.manipulation_frame)
+        self.text_frame = tk.Frame(self.manipulation_frame, bg='black', background="black")
         self.text_frame.grid(row=1, column=1, sticky="NSEW")
         self.text_frame.grid_columnconfigure(0, weight=1)
         self.text_frame.grid_rowconfigure(0, weight=1)
@@ -131,7 +187,7 @@ class App:
         self.last_y = None
         self.notification = tk.Label(self.root, text="", fg='green', bg='black', font=('Arial', 20))
         self.text_widget.insert(tk.END, "Welcome to use this system to record your idea.")
-        self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview)
+        self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black')
         self.text_widget.config(yscrollcommand=self.scrollbar.set)
         self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -140,7 +196,7 @@ class App:
         self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
                                       command=self.hide_show_text)
         self.right_button = get_button(self.manipulation_frame, text="More", fg_color="green", command=self.on_more)
-        self.bottom_button = get_button(self.manipulation_frame, text="Recording", fg_color="green",
+        self.bottom_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
                                         command=self.on_new)
         self.text_frame.grid(row=1, column=1, sticky="NSEW")
         self.notification.pack()
@@ -152,14 +208,16 @@ class App:
         self.root.bind('<Up>', lambda event: self.top_button.invoke())
         self.root.bind('<Down>', lambda event: self.bottom_button.invoke())
         self.root.bind('<Left>', lambda event: self.left_button.invoke())
-        # self.root.bind('<Right>', lambda event: self.right_button.invoke())
-        # screen_width = self.root.winfo_screenwidth()
-        # screen_height = self.root.winfo_screenheight()
-        #
-        # # set the dimensions of the window to match the screen
-        # self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+        self.root.bind('<Right>', lambda event: self.right_button.invoke())
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        # set the dimensions of the window to match the screen
+        self.root.geometry(f"{screen_width}x{screen_height}+0+0")
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.root.attributes("-fullscreen", True)
+        # self.root.overrideredirect(True)
+        # self.root.attributes("-fullscreen", True)
+        # self.root.attributes("-alpha", 0.7)
 
     def on_close(self):
         self.root.destroy()
@@ -199,7 +257,7 @@ class App:
     def on_more(self):
         if not self.is_recording:
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
-            self.audio_capture = AudioCapture(self.audio_file_name)
+            self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
             self.audio_capture.start_recording()
             self.is_recording = True
         else:
@@ -220,7 +278,8 @@ class App:
     def on_new(self):
         if not self.is_recording:
             self.notification.config(text="Reminder: Press \"Bottom\" button again to stop recording!")
-            self.audio_capture = AudioCapture(self.audio_file_name)
+            self.bottom_button.configure(text="Stop")
+            self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
             self.audio_capture.start_recording()
             self.is_recording = True
         else:
@@ -234,6 +293,7 @@ class App:
 
             t = threading.Thread(target=self.thread_transcribe_and_render, args=(command_type,), daemon=True)
             t.start()
+            self.bottom_button.configure(text="Record")
 
     def setup_chat_gpt(self, task_type):
         self.task_description = load_task_description(task_type)
@@ -242,9 +302,11 @@ class App:
         self.ai_history = self.task_description
         _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
 
-    def store(self, text):
+    def store(self, text, path=None):
+        if path is None:
+            path = self.chat_history_file_name
         data = str(datetime.now()) + ": " + text.lstrip() + "\n"
-        append_data(self.chat_history_file_name, data)
+        append_data(path, data)
 
     def transcribe_and_send_to_gpt(self, command_type=None):
         # transcribe audio to text
@@ -261,15 +323,15 @@ class App:
     def get_response_from_gpt(self, command, is_stored=True, role="Human: ", prefix=""):
         # Define OpenAI API key
         response = ""
-        try:
-            openai.api_key = "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"
+        openai.api_key = "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"
 
-            # Set up the model and prompt
-            model_engine = "text-davinci-003"
-            prompt = role + prefix + " " + command
-            if is_stored:
-                self.store(prompt)
+        # Set up the model and prompt
+        model_engine = "text-davinci-003"
+        prompt = role + prefix + " " + command
+        if is_stored:
+            self.store(prompt)
             print(prompt)
+        try:
             self.chat_history = self.chat_history + prompt
             self.human_history = self.human_history + prompt
 
@@ -284,7 +346,7 @@ class App:
             completion = openai.Completion.create(
                 engine=model_engine,
                 prompt=sent_prompt,
-                max_tokens=1024,
+                max_tokens=1000,
                 n=1,
                 stop=None,
                 temperature=0.7,
@@ -302,6 +364,15 @@ class App:
             response = "No Response from GPT."
             if self.chat_history > CONCISE_THRESHOLD:
                 self.chat_history = self.task_description + self.slim_history
+                completion = openai.Completion.create(
+                    engine=model_engine,
+                    prompt=self.chat_history + prompt,
+                    max_tokens=1000,
+                    n=1,
+                    stop=None,
+                    temperature=0.7,
+                )
+                response = completion.choices[0].text
             # self.send_history_mode = AI_HISTORY
         finally:
             return response
@@ -313,27 +384,28 @@ class App:
 
             # Set up the model and prompt
             model_engine = "text-davinci-003"
-
+            task_type = "concise_history"
             prompt = load_task_description(task_type)
-            sent_prompt = prompt + self.chat_history
+            sent_prompt = prompt + self.slim_history
+            if sent_prompt > CONCISE_THRESHOLD:
+                sent_prompt = sent_prompt[-CONCISE_THRESHOLD:-1]
 
             # Generate a response
             completion = openai.Completion.create(
                 engine=model_engine,
                 prompt=sent_prompt,
-                max_tokens=1024,
+                max_tokens=800,
                 n=1,
                 stop=None,
                 temperature=0.7,
             )
             response = completion.choices[0].text
             self.slim_history = self.task_description + response.lstrip()
-            print(self.slim_history)
+            self.store(self.slim_history, self.slim_history_file_name)
+            print("slim:", self.slim_history)
 
         except Exception as e:
-            print(e)
-            self.send_history_mode = AI_HISTORY
-
+            print("concise error: ", e)
 
     def render_response(self, response):
         print(response.lstrip())
@@ -343,28 +415,6 @@ class App:
             p = Process(target=play_audio_response, args=(response,))
             p.start()
 
-    def on_release(self, key):
-        # Resume Previous conversation
-        if key == keyboard.Key.esc:
-            chat_history = None
-            print("Resuming the conversation: ", self.chat_history_file_name)
-            with open(self.chat_history_file_name) as f:
-                chat_history = f.read()
-            response = self.get_response_from_gpt(command=chat_history,
-                                                  prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
-                                                  is_stored=False)
-            self.store(response)
-            self.chat_history = self.chat_history + response
-            print(response.lstrip())
-
 
 if __name__ == '__main__':
-    uid = input("Please enter the user id: ")
-    if uid == "test":
-        App("test", AUDIO_OUTPUT, PAPER_REVIEW)
-    else:
-        output_mode = input("Please enter the output mode ({} or {}): ".format(VISUAL_OUTPUT, AUDIO_OUTPUT))
-        task_type = input(
-            "Please enter the task ({} or {} or {} or others (create a .txt file under data/task_description and add the description first.): ".format(
-                SELF_REFLECTION, JOURNAL, PAPER_REVIEW))
-        App(uid, output_mode, task_type)
+    App()

@@ -12,3 +12,6 @@ openai-whisper @ git+https://github.com/openai/whisper.git@5c1a8c10e762bf9c29fcf
 pyttsx3~=2.90
 sounddevice~=0.4.6
 numpy~=1.24.1
+pandas~=1.5.3
+opencv-python~=4.7.0.68
+screeninfo~=0.8.1

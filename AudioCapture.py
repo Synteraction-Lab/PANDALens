@@ -2,12 +2,12 @@ import subprocess
 from time import sleep
 import os
 
-from utilities import remove_file
+from Utilities.utilities import remove_file, get_system_name
 
 
 class AudioCapture:
-    def __init__(self, file_path):
-        self.AUDIO_DEVICES_IDX = None
+    def __init__(self, file_path, audio_idx):
+        self.AUDIO_DEVICES_IDX = audio_idx
         self.recording_cmd = None
         self.process = None
         self.file_path = file_path
@@ -15,8 +15,15 @@ class AudioCapture:
     def start_recording(self):
         os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
         remove_file(self.file_path)
-        self.AUDIO_DEVICES_IDX = "1"
-        self.recording_cmd = '/Applications/ffmpeg -f avfoundation -capture_cursor 1 -i :"1" -r 12 {}'.format(self.file_path)
+
+        if get_system_name() == "Windows":
+            self.recording_cmd = 'ffmpeg -f dshow -i audio="{}" {}'.format(
+                self.AUDIO_DEVICES_IDX, self.file_path)
+
+        elif get_system_name() == "Darwin":
+            self.recording_cmd = 'ffmpeg -f avfoundation -capture_cursor 1 -i :"{}" -r 12 {}'.format(
+                self.AUDIO_DEVICES_IDX, self.file_path)
+
         self.process = subprocess.Popen(self.recording_cmd, stdin=subprocess.PIPE, shell=True)
 
     def stop_recording(self):

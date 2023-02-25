@@ -2,7 +2,7 @@ from datetime import datetime
 import whisper
 import ssl
 import openai
-from utilities import append_data
+from Utilities.utilities import append_data
 import os
 from gtts import gTTS
 from playsound import playsound
