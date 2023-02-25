@@ -42,6 +42,7 @@ You can also modify the prompt in this folder to improve the experience.
   - To start a new recording, press ``arrow_down`` key on your keyboard. 
   - To get a summarization or generate full writing, press ``arrow_up`` key on your keyboard. 
   - To hide/show the content, click your mouse within the UI window.
+  - You can scroll your mouse wheel to scroll up and down the generated writing.
 
 ### Step 4
 If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.txt`` folder.
