@@ -41,7 +41,9 @@ You can also modify the prompt in this folder to improve the experience.
 - You can use our ring mouse to manipulate the menu. You can use your mouse and keyboard if you use it for desktop setting.
   - To start a new recording, press ``arrow_down`` key on your keyboard. 
   - To get a summarization or generate full writing, press ``arrow_up`` key on your keyboard. 
-  - To hide/show the content, click your mouse within the UI window.
+  - To increase/decrease the window's size, please press ``arrow_right`` key on your keyboard.
+  - To hide/show the content, please press ``arrow_left`` key on your keyboard.
+  - You can now select text using your mouse (press and hold the mouse button, move to select content, and release to record the selection) and speak out your comments to it.
   - You can scroll your mouse wheel to scroll up and down the generated writing.
 
 ### Step 4

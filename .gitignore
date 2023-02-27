@@ -3,6 +3,7 @@
 
 
 data/recordings
+data/device_config.csv
 
 # System Files
 .DS_Store

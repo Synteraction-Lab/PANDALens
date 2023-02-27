@@ -10,6 +10,9 @@ from Utilities.utilities import get_system_name, record_device_config, get_secon
 
 CONFIG_FILE_NAME = "device_config.csv"
 
+VISUAL_OUTPUT = "visual"
+AUDIO_OUTPUT = "visual+audio"
+
 
 def save_device_config(path, item, data):
     print("Saving to: " + path)
@@ -26,13 +29,13 @@ class DevicePanel:
         self.load_recording_device_index()
 
         self.root = tk.Toplevel(root)
-        self.place_window_to_center()
-        self.root.overrideredirect(True)
+        # self.place_window_to_center()
+        # self.root.overrideredirect(True)
         self.root.wm_transient(root)
 
-
         self.pack_layout()
-        self.place_window_to_center()
+        self.root.wm_attributes("-topmost", True)
+        # self.place_window_to_center()
 
     def place_window_to_center(self):
         self.root.update_idletasks()
@@ -151,7 +154,6 @@ class DevicePanel:
 
         self.task_options.pack(side="left", padx=5)
 
-
         self.output_label = get_label(self.task_frame, text="Output", pattern=0)
         self.output_label.pack(side="left", padx=5)
 
@@ -160,10 +162,9 @@ class DevicePanel:
 
         self.output_list = [VISUAL_OUTPUT, AUDIO_OUTPUT]
         self.output_options = get_dropdown_menu(self.task_frame, values=self.output_list,
-                                              variable=self.output_var)
+                                                variable=self.output_var)
 
         self.output_options.pack(side="left", padx=5)
-
 
         self.audio_device = tk.StringVar()
         self.audio_device.set(self.audio_device_idx)
@@ -185,5 +186,3 @@ if __name__ == '__main__':
     root = tk.Tk()
     DevicePanel(root)
     root.mainloop()
-VISUAL_OUTPUT = "visual"
-AUDIO_OUTPUT = "visual+audio"
