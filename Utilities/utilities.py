@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import sys
 from os.path import isfile, join
@@ -38,15 +39,23 @@ def read_file(file_name):
         print("Failed to read: ", e.__class__)
 
 
-def append_data(file_name, data):
-    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+def append_data(file_name, new_data):
+    # Create the file and directories if they don't exist
+    if not os.path.exists(file_name):
+        os.makedirs(os.path.dirname(file_name), exist_ok=True)
+        with open(file_name, "w") as f:
+            json.dump({"recordings": []}, f)
 
-    try:
-        file = open(file_name, "a")
-        file.write(data)
-        file.close()
-    except Exception as e:
-        print("Failed to write: ", e.__class__)
+    # Load the existing data from the JSON file
+    with open(file_name, "r") as f:
+        data = json.load(f)
+
+    # Append the new data to the existing data
+    data["recordings"].append(new_data)
+
+    # Write the updated data to the JSON file
+    with open(file_name, "w") as f:
+        json.dump(data, f, indent=4)
 
 
 def is_file_exists(file_name):

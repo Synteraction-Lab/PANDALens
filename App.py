@@ -22,7 +22,11 @@ from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-CONCISE_THRESHOLD = 7000
+ROLE_AI = "AI"
+
+ROLE_HUMAN = "Human"
+
+CONCISE_THRESHOLD = 8000
 
 JOURNAL = "journal"
 PAPER = "paper_writing"
@@ -36,8 +40,8 @@ HUMAN_HISTORY = "human"
 ssl._create_default_https_context = ssl._create_unverified_context
 
 audio_file = "command.mp3"
-chat_file = "chat_history.txt"
-slim_history_file = "slim_history.txt"
+chat_file = "chat_history.json"
+slim_history_file = "slim_history.json"
 task_description_path = os.path.join("data", "task_description")
 NEW_ITEM_KEY = 'key.down'
 REVISE_KEY = 'key.right'
@@ -60,10 +64,14 @@ def play_audio_response(response):
     speech_engine.runAndWait()
 
 
-def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.65):
+def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.65, id_idx=0):
     try:
-        openai.api_key = "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"
+        if id_idx == 0:
+            openai.api_key = "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"
+        else:
+            openai.api_key = "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"
         model_engine = "text-davinci-003"
+        print("\n********\nSent Prompt:", sent_prompt, "*********\n")
         completion = openai.Completion.create(
             engine=model_engine,
             prompt=sent_prompt,
@@ -73,9 +81,10 @@ def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.65):
             temperature=temperature,
         )
         response = completion.choices[0].text
+        print("\n********\nReceived Response:", response.lstrip().rstrip(), "*********\n")
         return response
-    except:
-        raise Exception
+    except Exception as e:
+        print(e)
 
 
 class App:
@@ -175,7 +184,7 @@ class App:
             response = self.get_response_from_gpt(command=chat_history,
                                                   prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
                                                   is_stored=False)
-            self.store(response)
+            self.store(role=ROLE_HUMAN, text=response)
             self.chat_history = self.chat_history + response
             print(response.lstrip())
 
@@ -263,9 +272,10 @@ class App:
     def determinate_voice_feedback_process(self):
         if self.voice_feedback_process is not None:
             self.voice_feedback_process.terminate()
+
     def thread_summarize(self, command_type):
         response = self.get_response_from_gpt(command="", prefix=command_type)
-        self.store(response)
+        self.store(role=ROLE_AI, text=response)
         self.chat_history = self.chat_history + response
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
@@ -306,7 +316,7 @@ class App:
         response = self.get_response_from_gpt(command=voice_command, prefix=command_type)
 
         # Store response
-        self.store(response)
+        self.store(role=ROLE_AI, text=response)
         self.chat_history = self.chat_history + response
 
         # Render response
@@ -348,10 +358,10 @@ class App:
         self.ai_history = self.task_description
         _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
 
-    def store(self, text, path=None):
+    def store(self, role=ROLE_HUMAN, text=None, path=None):
         if path is None:
             path = self.chat_history_file_name
-        data = str(datetime.now()) + ": " + text.lstrip() + "\n"
+        data = {"time": str(datetime.now()), "role": role, "content": text.lstrip()}
         append_data(path, data)
 
     def transcribe_voice_command(self):
@@ -369,7 +379,7 @@ class App:
         # Set up the prompt
         prompt = role + prefix + " " + command
         if is_stored:
-            self.store(prompt)
+            self.store(role=ROLE_HUMAN, text=prompt)
             print(prompt)
         try:
             self.chat_history = self.chat_history + prompt
@@ -406,15 +416,18 @@ class App:
                 self.slim_history = self.chat_history
             else:
                 self.slim_history = self.slim_history + self.latest_request
-            sent_prompt = prompt + self.slim_history
+            sent_prompt = prompt + '"' + self.slim_history + '"'
             if len(sent_prompt) > CONCISE_THRESHOLD:
                 sent_prompt = sent_prompt[-CONCISE_THRESHOLD:-1]
 
             # Generate a response
-            response = generate_gpt_response(sent_prompt)
-            self.slim_history = self.task_description + response.lstrip()
-            self.store(self.slim_history, self.slim_history_file_name)
-            print("slim: ", self.slim_history)
+            time.sleep(1)
+            print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
+            response = generate_gpt_response(sent_prompt, id_idx=1)
+            print("\nslim response: ", response, "\n******\n")
+            self.slim_history = response.lstrip()
+            self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
+            print("\nslim stored: ", self.slim_history)
 
         except Exception as e:
             print("concise error: ", e)
