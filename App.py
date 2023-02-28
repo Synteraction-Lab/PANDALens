@@ -11,7 +11,6 @@ from UI.widget_generator import get_button
 
 from datetime import datetime
 from time import sleep
-from pynput import keyboard
 import whisper
 import ssl
 import openai
@@ -61,7 +60,7 @@ def play_audio_response(response):
     speech_engine.runAndWait()
 
 
-def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.7):
+def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.65):
     try:
         openai.api_key = "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"
         model_engine = "text-davinci-003"
@@ -103,6 +102,8 @@ class App:
 
         # Set up keyboard and mouse listener
         self.start_listener()
+
+        self.voice_feedback_process = None
 
         # Pack and run the main UI
         self.pack_layout()
@@ -159,7 +160,6 @@ class App:
         elif key == Key.down:
             self.on_new()
 
-
     def on_release(self, key):
         # Resume Previous conversation
         if key == Key.esc:
@@ -190,14 +190,13 @@ class App:
 
     def on_click(self, x, y, button, pressed):
         # self.hide_show_text()
-        print((x,y), pressed)
         if not pressed:
             copy_content()
 
     def pack_layout(self):
         # set the dimensions of the window to match the screen
         screen_width = self.root.winfo_screenwidth()
-        screen_height = int(self.root.winfo_screenheight()/6)
+        screen_height = int(self.root.winfo_screenheight() / 6)
         self.init_screen_size = f"{screen_width}x{screen_height}+0+0"
         self.root.geometry(f"{screen_width}x{screen_height}+0+0")
 
@@ -217,7 +216,9 @@ class App:
         self.text_widget = tk.Text(self.text_frame, height=10, width=50, fg='green', bg='black', font=('Arial', 40),
                                    spacing1=10, spacing2=20, wrap="word")
         self.last_y = None
-        self.notification = tk.Label(self.root, text="Up for summarization, Down for recording, Left for hide/show text, Right for Resize", fg='green', bg='black', font=('Arial', 20))
+        self.notification = tk.Label(self.root,
+                                     text="Use Arrows on your keyboard to manipulate: Up for summarization, Down for recording, Left for hide/show text, Right for Resize",
+                                     fg='green', bg='black', font=('Arial', 20))
         self.text_widget.insert(tk.END, "Welcome to use this system to record your idea.")
         self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black')
         self.text_widget.config(yscrollcommand=self.scrollbar.set)
@@ -251,6 +252,7 @@ class App:
         self.keyboard_listener.stop()
 
     def on_summarize(self):
+        self.determinate_voice_feedback_process()
         self.notification.config(text="Summarizing...")
         if not self.is_recording:
             command_type = "{} all the items and generate the writing". \
@@ -258,13 +260,15 @@ class App:
             t = threading.Thread(target=self.thread_summarize, args=(command_type,), daemon=True)
             t.start()
 
+    def determinate_voice_feedback_process(self):
+        if self.voice_feedback_process is not None:
+            self.voice_feedback_process.terminate()
     def thread_summarize(self, command_type):
         response = self.get_response_from_gpt(command="", prefix=command_type)
         self.store(response)
         self.chat_history = self.chat_history + response
-        self.render_response(response)
+        self.render_response(response, self.output_mode)
         self.notification.config(text="")
-
 
     def hide_show_text(self):
         if not self.is_hidden_text:
@@ -295,10 +299,10 @@ class App:
             # self.right_button.grid(row=1, column=2, padx=5)
             self.bottom_button.grid(row=2, column=1, pady=5)
 
-
     def thread_transcribe_and_render(self, command_type):
         # Transcribe voice command and get response from GPT
         voice_command = self.transcribe_voice_command()
+        self.notification.config(text="Analyzing...")
         response = self.get_response_from_gpt(command=voice_command, prefix=command_type)
 
         # Store response
@@ -306,13 +310,14 @@ class App:
         self.chat_history = self.chat_history + response
 
         # Render response
-        self.render_response(response)
+        self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
         # Enable new recording
         self.is_recording = False
 
     def on_new(self):
+        self.determinate_voice_feedback_process()
         if not self.is_recording:
             self.notification.config(text="Reminder: Press \"Bottom\" button again to stop recording!")
             self.bottom_button.configure(text="Stop")
@@ -322,7 +327,6 @@ class App:
         else:
             if self.audio_capture is not None:
                 self.audio_capture.stop_recording()
-                self.notification.config(text="Analyzing...")
                 sleep(0.5)
 
             # command_type = "I want to add a new point: "
@@ -352,10 +356,11 @@ class App:
 
     def transcribe_voice_command(self):
         # transcribe audio to text
-        print("start transcribing")
+        self.notification.config(text="start transcribing")
         model = whisper.load_model("base.en")
         result = model.transcribe(self.audio_file_name)
         command = result['text']
+        self.render_response(command, VISUAL_OUTPUT)
         return command
 
     def get_response_from_gpt(self, command, is_stored=True, role="Human: ", prefix=""):
@@ -369,6 +374,7 @@ class App:
         try:
             self.chat_history = self.chat_history + prompt
             self.human_history = self.human_history + prompt
+            self.latest_request = prompt
 
             sent_prompt = self.chat_history + prompt
 
@@ -376,7 +382,7 @@ class App:
 
             self.ai_history = self.ai_history + response
             print("ai:", len(self.ai_history), "human: ", len(self.human_history), "total: ", len(self.chat_history))
-            if len(self.chat_history) > CONCISE_THRESHOLD:
+            if len(self.chat_history) > CONCISE_THRESHOLD / 2:
                 t = threading.Thread(target=self.concise_history, daemon=True)
                 t.start()
 
@@ -384,7 +390,7 @@ class App:
             print(e)
             response = "No Response from GPT."
 
-            if self.chat_history > CONCISE_THRESHOLD:
+            if len(self.chat_history) > CONCISE_THRESHOLD:
                 self.chat_history = self.task_description + self.slim_history
                 sent_prompt = self.chat_history + prompt
                 response = generate_gpt_response(sent_prompt)
@@ -396,6 +402,10 @@ class App:
             # Set up the prompt
             task_type = "concise_history"
             prompt = load_task_description(task_type)
+            if len(self.chat_history) < CONCISE_THRESHOLD:
+                self.slim_history = self.chat_history
+            else:
+                self.slim_history = self.slim_history + self.latest_request
             sent_prompt = prompt + self.slim_history
             if len(sent_prompt) > CONCISE_THRESHOLD:
                 sent_prompt = sent_prompt[-CONCISE_THRESHOLD:-1]
@@ -404,18 +414,18 @@ class App:
             response = generate_gpt_response(sent_prompt)
             self.slim_history = self.task_description + response.lstrip()
             self.store(self.slim_history, self.slim_history_file_name)
-            print("slim:", self.slim_history)
+            print("slim: ", self.slim_history)
 
         except Exception as e:
             print("concise error: ", e)
 
-    def render_response(self, response):
+    def render_response(self, response, output_mode):
         print(response.lstrip())
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, response.lstrip())
-        if self.output_mode == AUDIO_OUTPUT:
-            p = Process(target=play_audio_response, args=(response,))
-            p.start()
+        if output_mode == AUDIO_OUTPUT:
+            self.voice_feedback_process = Process(target=play_audio_response, args=(response,))
+            self.voice_feedback_process.start()
 
 
 if __name__ == '__main__':
