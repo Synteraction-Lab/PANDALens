@@ -72,7 +72,6 @@ def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.3, id_idx=
             openai.api_key = "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"
         model_engine = "gpt-3.5-turbo"
         print("\n********\nSent Prompt:", sent_prompt, "\n*********\n")
-        print(11)
         response = openai.ChatCompletion.create(
             model=model_engine,
             messages=sent_prompt,
@@ -81,7 +80,6 @@ def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.3, id_idx=
             stop=None,
             temperature=temperature,
         )
-        print(10)
         print(response)
         response = response['choices'][0]['message']['content']
 
@@ -192,7 +190,6 @@ class App:
                                                       is_stored=False)
                 self.store(role=ROLE_HUMAN, text=response)
                 self.chat_history = self.chat_history + response
-                print(response.lstrip())
         except Exception as e:
             print(e)
 
@@ -437,7 +434,7 @@ class App:
             time.sleep(1)
             print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
             response = generate_gpt_response(new_message)
-            print("\nslim response: ", response, "\n******\n")
+            
             self.slim_history = response.lstrip()
             self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
             print("\nslim stored: ", self.slim_history)
