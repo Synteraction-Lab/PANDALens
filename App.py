@@ -22,9 +22,9 @@ from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-ROLE_AI = "AI"
-
-ROLE_HUMAN = "Human"
+ROLE_AI = "assistant"
+ROLE_SYSTEM = "system"
+ROLE_HUMAN = "user"
 
 CONCISE_THRESHOLD = 8000
 
@@ -64,24 +64,27 @@ def play_audio_response(response):
     speech_engine.runAndWait()
 
 
-def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.65, id_idx=0):
+def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.3, id_idx=0):
     try:
         if id_idx == 0:
             openai.api_key = "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"
         else:
             openai.api_key = "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"
-        model_engine = "text-davinci-003"
-        print("\n********\nSent Prompt:", sent_prompt, "*********\n")
-        completion = openai.Completion.create(
-            engine=model_engine,
-            prompt=sent_prompt,
+        model_engine = "gpt-3.5-turbo"
+        print("\n********\nSent Prompt:", sent_prompt, "\n*********\n")
+        print(11)
+        response = openai.ChatCompletion.create(
+            model=model_engine,
+            messages=sent_prompt,
             max_tokens=max_tokens,
             n=1,
             stop=None,
             temperature=temperature,
         )
-        response = completion.choices[0].text
-        print("\n********\nReceived Response:", response.lstrip().rstrip(), "*********\n")
+        print(10)
+        print(response)
+        response = response['choices'][0]['message']['content']
+
         return response
     except Exception as e:
         print(e)
@@ -106,6 +109,7 @@ class App:
         self.human_history = ""
         self.chat_history = ""
         self.stored_text_widget_content = ""
+        self.message_list = []
 
         self.send_history_mode = ALL_HISTORY
 
@@ -171,22 +175,25 @@ class App:
 
     def on_release(self, key):
         # Resume Previous conversation
-        if key == Key.esc:
-            chat_history = None
-            if os.path.isfile(self.slim_history_file_name):
-                with open(self.slim_history_file_name) as f:
-                    chat_history = f.read()
-                    print("Resuming the conversation: ", self.slim_history_file_name)
-            else:
-                with open(self.chat_history_file_name) as f:
-                    chat_history = f.read()
-                    print("Resuming the conversation: ", self.chat_history_file_name)
-            response = self.get_response_from_gpt(command=chat_history,
-                                                  prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
-                                                  is_stored=False)
-            self.store(role=ROLE_HUMAN, text=response)
-            self.chat_history = self.chat_history + response
-            print(response.lstrip())
+        try:
+            if key == Key.esc:
+                chat_history = None
+                if os.path.isfile(self.slim_history_file_name):
+                    with open(self.slim_history_file_name) as f:
+                        chat_history = f.read()
+                        print("Resuming the conversation: ", self.slim_history_file_name)
+                else:
+                    with open(self.chat_history_file_name) as f:
+                        chat_history = f.read()
+                        print("Resuming the conversation: ", self.chat_history_file_name)
+                response = self.get_response_from_gpt(command=chat_history,
+                                                      prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
+                                                      is_stored=False)
+                self.store(role=ROLE_HUMAN, text=response)
+                self.chat_history = self.chat_history + response
+                print(response.lstrip())
+        except Exception as e:
+            print(e)
 
     def start_listener(self):
         # self.root.bind("<Button-1>", self.on_click)
@@ -356,7 +363,9 @@ class App:
         self.chat_history = self.task_description
         self.human_history = self.task_description
         self.ai_history = self.task_description
-        _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
+        initial_message = {"role": ROLE_SYSTEM, "content": self.task_description}
+        self.message_list.append(initial_message)
+        # _ = self.get_response_from_gpt(self.chat_history, role=ROLE_SYSTEM, is_stored=False)
 
     def store(self, role=ROLE_HUMAN, text=None, path=None):
         if path is None:
@@ -373,24 +382,24 @@ class App:
         self.render_response(command, VISUAL_OUTPUT)
         return command
 
-    def get_response_from_gpt(self, command, is_stored=True, role="Human: ", prefix=""):
+    def get_response_from_gpt(self, command, is_stored=True, role=ROLE_HUMAN, prefix=""):
         response = ""
 
         # Set up the prompt
-        prompt = role + prefix + " " + command
+        prompt = role + " :" + prefix + command
+        new_message = {"role": role, "content": prefix + command}
         if is_stored:
-            self.store(role=ROLE_HUMAN, text=prompt)
+            self.store(role=role, text=prompt)
             print(prompt)
         try:
             self.chat_history = self.chat_history + prompt
             self.human_history = self.human_history + prompt
             self.latest_request = prompt
 
-            sent_prompt = self.chat_history + prompt
-
-            response = generate_gpt_response(sent_prompt)
-
+            self.message_list.append(new_message)
+            response = generate_gpt_response(self.message_list)
             self.ai_history = self.ai_history + response
+
             print("ai:", len(self.ai_history), "human: ", len(self.human_history), "total: ", len(self.chat_history))
             if len(self.chat_history) > CONCISE_THRESHOLD / 2:
                 t = threading.Thread(target=self.concise_history, daemon=True)
@@ -403,7 +412,9 @@ class App:
             if len(self.chat_history) > CONCISE_THRESHOLD:
                 self.chat_history = self.task_description + self.slim_history
                 sent_prompt = self.chat_history + prompt
-                response = generate_gpt_response(sent_prompt)
+                new_message = {"role": ROLE_HUMAN, "content": sent_prompt}
+                self.message_list = [new_message, ]
+                response = generate_gpt_response(self.message_list)
         finally:
             return response
 
@@ -421,9 +432,10 @@ class App:
                 sent_prompt = sent_prompt[-CONCISE_THRESHOLD:-1]
 
             # Generate a response
+            new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
             print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(sent_prompt, id_idx=1)
+            response = generate_gpt_response(new_message)
             print("\nslim response: ", response, "\n******\n")
             self.slim_history = response.lstrip()
             self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
