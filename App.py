@@ -156,6 +156,7 @@ class App:
 
         # Initiate the conversation
         self.setup_chat_gpt(self.task_type)
+        pyperclip.copy('')
 
     def on_press(self, key):
         if str(key) == "'.'":
