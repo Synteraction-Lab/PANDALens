@@ -20,7 +20,9 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 
 ## Requirements
 - Python 3.9 (better to create a new [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
-- Install [FFmpeg](https://ffmpeg.org/)
+- Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
+  - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg)
+  - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
 
 
 ## Installation
@@ -47,11 +49,17 @@ You can also modify the prompt in this folder to improve the experience.
   - You can scroll your mouse wheel to scroll up and down the generated writing.
 
 ### Step 4
-If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.txt`` folder.
+If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.json`` folder.
 
+### Step 5 (OPTIONAL: DEBUGGING MODE)
+
+If you want to rerun the program and load the previous chat history (with the same PID), you can press the `Esc` key on the keyboard. 
+
+However, please note that we cannot guarantee that it will resume your entire chat history, as OpenAI has limitations on the length of requests.
 ## References
 
-- 
+- https://realpython.com/python-virtual-environments-a-primer/
+- https://phoenixnap.com/kb/ffmpeg-windows
 
 
 
