@@ -168,9 +168,10 @@ class App:
         elif key == Key.up:
             self.on_summarize()
         elif key == Key.right:
-            self.on_more()
-        elif key == Key.down:
             self.on_new()
+        elif key == Key.down:
+            self.on_more()
+
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -231,7 +232,7 @@ class App:
                                    spacing1=10, spacing2=20, wrap="word")
         self.last_y = None
         self.notification = tk.Label(self.root,
-                                     text="Use Arrows on your keyboard to manipulate: Up for summarization, Down for recording, Left for hide/show text, Right for Resize",
+                                     text="Use Arrows on your keyboard to manipulate: Up for Summarization, Right for Recording, Left for Hide/Show text, Down for Resize",
                                      fg='green', bg='black', font=('Arial', 20))
         self.text_widget.insert(tk.END, "Welcome to use this system to record your idea.")
         self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black')
@@ -242,24 +243,24 @@ class App:
                                      command=self.on_summarize)
         self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
                                       command=self.hide_show_text)
-        self.right_button = get_button(self.manipulation_frame, text="Resize", fg_color="green", command=self.on_more)
-        self.bottom_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
+        self.resize_button = get_button(self.manipulation_frame, text="Resize", fg_color="green", command=self.on_more)
+        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
                                         command=self.on_new)
         self.text_frame.grid(row=1, column=1, sticky="NSEW")
         self.notification.pack()
         self.top_button.grid(row=0, column=1, pady=5)
         self.left_button.grid(row=1, column=0, padx=5)
-        self.right_button.grid(row=1, column=2, padx=5)
-        self.bottom_button.grid(row=2, column=1, pady=5)
+        self.record_button.grid(row=1, column=2, padx=5)
+        self.resize_button.grid(row=2, column=1, pady=5)
         self.manipulation_frame.pack(fill="both", expand=True)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         # self.root.attributes("-fullscreen", True)
-        self.root.attributes("-alpha", 0.85)
+        self.root.attributes("-alpha", 0.95)
         self.top_button.grid_forget()
         self.left_button.grid_forget()
-        self.right_button.grid_forget()
-        self.bottom_button.grid_forget()
+        self.resize_button.grid_forget()
+        self.record_button.grid_forget()
 
     def on_close(self):
         self.root.destroy()
@@ -304,15 +305,15 @@ class App:
 
             self.top_button.grid_forget()
             self.left_button.grid_forget()
-            self.right_button.grid_forget()
-            self.bottom_button.grid_forget()
+            self.resize_button.grid_forget()
+            self.record_button.grid_forget()
         else:
             # If it's not, set the window size to the screen size
             self.root.attributes('-fullscreen', True)
             self.top_button.grid(row=0, column=1, pady=5)
             self.left_button.grid(row=1, column=0, padx=5)
-            # self.right_button.grid(row=1, column=2, padx=5)
-            self.bottom_button.grid(row=2, column=1, pady=5)
+            self.resize_button.grid(row=2, column=1, padx=5)
+            self.record_button.grid(row=1, column=2, pady=5)
 
     def thread_transcribe_and_render(self, command_type):
         # Transcribe voice command and get response from GPT
@@ -335,7 +336,7 @@ class App:
         self.determinate_voice_feedback_process()
         if not self.is_recording:
             self.notification.config(text="Reminder: Press \"Bottom\" button again to stop recording!")
-            self.bottom_button.configure(text="Stop")
+            self.record_button.configure(text="Stop")
             self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
             self.audio_capture.start_recording()
             self.is_recording = True
@@ -354,7 +355,7 @@ class App:
             t = threading.Thread(target=self.thread_transcribe_and_render, args=(command_type,), daemon=True)
             t.start()
             pyperclip.copy('')
-            self.bottom_button.configure(text="Record")
+            self.record_button.configure(text="Record")
 
     def setup_chat_gpt(self, task_type):
         self.task_description = load_task_description(task_type)

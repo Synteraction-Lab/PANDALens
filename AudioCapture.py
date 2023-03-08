@@ -21,7 +21,7 @@ class AudioCapture:
                 self.AUDIO_DEVICES_IDX, self.file_path)
 
         elif get_system_name() == "Darwin":
-            self.recording_cmd = 'ffmpeg -f avfoundation -capture_cursor 1 -i :"{}" -r 12 {}'.format(
+            self.recording_cmd = 'ffmpeg -f avfoundation -i :"{}" {}'.format(
                 self.AUDIO_DEVICES_IDX, self.file_path)
 
         self.process = subprocess.Popen(self.recording_cmd, stdin=subprocess.PIPE, shell=True)
