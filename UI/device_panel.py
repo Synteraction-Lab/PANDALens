@@ -5,13 +5,10 @@ import pandas
 import tkinter as tk
 
 from UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label
-from Utilities.utilities import get_system_name, record_device_config, get_second_monitor_original_pos, \
+from Utilities.constant import CONFIG_FILE_NAME, VISUAL_OUTPUT, AUDIO_OUTPUT
+from Utilities.file import get_system_name, get_second_monitor_original_pos, \
     get_possible_tasks
-
-CONFIG_FILE_NAME = "device_config.csv"
-
-VISUAL_OUTPUT = "visual"
-AUDIO_OUTPUT = "visual+audio"
+from Storage.writer import record_device_config
 
 
 def save_device_config(path, item, data):

@@ -6,54 +6,26 @@ from multiprocessing import Process
 import pandas
 import pyperclip
 
-from UI.device_panel import DevicePanel, VISUAL_OUTPUT, AUDIO_OUTPUT, CONFIG_FILE_NAME
+from Model.GPT import generate_gpt_response
+from Storage.reader import load_task_description
+from UI.device_panel import DevicePanel
+from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, ROLE_AI, ROLE_SYSTEM, ROLE_HUMAN, \
+    CONCISE_THRESHOLD, ALL_HISTORY, audio_file, chat_file, slim_history_file, config_path
 from UI.widget_generator import get_button
 
 from datetime import datetime
 from time import sleep
 import whisper
 import ssl
-import openai
-from AudioCapture import AudioCapture
+from Model.AudioCapture import AudioCapture
 from Utilities.clipboard import copy_content, get_clipboard_content
-from Utilities.utilities import append_data
+from Storage.writer import append_data
 import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-ROLE_AI = "assistant"
-ROLE_SYSTEM = "system"
-ROLE_HUMAN = "user"
-
-CONCISE_THRESHOLD = 8000
-
-JOURNAL = "journal"
-PAPER = "paper_writing"
-SELF_REFLECTION = "reflection"
-PAPER_REVIEW = "paper_review"
-
-ALL_HISTORY = "all"
-AI_HISTORY = "ai"
-HUMAN_HISTORY = "human"
-
 ssl._create_default_https_context = ssl._create_unverified_context
-
-audio_file = "command.mp3"
-chat_file = "chat_history.json"
-slim_history_file = "slim_history.json"
-task_description_path = os.path.join("data", "task_description")
-NEW_ITEM_KEY = 'key.down'
-REVISE_KEY = 'key.right'
-SUMMARIZE_KEY = 'key.up'
-
-config_path = os.path.join("data", CONFIG_FILE_NAME)
-
-
-def load_task_description(task_type):
-    with open(os.path.join(task_description_path, task_type)) as f:
-        task_description = f.read()
-        return task_description
 
 
 def play_audio_response(response):
@@ -62,30 +34,6 @@ def play_audio_response(response):
     speech_engine.setProperty('rate', 120)
     speech_engine.say(response)
     speech_engine.runAndWait()
-
-
-def generate_gpt_response(sent_prompt, max_tokens=1000, temperature=0.3, id_idx=0):
-    try:
-        if id_idx == 0:
-            openai.api_key = "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"
-        else:
-            openai.api_key = "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"
-        model_engine = "gpt-3.5-turbo"
-        print("\n********\nSent Prompt:", sent_prompt, "\n*********\n")
-        response = openai.ChatCompletion.create(
-            model=model_engine,
-            messages=sent_prompt,
-            max_tokens=max_tokens,
-            n=1,
-            stop=None,
-            temperature=temperature,
-        )
-        print(response)
-        response = response['choices'][0]['message']['content']
-
-        return response
-    except Exception as e:
-        print(e)
 
 
 class App:
@@ -171,7 +119,6 @@ class App:
             self.on_new()
         elif key == Key.down:
             self.on_more()
-
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -435,7 +382,7 @@ class App:
             time.sleep(1)
             print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
             response = generate_gpt_response(new_message)
-            
+
             self.slim_history = response.lstrip()
             self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
             print("\nslim stored: ", self.slim_history)

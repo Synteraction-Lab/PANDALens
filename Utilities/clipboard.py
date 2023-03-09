@@ -1,7 +1,7 @@
 import pyperclip
 from pynput.keyboard import Controller, Key
 
-from Utilities.utilities import get_system_name
+from Utilities.file import get_system_name
 
 
 def copy_content():

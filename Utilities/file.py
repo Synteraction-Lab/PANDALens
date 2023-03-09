@@ -1,5 +1,3 @@
-import glob
-import json
 import os
 import sys
 from os.path import isfile, join
@@ -14,6 +12,7 @@ _isMacOS = sys.platform.startswith('darwin')
 _isWindows = sys.platform.startswith('win')
 _isLinux = sys.platform.startswith('linux')
 
+
 def check_saving_path(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
@@ -27,46 +26,9 @@ def remove_file(file_name):
         os.remove(file_name)
 
 
-def read_file(file_name):
-    if not os.path.exists(file_name):
-        return ""
-    try:
-        file = open(file_name, "a")
-        content = file.read()
-        file.close()
-        return content
-    except Exception as e:
-        print("Failed to read: ", e.__class__)
-
-
-def append_data(file_name, new_data):
-    # Create the file and directories if they don't exist
-    if not os.path.exists(file_name):
-        os.makedirs(os.path.dirname(file_name), exist_ok=True)
-        with open(file_name, "w") as f:
-            json.dump({"recordings": []}, f)
-
-    # Load the existing data from the JSON file
-    with open(file_name, "r") as f:
-        data = json.load(f)
-
-    # Append the new data to the existing data
-    data["recordings"].append(new_data)
-
-    # Write the updated data to the JSON file
-    with open(file_name, "w") as f:
-        json.dump(data, f, indent=4)
-
-
 def is_file_exists(file_name):
     return os.path.exists(file_name)
 
-
-def record_device_config(file_name, item, details):
-    if not is_file_exists(file_name):
-        append_data(file_name, f'{ITEM},{DETAILS}\n')
-
-    append_data(file_name, f'{item},{details}\n')
 
 def get_second_monitor_original_pos():
     if len(get_monitors()) == 1:
@@ -79,8 +41,8 @@ def get_second_monitor_original_pos():
         else:
             y = -get_monitors()[selected_monitor_idx].y + get_monitors()[0].height - get_monitors()[1].height
         return get_monitors()[selected_monitor_idx].x, y, \
-               get_monitors()[selected_monitor_idx].width, \
-               get_monitors()[selected_monitor_idx].height
+            get_monitors()[selected_monitor_idx].width, \
+            get_monitors()[selected_monitor_idx].height
 
 
 def get_possible_tasks():
