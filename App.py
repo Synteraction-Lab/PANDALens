@@ -6,11 +6,11 @@ from multiprocessing import Process
 import pandas
 import pyperclip
 
-from Model.GPT import generate_gpt_response
-from Storage.reader import load_task_description
+from Model.GPT import GPT
+
 from UI.device_panel import DevicePanel
-from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, ROLE_AI, ROLE_SYSTEM, ROLE_HUMAN, \
-    CONCISE_THRESHOLD, ALL_HISTORY, audio_file, chat_file, slim_history_file, config_path
+from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, ROLE_AI, audio_file, chat_file, \
+    slim_history_file, config_path
 from UI.widget_generator import get_button
 
 from datetime import datetime
@@ -19,13 +19,13 @@ import whisper
 import ssl
 from Model.AudioCapture import AudioCapture
 from Utilities.clipboard import copy_content, get_clipboard_content
-from Storage.writer import append_data
+
 import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-ssl._create_default_https_context = ssl._create_unverified_context
+# ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def play_audio_response(response):
@@ -38,6 +38,9 @@ def play_audio_response(response):
 
 class App:
     def __init__(self):
+        self.audio_file_name = None
+        self.folder_path = None
+        self.GPT = None
         self.root = tk.Tk()
         self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
@@ -48,16 +51,6 @@ class App:
         # Set up voice recording
         self.audio_capture = None
         self.is_recording = False
-
-        # Set up conversation history
-        self.slim_history = ""
-        self.ai_history = ""
-        self.human_history = ""
-        self.chat_history = ""
-        self.stored_text_widget_content = ""
-        self.message_list = []
-
-        self.send_history_mode = ALL_HISTORY
 
         # Set up keyboard and mouse listener
         self.start_listener()
@@ -92,16 +85,19 @@ class App:
         # Set up path
         self.folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
-        self.chat_history_file_name = os.path.join(self.folder_path, chat_file)
-        self.slim_history_file_name = os.path.join(self.folder_path, slim_history_file)
-        self.task_type = task_name
+        chat_history_file_name = os.path.join(self.folder_path, chat_file)
+        slim_history_file_name = os.path.join(self.folder_path, slim_history_file)
+
+        self.GPT = GPT(chat_history_file_name=chat_history_file_name,
+                       slim_history_file_name=slim_history_file_name)
+
+        # Initiate the conversation
+        self.GPT.setup_chat_gpt(task_name)
 
         # Set up output modality
         self.output_mode = output_modality
         self.audio_device_idx = audio_device_idx
 
-        # Initiate the conversation
-        self.setup_chat_gpt(self.task_type)
         pyperclip.copy('')
 
     def on_press(self, key):
@@ -124,20 +120,7 @@ class App:
         # Resume Previous conversation
         try:
             if key == Key.esc:
-                chat_history = None
-                if os.path.isfile(self.slim_history_file_name):
-                    with open(self.slim_history_file_name) as f:
-                        chat_history = f.read()
-                        print("Resuming the conversation: ", self.slim_history_file_name)
-                else:
-                    with open(self.chat_history_file_name) as f:
-                        chat_history = f.read()
-                        print("Resuming the conversation: ", self.chat_history_file_name)
-                response = self.get_response_from_gpt(command=chat_history,
-                                                      prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
-                                                      is_stored=False)
-                self.store(role=ROLE_HUMAN, text=response)
-                self.chat_history = self.chat_history + response
+                self.GPT.resume_stored_history()
         except Exception as e:
             print(e)
 
@@ -227,9 +210,9 @@ class App:
             self.voice_feedback_process.terminate()
 
     def thread_summarize(self, command_type):
-        response = self.get_response_from_gpt(command="", prefix=command_type)
-        self.store(role=ROLE_AI, text=response)
-        self.chat_history = self.chat_history + response
+        response = self.GPT.process_prompt_and_get_gpt_response(command="", prefix=command_type)
+        self.GPT.store(role=ROLE_AI, text=response)
+        self.GPT.append_chat_history(response)
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
@@ -266,11 +249,11 @@ class App:
         # Transcribe voice command and get response from GPT
         voice_command = self.transcribe_voice_command()
         self.notification.config(text="Analyzing...")
-        response = self.get_response_from_gpt(command=voice_command, prefix=command_type)
+        response = self.GPT.process_prompt_and_get_gpt_response(command=voice_command, prefix=command_type)
 
         # Store response
-        self.store(role=ROLE_AI, text=response)
-        self.chat_history = self.chat_history + response
+        self.GPT.store(role=ROLE_AI, text=response)
+        self.GPT.append_chat_history(response)
 
         # Render response
         self.render_response(response, self.output_mode)
@@ -304,21 +287,6 @@ class App:
             pyperclip.copy('')
             self.record_button.configure(text="Record")
 
-    def setup_chat_gpt(self, task_type):
-        self.task_description = load_task_description(task_type)
-        self.chat_history = self.task_description
-        self.human_history = self.task_description
-        self.ai_history = self.task_description
-        initial_message = {"role": ROLE_SYSTEM, "content": self.task_description}
-        self.message_list.append(initial_message)
-        # _ = self.get_response_from_gpt(self.chat_history, role=ROLE_SYSTEM, is_stored=False)
-
-    def store(self, role=ROLE_HUMAN, text=None, path=None):
-        if path is None:
-            path = self.chat_history_file_name
-        data = {"time": str(datetime.now()), "role": role, "content": text.lstrip()}
-        append_data(path, data)
-
     def transcribe_voice_command(self):
         # transcribe audio to text
         self.notification.config(text="start transcribing")
@@ -327,68 +295,6 @@ class App:
         command = result['text']
         self.render_response(command, VISUAL_OUTPUT)
         return command
-
-    def get_response_from_gpt(self, command, is_stored=True, role=ROLE_HUMAN, prefix=""):
-        response = ""
-
-        # Set up the prompt
-        prompt = role + " :" + prefix + command
-        new_message = {"role": role, "content": prefix + command}
-        if is_stored:
-            self.store(role=role, text=prompt)
-            print(prompt)
-        try:
-            self.chat_history = self.chat_history + prompt
-            self.human_history = self.human_history + prompt
-            self.latest_request = prompt
-
-            self.message_list.append(new_message)
-            response = generate_gpt_response(self.message_list)
-            self.ai_history = self.ai_history + response
-
-            print("ai:", len(self.ai_history), "human: ", len(self.human_history), "total: ", len(self.chat_history))
-            if len(self.chat_history) > CONCISE_THRESHOLD / 2:
-                t = threading.Thread(target=self.concise_history, daemon=True)
-                t.start()
-
-        except Exception as e:
-            print(e)
-            response = "No Response from GPT."
-
-            if len(self.chat_history) > CONCISE_THRESHOLD:
-                self.chat_history = self.task_description + self.slim_history
-                sent_prompt = self.chat_history + prompt
-                new_message = {"role": ROLE_HUMAN, "content": sent_prompt}
-                self.message_list = [new_message, ]
-                response = generate_gpt_response(self.message_list)
-        finally:
-            return response
-
-    def concise_history(self):
-        try:
-            # Set up the prompt
-            task_type = "concise_history"
-            prompt = load_task_description(task_type)
-            if len(self.chat_history) < CONCISE_THRESHOLD:
-                self.slim_history = self.chat_history
-            else:
-                self.slim_history = self.slim_history + self.latest_request
-            sent_prompt = prompt + '"' + self.slim_history + '"'
-            if len(sent_prompt) > CONCISE_THRESHOLD:
-                sent_prompt = sent_prompt[-CONCISE_THRESHOLD:-1]
-
-            # Generate a response
-            new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
-            time.sleep(1)
-            print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(new_message)
-
-            self.slim_history = response.lstrip()
-            self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
-            print("\nslim stored: ", self.slim_history)
-
-        except Exception as e:
-            print("concise error: ", e)
 
     def render_response(self, response, output_mode):
         print(response.lstrip())
