@@ -9,14 +9,12 @@ import pyperclip
 from Model.GPT import GPT
 
 from UI.device_panel import DevicePanel
-from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, ROLE_AI, audio_file, chat_file, \
-    slim_history_file, config_path
+from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
 from UI.widget_generator import get_button
 
-from datetime import datetime
 from time import sleep
 import whisper
-import ssl
+
 from Model.AudioCapture import AudioCapture
 from Utilities.clipboard import copy_content, get_clipboard_content
 
@@ -24,8 +22,6 @@ import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
-
-# ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def play_audio_response(response):
@@ -114,7 +110,7 @@ class App:
         elif key == Key.right:
             self.on_new()
         elif key == Key.down:
-            self.on_more()
+            self.on_resize()
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -173,7 +169,7 @@ class App:
                                      command=self.on_summarize)
         self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
                                       command=self.hide_show_text)
-        self.resize_button = get_button(self.manipulation_frame, text="Resize", fg_color="green", command=self.on_more)
+        self.resize_button = get_button(self.manipulation_frame, text="Resize", fg_color="green", command=self.on_resize)
         self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
                                         command=self.on_new)
         self.text_frame.grid(row=1, column=1, sticky="NSEW")
@@ -211,8 +207,6 @@ class App:
 
     def thread_summarize(self, command_type):
         response = self.GPT.process_prompt_and_get_gpt_response(command="", prefix=command_type)
-        self.GPT.store(role=ROLE_AI, text=response)
-        self.GPT.append_chat_history(response)
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
@@ -227,7 +221,7 @@ class App:
             self.left_button.configure(text="Hide")
         self.is_hidden_text = not self.is_hidden_text
 
-    def on_more(self):
+    def on_resize(self):
         if self.root.attributes('-fullscreen'):
             # If it is, restore the window to its previous size
             self.root.attributes('-fullscreen', False)
@@ -251,10 +245,6 @@ class App:
         self.notification.config(text="Analyzing...")
         response = self.GPT.process_prompt_and_get_gpt_response(command=voice_command, prefix=command_type)
 
-        # Store response
-        self.GPT.store(role=ROLE_AI, text=response)
-        self.GPT.append_chat_history(response)
-
         # Render response
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
@@ -265,7 +255,7 @@ class App:
     def on_new(self):
         self.determinate_voice_feedback_process()
         if not self.is_recording:
-            self.notification.config(text="Reminder: Press \"Bottom\" button again to stop recording!")
+            self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
             self.record_button.configure(text="Stop")
             self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
             self.audio_capture.start_recording()

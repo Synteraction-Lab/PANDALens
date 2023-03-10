@@ -74,21 +74,19 @@ class GPT:
                 print("Resuming the conversation: ", self.chat_history_file_name)
         response = self.process_prompt_and_get_gpt_response(command=chat_history,
                                                             prefix="Resume the conversation history (Don't show the timestamp in the following answers)",
-                                                            is_stored=False)
-        self.store(role=ROLE_HUMAN, text=response)
-        self.chat_history = self.chat_history + response
+                                                            is_prompt_stored=False)
 
     def append_chat_history(self, response):
         self.chat_history = self.chat_history + response
 
-    def process_prompt_and_get_gpt_response(self, command, is_stored=True, role=ROLE_HUMAN, prefix=""):
+    def process_prompt_and_get_gpt_response(self, command, is_prompt_stored=True, role=ROLE_HUMAN, prefix=""):
         """
         Process a chat prompt, add it to the chat history, and generate a response using the OpenAI GPT-3.5 language model,
         and store the conversation history if required.
 
         Args:
             command (str): The chat prompt to process and generate a response for.
-            is_stored (bool, optional): Whether to store the prompt to conversation history file. Defaults to True.
+            is_prompt_stored (bool, optional): Whether to store the prompt to conversation history file. Defaults to True.
             role (str, optional): The role of the speaker. Defaults to ROLE_HUMAN.
             prefix (str, optional): Any prefix to add to the prompt. Defaults to "".
 
@@ -100,7 +98,7 @@ class GPT:
         # Set up the prompt
         prompt = role + " :" + prefix + command
         new_message = {"role": role, "content": prefix + command}
-        if is_stored:
+        if is_prompt_stored:
             self.store(role=role, text=prompt)
             print(prompt)
         try:
@@ -137,6 +135,9 @@ class GPT:
                 self.message_list = [new_message, ]
                 response = generate_gpt_response(self.message_list)
         finally:
+            # Store response
+            self.store(role=ROLE_AI, text=response)
+            self.append_chat_history(response)
             return response
 
     def concise_history(self):
