@@ -10,7 +10,8 @@ pypdf2~=3.0.1
 openai-whisper @git+https://github.com/openai/whisper.git
 pyttsx3~=2.90
 sounddevice~=0.4.6
-numpy~=1.24.1
+numpy~=1.23.5
+numba~=0.56.4
 pandas~=1.5.3
 opencv-python~=4.7.0.68
 screeninfo~=0.8.1
