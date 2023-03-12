@@ -6,7 +6,7 @@ from datetime import datetime
 import openai
 
 from Storage.reader import load_task_description
-from Storage.writer import append_data
+from Storage.writer import append_json_data
 from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
 
@@ -61,7 +61,7 @@ class GPT:
         if path is None:
             path = self.chat_history_file_name
         data = {"time": str(datetime.now()), "role": role, "content": text.lstrip()}
-        append_data(path, data)
+        append_json_data(path, data)
 
     def resume_stored_history(self):
         if os.path.isfile(self.slim_history_file_name):

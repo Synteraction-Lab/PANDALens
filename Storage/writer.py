@@ -4,7 +4,7 @@ import os
 from Utilities.file import is_file_exists, ITEM, DETAILS
 
 
-def append_data(file_name, new_data):
+def append_json_data(file_name, new_data):
     # Create the file and directories if they don't exist
     if not os.path.exists(file_name):
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
@@ -23,8 +23,19 @@ def append_data(file_name, new_data):
         json.dump(data, f, indent=4)
 
 
+def append_csv_data(file_name, data, write_type="a"):
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
+    try:
+        file = open(file_name, write_type)
+        file.write(data)
+        file.close()
+    except Exception as e:
+        print("Failed to write: ", e.__class__)
+
+
 def record_device_config(file_name, item, details):
     if not is_file_exists(file_name):
-        append_data(file_name, f'{ITEM},{DETAILS}\n')
+        append_csv_data(file_name, f'{ITEM},{DETAILS}\n')
 
-    append_data(file_name, f'{item},{details}\n')
+    append_csv_data(file_name, f'{item},{details}\n')

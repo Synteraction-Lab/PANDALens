@@ -2,7 +2,7 @@ from datetime import datetime
 import whisper
 import ssl
 import openai
-from Storage.writer import append_data
+from Storage.writer import append_json_data
 import os
 from gtts import gTTS
 from playsound import playsound
@@ -35,7 +35,7 @@ class App:
 
     def store(self, text):
         data = str(datetime.now()) + ": " + text.lstrip() + "\n"
-        append_data(self.interview_file_name, data)
+        append_json_data(self.interview_file_name, data)
 
     def transcribe_and_send_to_gpt(self, command_type=None):
         # transcribe audio to text
