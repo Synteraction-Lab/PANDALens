@@ -30,6 +30,20 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 - If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
 You can also modify the prompt in this folder to improve the experience.
 
+## Windows specific issues
+- Windows defender issue
+  - Windows defender will treat the keyboardListener in App.py as a threat and automatically delete the file 
+    - To overcome this problem, follow these steps
+      1. Press Windows + I keys and open Settings
+      2. Click on Update & Security
+      3. Go to Windows Security
+      4. Click on Virus & Threat protection
+      5. Select Manage Settings
+      6. Under Exclusions, click on Add or remove exclusion
+      7. Click on the + sign which says Add an exclusion
+      8. Select File, Folder, File Type or Process
+
+
 ## Manipulation
 
 ### Step 1
