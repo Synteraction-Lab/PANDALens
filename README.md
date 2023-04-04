@@ -44,10 +44,10 @@ You can also modify the prompt in this folder to improve the experience.
       8. Select File, Folder, File Type or Process
 
 
-## Manipulation
+## Manipulation For Paper Review
 
 ### Step 1
-- Run ``python App.py``
+- Run ``python ReviewApp.py``
 
 ### Step 2
 - Set up your device & task, including entering the user_id, selecting task type and output modality, and selecting your source for voice recording.
