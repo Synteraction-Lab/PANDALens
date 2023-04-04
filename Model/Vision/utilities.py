@@ -7,7 +7,7 @@ from Utilities.file import check_saving_path
 
 def take_picture(save_path=None):
     # create a VideoCapture object to access the camera
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     # check if camera is opened successfully
     if not cap.isOpened():

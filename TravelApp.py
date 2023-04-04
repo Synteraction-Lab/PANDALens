@@ -4,7 +4,7 @@ import tkinter as tk
 from datetime import datetime
 from multiprocessing import Process
 
-from PIL import Image, ImageTk, ImageEnhance
+from PIL import Image, ImageTk
 
 import pandas
 import pyperclip
@@ -21,14 +21,13 @@ from time import sleep
 import whisper
 
 from Model.AudioCapture import AudioCapture
-from Utilities.clipboard import copy_content, get_clipboard_content
 
 import os
-from pynput.keyboard import Key, Controller, Listener as KeyboardListener
+from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-from Utilities.vision import get_image_labels
+from Model.Vision.google_vision import get_image_labels
 
 
 def play_audio_response(response):
