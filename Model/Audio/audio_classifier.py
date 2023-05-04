@@ -84,7 +84,6 @@ class AudioClassifierRunner:
                 data = record.read(buffer_size)
                 audio_data.load_from_array(data)
                 classifier.classify_async(audio_data, round(last_inference_time * 1000))
-                print(self.classification_result_list)
                 if self.classification_result_list:
                     if len(self.classification_result_list[0].classifications[0].categories) > 0:
                         top_category = self.classification_result_list[0].classifications[0].categories[0]
@@ -92,8 +91,13 @@ class AudioClassifierRunner:
                         if self.callback:
                             threading.Thread(target=self.callback,
                                              args=(top_category.score, top_category.category_name,)).start()
+                    else:
+                        if self.callback:
+                            threading.Thread(target=self.callback, args=(None, None,)).start()
 
                     self.classification_result_list.clear()
+
+
 
     def stop(self):
         self.is_recording = False

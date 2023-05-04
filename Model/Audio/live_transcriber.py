@@ -18,7 +18,8 @@ def show_devices():
 
 
 class LiveTranscriber:
-    def __init__(self, model="base.en", device_index=1, duration=7, silence_threshold=0.02, overlapping_factor=0):
+    def __init__(self, model="base.en", device_index=1, duration=7, silence_threshold=0.01, overlapping_factor=0):
+        self.prompt = None
         self.record_thread = None
         self.model = whisper.load_model(model)
         self.device_index = device_index
@@ -60,7 +61,6 @@ class LiveTranscriber:
             rms = np.sqrt(np.mean(np.square(data)))
             print(rms)
             if rms > self.silence_threshold:
-
                 file_path = os.path.join("data", "audio", "recording.wav")
                 wv.write(file_path, data, self.audio_record.sampling_rate, sampwidth=2)
 
@@ -68,14 +68,24 @@ class LiveTranscriber:
 
     def transcribe(self, file_path):
         audio = whisper.load_audio(file_path)
+        original_audio = audio
         audio = whisper.pad_or_trim(audio)
 
         mel = whisper.log_mel_spectrogram(audio).to(self.model.device)
         options = whisper.DecodingOptions(language='en', fp16=False)
-        result = whisper.decode(self.model, mel, options)
-        self.full_text += result.text + " "
+        # result = whisper.decode(self.model, mel, options)
+        result = self.model.transcribe(
+            original_audio,
+            no_speech_threshold=0.2,
+            logprob_threshold=None,
+            verbose=False,
+            **options.__dict__
+        )
+        print(result['text'])
+        self.prompt = result['text']
+        self.full_text += result['text'] + " "
 
-        print(result.text)
+        print(result['text'])
 
     def start(self):
         self.stop_event.clear()
@@ -91,8 +101,8 @@ class LiveTranscriber:
 if __name__ == '__main__':
     model_path = "base.en"
     device_index = 1
-    duration = 6
-    silence_threshold = 0.02
+    duration = 7
+    silence_threshold = 0.01
     overlapping_factor = 0
 
     show_devices()
