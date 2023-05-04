@@ -4,6 +4,8 @@
 
 data/recordings
 data/device_config.csv
+data/audio/*
+data/test_data/*
 
 # System Files
 .DS_Store
