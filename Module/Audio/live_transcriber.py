@@ -30,8 +30,7 @@ class LiveTranscriber:
         self.full_text = ""
 
         sample_rate = 44100
-        devices = sd.query_devices()
-        device = devices[device_index]
+        device = sd.query_devices(device_index)
         channels = device['max_input_channels']
 
         # Initialize an AudioRecord instance
@@ -59,7 +58,6 @@ class LiveTranscriber:
 
             # Check the RMS amplitude to determine if there is silence
             rms = np.sqrt(np.mean(np.square(data)))
-            print(rms)
             if rms > self.silence_threshold:
                 file_path = os.path.join("data", "audio", "recording.wav")
                 wv.write(file_path, data, self.audio_record.sampling_rate, sampwidth=2)
@@ -85,8 +83,6 @@ class LiveTranscriber:
         self.prompt = result['text']
         self.full_text += result['text'] + " "
 
-        print(result['text'])
-
     def start(self):
         self.stop_event.clear()
         self.record_thread = threading.Thread(target=self.run)
@@ -95,7 +91,9 @@ class LiveTranscriber:
     def stop(self):
         self.stop_event.set()
         self.record_thread.join()
-        return self.full_text
+        final_result = self.full_text
+        self.full_text = ""
+        return final_result
 
 
 if __name__ == '__main__':

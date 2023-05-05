@@ -6,7 +6,7 @@ AUDIO_OUTPUT = "visual+audio"
 ROLE_AI = "assistant"
 ROLE_SYSTEM = "system"
 ROLE_HUMAN = "user"
-CONCISE_THRESHOLD = 8000
+CONCISE_THRESHOLD = 2000
 JOURNAL = "journal"
 PAPER = "paper_writing"
 SELF_REFLECTION = "reflection"
@@ -21,5 +21,8 @@ slim_history_file = "slim_history.json"
 NEW_ITEM_KEY = 'key.down'
 REVISE_KEY = 'key.right'
 SUMMARIZE_KEY = 'key.up'
-task_description_path = os.path.join("data", "task_description")
+
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+task_description_path = os.path.join(project_root, "Module", "LLM", "task_description")
 config_path = os.path.join("data", CONFIG_FILE_NAME)

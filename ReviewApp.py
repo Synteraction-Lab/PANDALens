@@ -6,7 +6,7 @@ from multiprocessing import Process
 import pandas
 import pyperclip
 
-from Model.GPT import GPT
+from Model.LLM.GPT import GPT
 
 from UI.device_panel import DevicePanel
 from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
@@ -15,7 +15,7 @@ from UI.widget_generator import get_button
 from time import sleep
 import whisper
 
-from Model.AudioCapture import AudioCapture
+from Model.Audio.AudioCapture import AudioCapture
 from Utilities.clipboard import copy_content, get_clipboard_content
 
 import os

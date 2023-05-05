@@ -9,7 +9,8 @@ from PIL import Image, ImageTk
 import pandas
 import pyperclip
 
-from Model.GPT import GPT
+from Model.Audio.live_transcriber import LiveTranscriber, show_devices
+from Model.LLM.GPT import GPT
 from Model.Vision.utilities import take_picture
 
 from UI.device_panel import DevicePanel
@@ -17,10 +18,7 @@ from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_fil
     image_folder
 from UI.widget_generator import get_button
 
-from time import sleep
 import whisper
-
-from Model.AudioCapture import AudioCapture
 
 import os
 from pynput.keyboard import Key, Listener as KeyboardListener
@@ -40,6 +38,8 @@ def play_audio_response(response):
 
 class App:
     def __init__(self):
+        self.final_transcription = ""
+        self.previous_transcription = ""
         self.picture_window = None
         self.audio_file_name = None
         self.folder_path = None
@@ -47,6 +47,8 @@ class App:
         self.root = tk.Tk()
         self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
+
+        show_devices()
 
         # Open Setup panel
         DevicePanel(self.root, parent_object_save_command=self.update_config)
@@ -88,6 +90,7 @@ class App:
         # Set up path
         self.folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
+        self.transcriber = LiveTranscriber(device_index=audio_device_idx)
         self.image_folder = os.path.join(self.folder_path, image_folder)
         chat_history_file_name = os.path.join(self.folder_path, chat_file)
         slim_history_file_name = os.path.join(self.folder_path, slim_history_file)
@@ -180,8 +183,8 @@ class App:
                                      command=self.on_summarize)
         self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
                                       command=self.hide_show_text)
-        self.resize_button = get_button(self.manipulation_frame, text="Photo", fg_color="green",
-                                        command=self.on_photo)
+        self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green",
+                                       command=self.on_photo)
         self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
                                         command=self.on_new)
         self.text_frame.grid(row=1, column=1, sticky="NSEW")
@@ -189,7 +192,7 @@ class App:
         self.top_button.grid(row=0, column=1, pady=5)
         self.left_button.grid(row=1, column=0, padx=5)
         self.record_button.grid(row=1, column=2, padx=5)
-        self.resize_button.grid(row=2, column=1, pady=5)
+        self.photo_button.grid(row=2, column=1, pady=5)
         self.manipulation_frame.pack(fill="both", expand=True)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -245,14 +248,14 @@ class App:
 
             self.top_button.grid_forget()
             self.left_button.grid_forget()
-            self.resize_button.grid_forget()
+            self.photo_button.grid_forget()
             self.record_button.grid_forget()
         else:
             # If it's not, set the window size to the screen size
             self.root.attributes('-fullscreen', True)
             self.top_button.grid(row=0, column=1, pady=5)
             self.left_button.grid(row=1, column=0, padx=5)
-            self.resize_button.grid(row=2, column=1, padx=5)
+            self.photo_button.grid(row=2, column=1, padx=5)
             self.record_button.grid(row=1, column=2, pady=5)
 
     def thread_transcribe_and_render(self, command_type):
@@ -263,9 +266,13 @@ class App:
 
 
         # Transcribe voice command and get response from GPT
-        voice_command = self.transcribe_voice_command()
+        # voice_command = self.transcribe_voice_command()
+        voice_command = self.final_transcription
+
+        prompt = '{\"User Command\": ' + voice_command + '}'
+
         self.notification.config(text="Analyzing...")
-        response = self.GPT.process_prompt_and_get_gpt_response(command=voice_command, prefix=command_type)
+        response = self.GPT.process_prompt_and_get_gpt_response(command=prompt, prefix=command_type)
 
         # Render response
         self.render_response(response, self.output_mode)
@@ -309,20 +316,38 @@ class App:
         if not self.is_recording:
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
             self.record_button.configure(text="Stop")
-            self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
-            self.audio_capture.start_recording()
+            self.start_recording()
+            # self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
+            # self.audio_capture.start_recording()
             self.is_recording = True
         else:
-            if self.audio_capture is not None:
-                self.audio_capture.stop_recording()
-                sleep(0.5)
+            self.stop_recording()
+            # if self.audio_capture is not None:
+            #     self.audio_capture.stop_recording()
+            #     sleep(0.5)
 
             command_type = ""
 
             t = threading.Thread(target=self.thread_transcribe_and_render, args=(command_type,), daemon=True)
             t.start()
-            pyperclip.copy('')
+            # pyperclip.copy('')
             self.record_button.configure(text="Record")
+
+    def start_recording(self):
+        if self.transcriber is not None:
+            self.transcriber.start()
+            self.update_transcription()
+
+    def stop_recording(self):
+        if self.transcriber is not None:
+            self.final_transcription = self.transcriber.stop()
+
+    def update_transcription(self):
+        if self.previous_transcription != self.transcriber.full_text:
+            self.render_response(self.transcriber.full_text, VISUAL_OUTPUT)
+            self.previous_transcription = self.transcriber.full_text
+        if not self.transcriber.stop_event.is_set():
+            self.root.after(100, self.update_transcription)
 
     def transcribe_voice_command(self):
         # transcribe audio to text

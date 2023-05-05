@@ -9,7 +9,7 @@ from Model.Audio.live_transcriber import LiveTranscriber, show_devices
 class TranscriberGUI:
     def __init__(self):
         self.audio_classifier_runner = AudioClassifierRunner(
-            model=os.path.join("Model", "Audio", "lite-model_yamnet_classification.tflite"),
+            model=os.path.join("Module", "Audio", "lite-model_yamnet_classification.tflite"),
             callback=self.update_score_category)
         self.transcriber = LiveTranscriber(device_index=1)
         self.score = None
