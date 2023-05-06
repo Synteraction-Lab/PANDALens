@@ -6,14 +6,15 @@ from datetime import datetime
 import openai
 import tiktoken
 
-from Module.LLM.keys import API_KEYS
 from Storage.reader import load_task_description
 from Storage.writer import append_json_data
 from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
-
 MAX_TOKENS = 1000
 TEMPERATURE = 0.3
+
+print(os.environ)
+API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
 
 
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
@@ -260,6 +261,6 @@ if __name__ == "__main__":
         }
     ]
 
-    for user_input in user_inputs:
+    for user_input in user_inputs[:2]:
         response = gpt.process_prompt_and_get_gpt_response(command=str(user_input))
         print("GPT Response:", response)
