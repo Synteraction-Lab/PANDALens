@@ -5,7 +5,8 @@ import wavio as wv
 import whisper
 import numpy as np
 import sounddevice as sd
-from Model.Audio.audio_record import AudioRecord
+from Module.Audio.audio_record import AudioRecord
+from queue import Queue
 
 
 def show_devices():
@@ -28,6 +29,7 @@ class LiveTranscriber:
         self.overlapping_factor = overlapping_factor
         self.stop_event = threading.Event()
         self.full_text = ""
+        self.transcription_queue = Queue()
 
         sample_rate = 44100
         device = sd.query_devices(device_index)
@@ -71,7 +73,6 @@ class LiveTranscriber:
 
         mel = whisper.log_mel_spectrogram(audio).to(self.model.device)
         options = whisper.DecodingOptions(language='en', fp16=False)
-        # result = whisper.decode(self.model, mel, options)
         result = self.model.transcribe(
             original_audio,
             no_speech_threshold=0.2,
@@ -79,9 +80,9 @@ class LiveTranscriber:
             verbose=False,
             **options.__dict__
         )
-        print(result['text'])
         self.prompt = result['text']
         self.full_text += result['text'] + " "
+        self.transcription_queue.put(result['text'])
 
     def start(self):
         self.stop_event.clear()

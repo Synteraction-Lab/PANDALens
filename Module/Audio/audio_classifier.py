@@ -25,7 +25,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python.components import containers
 from mediapipe.tasks.python import audio
 
-from Model.Audio.audio_record import AudioRecord
+from Module.Audio.audio_record import AudioRecord
 
 
 class AudioClassifierRunner:

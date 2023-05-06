@@ -2,8 +2,8 @@ import os
 import threading
 import tkinter as tk
 
-from Model.Audio.audio_classifier import AudioClassifierRunner
-from Model.Audio.live_transcriber import LiveTranscriber, show_devices
+from Module.Audio.audio_classifier import AudioClassifierRunner
+from Module.Audio.live_transcriber import LiveTranscriber, show_devices
 
 
 class TranscriberGUI:
@@ -61,7 +61,7 @@ class TranscriberGUI:
         self.transcription_text.delete("1.0", tk.END)
         self.transcription_text.insert(tk.END, self.transcriber.full_text)
         if not self.transcriber.stop_event.is_set():
-            self.window.after(100, self.update_transcription)
+            self.window.after(500, self.update_transcription)
 
     def run(self):
         threading.Thread(target=self.audio_classifier_runner.run).start()

@@ -10,8 +10,7 @@ from Storage.reader import load_task_description
 from Storage.writer import append_json_data
 from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
-API_KEYS = ["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",
-            "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"]
+
 MAX_TOKENS = 1000
 TEMPERATURE = 0.3
 
