@@ -9,9 +9,9 @@ from PIL import Image, ImageTk
 import pandas
 import pyperclip
 
-from Model.Audio.live_transcriber import LiveTranscriber, show_devices
-from Model.LLM.GPT import GPT
-from Model.Vision.utilities import take_picture
+from Module.Audio.live_transcriber import LiveTranscriber, show_devices
+from Module.LLM.GPT import GPT
+from Module.Vision.utilities import take_picture
 
 from UI.device_panel import DevicePanel
 from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
