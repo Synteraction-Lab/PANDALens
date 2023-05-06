@@ -7,7 +7,6 @@ from multiprocessing import Process
 from PIL import Image, ImageTk
 
 import pandas
-import pyperclip
 
 from Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from Module.LLM.GPT import GPT
@@ -25,7 +24,7 @@ from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-from Model.Vision.google_vision import get_image_labels
+from Module.Vision.google_vision import get_image_labels
 
 
 def play_audio_response(response):
@@ -105,7 +104,6 @@ class App:
         self.output_mode = output_modality
         self.audio_device_idx = audio_device_idx
 
-        pyperclip.copy('')
 
     def on_press(self, key):
         if str(key) == "'.'":
@@ -330,7 +328,6 @@ class App:
 
             t = threading.Thread(target=self.thread_transcribe_and_render, args=(command_type,), daemon=True)
             t.start()
-            # pyperclip.copy('')
             self.record_button.configure(text="Record")
 
     def start_recording(self):
