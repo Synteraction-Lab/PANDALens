@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from ultralyticsplus import YOLO, render_result
-from Model.Gaze.frame_stream import PupilCamera
+from Module.Gaze.frame_stream import PupilCamera
 
 
 class ObjectDetector:

@@ -10,10 +10,9 @@ from Storage.reader import load_task_description
 from Storage.writer import append_json_data
 from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
-MAX_TOKENS = 1000
+MAX_TOKENS = 2000
 TEMPERATURE = 0.3
 
-print(os.environ)
 API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
 
 
@@ -145,7 +144,7 @@ class GPT:
                 self.chat_history = self.task_description + self.slim_history
 
                 # Combine important moments with the last few messages
-                last_messages = self.message_list[-2:]
+                last_messages = self.message_list[-3:]
                 self.message_list = [{"role": ROLE_SYSTEM, "content": prompt}] \
                                     + [{"role": ROLE_HUMAN, "content": f"Here is concise chat context: {response}"}] \
                                     + last_messages + [new_message]
@@ -180,7 +179,7 @@ class GPT:
             new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
             print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(new_message)
+            response = generate_gpt_response(new_message, max_tokens=1000)
 
             self.slim_history = response.lstrip()
             self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
@@ -261,6 +260,6 @@ if __name__ == "__main__":
         }
     ]
 
-    for user_input in user_inputs[:2]:
+    for user_input in user_inputs:
         response = gpt.process_prompt_and_get_gpt_response(command=str(user_input))
         print("GPT Response:", response)

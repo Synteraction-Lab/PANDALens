@@ -14,6 +14,8 @@ cap = cv2.VideoCapture(0)
 while True:
     # capture a frame from the webcam
     ret, frame = cap.read()
+    if ret is None:
+        continue
 
     # convert the frame to a PIL image
     image = Image.fromarray(frame)
