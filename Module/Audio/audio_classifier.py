@@ -31,13 +31,13 @@ from Module.Audio.audio_record import AudioRecord
 class AudioClassifierRunner:
 
     def __init__(self, model='lite-model_yamnet_classification.tflite',
-                 max_results=3, score_threshold=0.3, overlapping_factor=0.5, callback=None):
+                 max_results=3, score_threshold=0.3, overlapping_factor=0.5, queue=None):
         self.model = model
         self.max_results = max_results
         self.score_threshold = score_threshold
         self.overlapping_factor = overlapping_factor
         self.classification_result_list = []
-        self.callback = callback
+        self.queue = queue
         self.is_recording = False
 
     def save_result(self, result: audio.AudioClassifierResult, timestamp_ms: int):
@@ -88,16 +88,16 @@ class AudioClassifierRunner:
                     if len(self.classification_result_list[0].classifications[0].categories) > 0:
                         top_category = self.classification_result_list[0].classifications[0].categories[0]
                         print(f"score={top_category.score}, category_name='{top_category.category_name}'")
-                        if self.callback:
-                            threading.Thread(target=self.callback,
-                                             args=(top_category.score, top_category.category_name,)).start()
+                        if self.queue:
+                            self.queue.put([top_category.score, top_category.category_name])
+                            # threading.Thread(target=self.callback,
+                            #                  args=(top_category.score, top_category.category_name,)).start()
                     else:
-                        if self.callback:
-                            threading.Thread(target=self.callback, args=(None, None,)).start()
+                        if self.queue:
+                            self.queue.put([None, None])
+                            # threading.Thread(target=self.callback, args=(None, None,)).start()
 
                     self.classification_result_list.clear()
-
-
 
     def stop(self):
         self.is_recording = False

@@ -3,13 +3,16 @@ import time
 import tkinter as tk
 from datetime import datetime
 from multiprocessing import Process
+from tkinter import filedialog
 
+import cv2
 from PIL import Image, ImageTk
 
 import pandas
 
 from Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from Module.LLM.GPT import GPT
+from Module.Vision.huggingface_query import get_image_caption
 from Module.Vision.utilities import take_picture
 
 from UI.device_panel import DevicePanel
@@ -36,7 +39,7 @@ def play_audio_response(response):
 
 
 class App:
-    def __init__(self):
+    def __init__(self, test_mode=True):
         self.final_transcription = ""
         self.previous_transcription = ""
         self.picture_window = None
@@ -44,8 +47,9 @@ class App:
         self.folder_path = None
         self.GPT = None
         self.root = tk.Tk()
-        self.root.wm_attributes("-topmost", True)
+        # self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
+        self.test_mode = test_mode
 
         show_devices()
 
@@ -63,6 +67,7 @@ class App:
 
         # Pack and run the main UI
         self.pack_layout()
+        self.moment_idx = 0
 
         self.root.mainloop()
 
@@ -103,7 +108,6 @@ class App:
         # Set up output modality
         self.output_mode = output_modality
         self.audio_device_idx = audio_device_idx
-
 
     def on_press(self, key):
         if str(key) == "'.'":
@@ -205,8 +209,7 @@ class App:
         self.determinate_voice_feedback_process()
         self.notification.config(text="Summarizing...")
         if not self.is_recording:
-            command_type = "{} all the items and generate the writing". \
-                format("Summarize")
+            command_type = '{"User Command": "Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }"'
             t = threading.Thread(target=self.thread_summarize, args=(command_type,), daemon=True)
             t.start()
 
@@ -215,7 +218,7 @@ class App:
             self.voice_feedback_process.terminate()
 
     def thread_summarize(self, command_type):
-        response = self.GPT.process_prompt_and_get_gpt_response(command="", prefix=command_type)
+        response = self.GPT.process_prompt_and_get_gpt_response(command=command_type)
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
@@ -257,20 +260,44 @@ class App:
             self.record_button.grid(row=1, column=2, pady=5)
 
     def thread_transcribe_and_render(self, command_type):
-        if self.picture_window:
-            photo_label = get_image_labels(self.latest_photo_file_path)
-            command_type = f'For this picture: "Labels: [{photo_label}]", ' \
-                           f' I want to comment that: '
+        self.notification.config(text="Analyzing...")
 
+        audio = None
+        photo_label = None
+        photo_caption = None
+        user_behavior = None
+
+        prompt = {}
+        if self.picture_window:
+            self.moment_idx += 1
+            prompt["no"] = self.moment_idx
+            photo_label = get_image_labels(self.latest_photo_file_path)
+            # photo_caption = get_image_caption(self.latest_photo_file_path)
+            if photo_label is not None:
+                prompt["photo_label"] = photo_label
+            if photo_caption is not None:
+                prompt["photo_caption"] = photo_caption
+
+            self.picture_window.destroy()
+            self.picture_window = None
+
+            # command_type = f'For this picture: "Labels: [{photo_label}]", ' \
+            #                f' I want to comment that: '
+
+        if audio is not None:
+            prompt["audio"] = audio
+        if user_behavior is not None:
+            prompt["user_behavior"] = user_behavior
 
         # Transcribe voice command and get response from GPT
         # voice_command = self.transcribe_voice_command()
         voice_command = self.final_transcription
+        prompt["user comments/commands"] = voice_command
 
-        prompt = '{\"User Command\": ' + voice_command + '}'
+        # prompt = '{\"User Command\": ' + voice_command + '}'
 
-        self.notification.config(text="Analyzing...")
-        response = self.GPT.process_prompt_and_get_gpt_response(command=prompt, prefix=command_type)
+
+        response = self.GPT.process_prompt_and_get_gpt_response(command=prompt, prefix="")
 
         # Render response
         self.render_response(response, self.output_mode)
@@ -280,9 +307,21 @@ class App:
         self.is_recording = False
 
     def on_photo(self):
-        self.latest_photo_file_path = os.path.join(self.image_folder, f'{datetime.now().strftime("%H_%M_%S")}.png')
-        frame = take_picture(self.latest_photo_file_path)
-        self.render_picture(frame)
+        if self.test_mode:
+            # enable users select an image from their local machine
+            self.latest_photo_file_path = filedialog.askopenfilename(initialdir="/", title="Select image file",
+                                                                     filetypes=(
+                                                                         ("jpg files", "*.jpg"),
+                                                                         ("jpeg files", "*.jpeg"),
+                                                                         ("png files", "*.png"),
+                                                                         ("all files", "*.*")))
+            frame = cv2.imread(self.latest_photo_file_path)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.render_picture(frame)
+        else:
+            self.latest_photo_file_path = os.path.join(self.image_folder, f'{datetime.now().strftime("%H_%M_%S")}.png')
+            frame = take_picture(self.latest_photo_file_path)
+            self.render_picture(frame)
 
     def render_picture(self, frame):
         if self.picture_window:

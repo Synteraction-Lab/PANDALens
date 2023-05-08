@@ -2,6 +2,7 @@ import os
 import threading
 import time
 from datetime import datetime
+from threading import Lock
 
 import openai
 import tiktoken
@@ -11,7 +12,8 @@ from Storage.writer import append_json_data
 from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
 MAX_TOKENS = 2000
-TEMPERATURE = 0.3
+MODEL_UPPER_TOKEN_LIMITATION = 4096
+TEMPERATURE = 0.4
 
 API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
 
@@ -24,7 +26,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
         print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     if model == "gpt-3.5-turbo":
-        print("Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.")
+        # print("Warning: gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.")
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0301")
     elif model == "gpt-4":
         print("Warning: gpt-4 may change over time. Returning num tokens assuming gpt-4-0314.")
@@ -53,6 +55,11 @@ def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPER
     try:
         openai.api_key = API_KEYS[api_key_idx]
         model_engine = "gpt-3.5-turbo"
+        print(f"\nSent Prompt:\n{sent_prompt}\n")
+        print(f"total token count: {num_tokens_from_messages(sent_prompt)}\n")
+
+        max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - num_tokens_from_messages(sent_prompt))
+
         response = openai.ChatCompletion.create(
             model=model_engine,
             messages=sent_prompt,
@@ -77,6 +84,8 @@ class GPT:
         self.human_history = ""
         self.chat_history = ""
         self.message_list = []
+        self.history_lock = Lock()
+        conversation_idx = 0
 
         self.send_history_mode = ALL_HISTORY
 
@@ -112,8 +121,6 @@ class GPT:
         self.chat_history += response
 
     def process_prompt_and_get_gpt_response(self, command, is_prompt_stored=True, role=ROLE_HUMAN, prefix=""):
-        response = ""
-
         prompt = f"{role} : {prefix}{command}"
         new_message = {"role": role, "content": f"{prefix}{command}"}
         if is_prompt_stored:
@@ -126,11 +133,12 @@ class GPT:
 
             self.latest_request = prompt
 
-            response = generate_gpt_response(self.message_list)
+            if num_tokens_from_messages(self.message_list) < CONCISE_THRESHOLD:
+                response = generate_gpt_response(self.message_list)
+            else:
+                response = self.handle_exception_in_response_generation(new_message)
 
             self.ai_history += response
-
-            print("total token count:", num_tokens_from_messages(self.message_list))
 
             if num_tokens_from_messages(self.message_list) > CONCISE_THRESHOLD / 2:
                 t = threading.Thread(target=self.concise_history, daemon=True)
@@ -138,22 +146,51 @@ class GPT:
 
         except Exception as e:
             print(e)
-            response = "No Response from GPT."
+            response = self.handle_exception_in_response_generation(new_message)
 
+        self.store(role=ROLE_AI, text=response)
+        self.message_list.append({"role": ROLE_AI, "content": response})
+        self.append_chat_history(response)
+        return response
+
+    def handle_exception_in_response_generation(self, new_message):
+        gpt_response = "No Response from GPT."
+        with self.history_lock:
             if num_tokens_from_messages(self.message_list) > CONCISE_THRESHOLD:
                 self.chat_history = self.task_description + self.slim_history
 
                 # Combine important moments with the last few messages
-                last_messages = self.message_list[-3:]
-                self.message_list = [{"role": ROLE_SYSTEM, "content": prompt}] \
-                                    + [{"role": ROLE_HUMAN, "content": f"Here is concise chat context: {response}"}] \
-                                    + last_messages + [new_message]
+                last_messages = []
+                found_last_messages = False
 
-                response = generate_gpt_response(self.message_list)
-        finally:
-            self.store(role=ROLE_AI, text=response)
-            self.append_chat_history(response)
-            return response
+                start_range = max(-5, 1 - len(self.message_list))
+                for i in range(-start_range, 0):
+                    sent_message_lists = [
+                        {"role": ROLE_SYSTEM, "content": self.task_description},
+                        {"role": ROLE_HUMAN, "content": f"Here is concise chat context: {self.slim_history}"},
+                        *self.message_list[i:-1],
+                        new_message,
+                    ]
+
+                    if num_tokens_from_messages(sent_message_lists) <= CONCISE_THRESHOLD:
+                        last_messages = self.message_list[i:-1]
+                        found_last_messages = True
+                        break
+
+                concise_context_messages = [
+                    {"role": ROLE_SYSTEM, "content": self.task_description},
+                    {"role": ROLE_HUMAN, "content": f"Here is concise chat context: {self.slim_history}"},
+                ]
+
+                previous_iteration = self.message_list[max(-3, 1 - len(self.message_list)):-1]
+                if found_last_messages:
+                    self.message_list = concise_context_messages + last_messages + [new_message]
+                else:
+                    self.message_list = concise_context_messages + previous_iteration + [new_message]
+
+                gpt_response = generate_gpt_response(self.message_list)
+
+        return gpt_response
 
     def concise_history(self):
         try:
@@ -161,35 +198,36 @@ class GPT:
             task_type = "concise_history"
             prompt = load_task_description(task_type)
 
-            if num_tokens_from_messages(self.message_list) < CONCISE_THRESHOLD:
-                self.slim_history = self.chat_history
-            else:
-                self.slim_history = self.slim_history + self.latest_request
+            with self.history_lock:
+                if num_tokens_from_messages(self.message_list) < CONCISE_THRESHOLD:
+                    self.slim_history = self.chat_history
+                else:
+                    self.slim_history = self.slim_history + self.latest_request
 
-            if len(self.slim_history) > CONCISE_THRESHOLD * 4 - 50:
-                self.slim_history = self.slim_history[-(CONCISE_THRESHOLD * 4 - 50):-1]
+            if len(self.slim_history) > CONCISE_THRESHOLD * 4:
+                self.slim_history = self.slim_history[-(CONCISE_THRESHOLD * 4):-1]
 
             # Include the content to be summarized
-            sent_prompt = f"{prompt} Here is the chat history to be summarized:\n\n{self.slim_history}"
-
-            if len(sent_prompt) > CONCISE_THRESHOLD * 4:
-                sent_prompt = sent_prompt[-CONCISE_THRESHOLD * 4:-1]
+            sent_prompt = f"{prompt} Here is the our chat history to be summarized: {self.slim_history}"
 
             # Generate a response
             new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
-            print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
+            # print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
             response = generate_gpt_response(new_message, max_tokens=1000)
 
-            self.slim_history = response.lstrip()
-            self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
+            with self.history_lock:
+                self.slim_history = response.lstrip()
+                self.store(role=ROLE_AI, text=self.slim_history, path=self.slim_history_file_name)
 
         except Exception as e:
             print("concise error: ", e)
 
 
 if __name__ == "__main__":
-    gpt = GPT("data/chat_history.json", "data/slim_history.json")
+    # get string of time in format: (year-month-day hour:minute:second) as idx
+    idx = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    gpt = GPT(f"data/{idx}/chat_history.json", f"data/{idx}/slim_history.json")
     gpt.setup_chat_gpt("travel_blog")
 
     # Simulating multiple user inputs
@@ -257,6 +295,18 @@ if __name__ == "__main__":
             "Audio": "loud music, cheering, clapping",
             "comment": "Ending the night with an awesome concert, the atmosphere is incredible!",
             "user behaviors": "the user is dancing and singing along to the music"
+        },
+        {
+            "User Command": "Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+        },
+        {
+            "User Command": "Make it appealing. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+        },
+        {
+            "User Command": "Reorder the paragraph to improve the logic flow. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+        },
+        {
+            "User Command": "Change the writing to appealing twitter. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
         }
     ]
 

@@ -1,6 +1,8 @@
+import multiprocessing
 import os
 import threading
 import tkinter as tk
+from multiprocessing import Process
 
 from Module.Audio.audio_classifier import AudioClassifierRunner
 from Module.Audio.live_transcriber import LiveTranscriber, show_devices
@@ -8,12 +10,14 @@ from Module.Audio.live_transcriber import LiveTranscriber, show_devices
 
 class TranscriberGUI:
     def __init__(self):
+        self.audio_classifier_results = multiprocessing.Queue()
         self.audio_classifier_runner = AudioClassifierRunner(
             model=os.path.join("Module", "Audio", "lite-model_yamnet_classification.tflite"),
-            callback=self.update_score_category)
+            queue=self.audio_classifier_results)
         self.transcriber = LiveTranscriber(device_index=1)
         self.score = None
         self.category_name = None
+
         self.create_gui()
         show_devices()
 
@@ -44,17 +48,22 @@ class TranscriberGUI:
             self.start_button.config(text="Start Recording")
             self.start_recording()
 
-    def update_score_category(self, score, category_name):
+    def update_score_category(self):
+        score, category_name = self.audio_classifier_results.get()
         self.score_label.config(text=f"Score: {score}")
         self.category_label.config(text=f"Category: {category_name}")
+        self.window.after(500, self.update_score_category)
 
     def start_recording(self):
         self.start_button.config(text="Stop Recording", command=self.stop_recording)
+        # self.audio_classifier_runner.stop()
         self.transcriber.start()
         self.update_transcription()
 
     def stop_recording(self):
         self.start_button.config(text="Start Recording", command=self.start_recording)
+        # self.audio_classifier_runner.start()
+
         self.transcriber.stop()
 
     def update_transcription(self):
@@ -64,7 +73,8 @@ class TranscriberGUI:
             self.window.after(500, self.update_transcription)
 
     def run(self):
-        threading.Thread(target=self.audio_classifier_runner.run).start()
+        Process(target=self.audio_classifier_runner.run).start()
+        self.update_score_category()
         self.window.mainloop()
 
 

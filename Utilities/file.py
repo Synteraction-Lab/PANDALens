@@ -5,6 +5,8 @@ from pathlib import Path
 import platform
 from screeninfo import get_monitors
 
+from Utilities.constant import task_description_path
+
 ITEM = "item"
 DETAILS = "details"
 
@@ -46,7 +48,7 @@ def get_second_monitor_original_pos():
 
 
 def get_possible_tasks():
-    dir_name = "./data/task_description"
+    dir_name = task_description_path
     return [f for f in os.listdir(dir_name) if isfile(join(dir_name, f))]
 
 
