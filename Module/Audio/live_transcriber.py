@@ -14,8 +14,7 @@ def show_devices():
     Print a list of available input devices.
     """
     devices = sd.query_devices()
-    for i, device in enumerate(devices):
-        print(i, device['name'])
+    print(devices)
 
 
 class LiveTranscriber:
@@ -99,6 +98,7 @@ class LiveTranscriber:
                 stored_previous_audio = previous_1s_audio
 
     def transcribe(self, file_path):
+        print("Transcribing...")
         audio = whisper.load_audio(file_path)
         original_audio = audio
         audio = whisper.pad_or_trim(audio)
@@ -135,12 +135,11 @@ class LiveTranscriber:
 
 if __name__ == '__main__':
     model_path = "base.en"
-    device_index = 1
-    duration = 60
-    silence_threshold = 0.02
-    overlapping_factor = 0
-
     show_devices()
+    device_index = int(input("Enter device index: "))
+    duration = 60
+    silence_threshold = 0.01
+    overlapping_factor = 0
 
     transcriber = LiveTranscriber(model_path, device_index, duration, silence_threshold, overlapping_factor)
     transcriber.start()

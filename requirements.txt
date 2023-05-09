@@ -26,3 +26,5 @@ transformers~=4.26.1
 requests~=2.28.2
 torch~=1.13.1
 matplotlib~=3.7.1
+mediapipe~=0.9.1.0
+wavio~=0.0.7

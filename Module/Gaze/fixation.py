@@ -1,4 +1,5 @@
 import zmq
+
 ctx = zmq.Context()
 # The REQ talks to Pupil remote and receives the session unique IPC SUB PORT
 pupil_remote = ctx.socket(zmq.REQ)
@@ -18,12 +19,18 @@ pub_port = pupil_remote.recv_string()
 
 subscriber = ctx.socket(zmq.SUB)
 subscriber.connect(f'tcp://{ip}:{sub_port}')
+subscriber.subscribe('gaze.3d.0')
 subscriber.subscribe('fixations')  # receive all gaze messages
+
 
 # we need a serializer
 import msgpack
 
 while True:
     topic, payload = subscriber.recv_multipart()
-    message = msgpack.loads(payload)
-    print(f"{topic}: {message}")
+    print(topic)
+    if topic == "fixations":
+        message = msgpack.loads(payload)
+        print(f"{topic}: {message}")
+    elif topic.startswith(b'gaze.3d.0'):
+        message = msgpack.loads(payload)
