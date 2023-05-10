@@ -209,7 +209,8 @@ class App:
         self.determinate_voice_feedback_process()
         self.notification.config(text="Summarizing...")
         if not self.is_recording:
-            command_type = '{"User Command": "Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }"'
+            command_type = '{"User Command": "Write a full blog based on the previous chat history.\n' \
+                           'Remember: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }"'
             t = threading.Thread(target=self.thread_summarize, args=(command_type,), daemon=True)
             t.start()
 
@@ -263,8 +264,6 @@ class App:
         self.notification.config(text="Analyzing...")
 
         audio = None
-        photo_label = None
-        photo_caption = None
         user_behavior = None
 
         prompt = {}
@@ -272,7 +271,7 @@ class App:
             self.moment_idx += 1
             prompt["no"] = self.moment_idx
             photo_label = get_image_labels(self.latest_photo_file_path)
-            # photo_caption = get_image_caption(self.latest_photo_file_path)
+            photo_caption = get_image_caption(self.latest_photo_file_path)
             if photo_label is not None:
                 prompt["photo_label"] = photo_label
             if photo_caption is not None:
@@ -294,10 +293,7 @@ class App:
         voice_command = self.final_transcription
         prompt["user comments/commands"] = voice_command
 
-        # prompt = '{\"User Command\": ' + voice_command + '}'
-
-
-        response = self.GPT.process_prompt_and_get_gpt_response(command=prompt, prefix="")
+        response = self.GPT.process_prompt_and_get_gpt_response(command=str(prompt))
 
         # Render response
         self.render_response(response, self.output_mode)
@@ -337,8 +333,12 @@ class App:
 
         # Create a new window to display the image
         self.picture_window = tk.Toplevel(self.root)
-        self.picture_window.title("Picture")
+        # self.picture_window.title("Picture")
         self.picture_window.wm_attributes("-topmost", True)
+        # Over direct the window to remove the border
+        self.picture_window.overrideredirect(True)
+        # make the pic window transparent by change its alpha value
+        self.picture_window.wm_attributes("-alpha", 0.8)
         self.picture_window.lift()
         self.picture_window.geometry(
             f"{img.width}x{img.height}+{int((self.root.winfo_screenwidth() - img.width) / 2)}+{int((self.root.winfo_screenheight() - img.height) / 2)}")

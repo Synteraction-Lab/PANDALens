@@ -108,8 +108,8 @@ You can also modify the prompt in this folder to improve the experience.
 - You can use our ring mouse to manipulate the menu. You can use your mouse and keyboard if you use it for desktop setting.
   - To start a new recording, press ``arrow_right`` key on your keyboard or click the right button in the GUI. 
   - To get a summarization or generate full writing, press ``arrow_up`` key on your keyboard or click the top button in the GUI. 
-  - To take a picture, please press ``arrow_down`` key on your keyboard or click the bottom button in the GUI.
-  - To hide/show the content, please press ``arrow_left`` key on your keyboard or click the left button in the GUI.
+  - To take a picture, please press ``arrow_down`` key on your keyboard or click the bottom button in the GUI. If you want to make any comments on the picture, after the picture windows shows up, you can start a new recording and say your comments following the above instructions.
+  - To hide/show the picture window or text, please press ``arrow_left`` key on your keyboard or click the left button in the GUI.
   - You can scroll your mouse wheel to scroll up and down the generated writing.
 
 ### Step 4
