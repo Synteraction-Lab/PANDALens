@@ -27,6 +27,7 @@ from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
 from src.Module.Vision.google_vision import get_image_labels
+from src.Utilities.json import detect_json
 
 
 def play_audio_response(response):
@@ -192,7 +193,7 @@ class App:
         self.determinate_voice_feedback_process()
         self.notification.config(text="Summarizing...")
         if not self.system_config.is_recording:
-            command_type = '{"User Command": "Write a full blog based on the previous chat history.\n' \
+            command_type = '{"User Command": "Write a full blog based on the previous chat history. ' \
                            'Remember: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }"'
             t = threading.Thread(target=self.thread_summarize, args=(command_type,), daemon=True)
             t.start()
@@ -205,6 +206,16 @@ class App:
     def thread_summarize(self, command_type):
         gpt = self.system_config.get_GPT()
         response = gpt.process_prompt_and_get_gpt_response(command=command_type)
+
+        json_response = detect_json(response)
+
+        try:
+            if json_response is not None:
+                response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
+                           f"Revision:\n{json_response['response']['revised parts']}\n"
+        except Exception as e:
+            pass
+
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
@@ -263,14 +274,18 @@ class App:
             photo_label = get_image_labels(self.system_config.latest_photo_file_path)
             photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
             if photo_label is not None:
-                prompt["photo_label"] = photo_label
+                prompt["photo_label"] = photo_label.rstrip()
             if photo_caption is not None:
-                prompt["photo_caption"] = photo_caption
+                prompt["photo_caption"] = photo_caption.rstrip()
 
             self.picture_window.destroy()
             self.picture_window = None
             self.system_config.picture_window_status = False
             self.system_config.set_picture_window_status(False)
+
+            if self.system_config.test_mode:
+                audio = input("Please input the simulated audio in the environment here: ")
+                user_behavior = input("Please input the simulated user behavior in the environment here: ")
 
         if audio is not None:
             prompt["audio"] = audio
@@ -283,6 +298,15 @@ class App:
 
         gpt = self.system_config.get_GPT()
         response = gpt.process_prompt_and_get_gpt_response(command=str(prompt))
+
+        json_response = detect_json(response)
+
+        try:
+            if json_response is not None:
+                response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
+                           f"Questions:\n{json_response['response']['question to users']}\n"
+        except Exception as e:
+            pass
 
         # Render response
         self.render_response(response, self.output_mode)
