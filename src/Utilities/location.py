@@ -2,9 +2,12 @@ import sys
 import threading
 
 import geocoder
-from Foundation import NSObject, NSRunLoop, NSDate
-from CoreLocation import CLLocationManager
+
 from geopy.geocoders import Nominatim
+
+if sys.platform == "darwin":
+    from Foundation import NSObject, NSRunLoop, NSDate
+    from CoreLocation import CLLocationManager
 
 
 class LocationDelegate(NSObject):

@@ -21,8 +21,6 @@ if __name__ == '__main__':
         }
     }"""
 
-
-
     result = detect_json(string)
 
     if result is None:
