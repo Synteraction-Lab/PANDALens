@@ -15,7 +15,9 @@ ssl._create_default_https_context = ssl._create_unverified_context
 class ObjectDetector:
     def __init__(self, simulate=False):
         # load model
-        self.GAZE_SLIDE_WINDOW_SIZE = 45  # Adjust the size according to your frame rate (e.g., 30 FPS = 45 for 1.5 seconds)
+        self.frame_height = None
+        self.frame_width = None
+        self.GAZE_SLIDE_WINDOW_SIZE = 10  # Adjust the size according to your frame rate (e.g., 30 FPS = 45 for 1.5 seconds)
         self.gaze_positions_window = deque(maxlen=self.GAZE_SLIDE_WINDOW_SIZE)
         self.fixation_detected = False
 
@@ -24,7 +26,7 @@ class ObjectDetector:
 
         # set model parameters
         self.model.overrides['conf'] = 0.3  # NMS confidence threshold
-        self.model.overrides['iou'] = 0.5  # NMS IoU threshold
+        self.model.overrides['iou'] = 0.1  # NMS IoU threshold
         self.model.overrides['agnostic_nms'] = False  # NMS class-agnostic
         self.model.overrides['max_det'] = 100  # maximum number of detections per image
         self.model.overrides['verbose'] = False  # print all detections
@@ -55,7 +57,9 @@ class ObjectDetector:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
 
     def detect_fixation(self):
-        frame_height, frame_width = self.cap.read()[1].shape[:2]
+        if self.frame_height is None or self.frame_width is None:
+            return
+        frame_height, frame_width = self.frame_height, self.frame_width
         threshold = 0.1 * min(frame_width, frame_height)
 
         self.gaze_positions_window.append(self.gaze_position)
@@ -87,19 +91,27 @@ class ObjectDetector:
             self.gaze_position = (x, y)
 
     def process_frame(self, frame):
+        #
+        frame = self.find_gaze_object(frame)
+
+        # draw gaze position
+        cv2.circle(frame, self.gaze_position, 10, (0, 0, 255), 2)
+        # draw yellow fixation position
+        cv2.circle(frame, self.fixation_position, 10, (0, 255, 255), 3)
+
+        cv2.imshow('YOLO Object Detection', frame)
+
+    def find_gaze_object(self, frame):
         results = self.model.predict(frame)
         boxes = results[0].boxes
-
         closest_object = None
         closest_distance = float('inf')
         closest_size = 0
-
         # Sort the boxes by whether they contain gaze_position and their area
         sorted_boxes = sorted(zip(boxes.xyxy, boxes.conf, boxes.cls), key=lambda box: (
             not (box[0][0] <= self.gaze_position[0] <= box[0][2] and box[0][1] <= self.gaze_position[1] <= box[0][3]),
             (box[0][2] - box[0][0]) * (box[0][3] - box[0][1])
         ))
-
         for xyxy, conf, cls in sorted_boxes:
             object_label = self.model.model.names[int(cls)]
             # # only consider finer classification for objects that are not people
@@ -120,10 +132,8 @@ class ObjectDetector:
                 closest_object = object_label
                 closest_distance = distance
                 closest_size = (xyxy[2] - xyxy[0]) * (xyxy[3] - xyxy[1])
-
         cv2.putText(frame, f"gaze:{self.gaze_position}, distance: {closest_distance},", (10, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-
         if closest_distance <= self.distance_threshold and closest_object is not None:
             label_text = f"User is looking at a {closest_object}"
             cv2.putText(frame, label_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
@@ -139,60 +149,66 @@ class ObjectDetector:
         else:
             label_text = "User is not looking at any object"
             cv2.putText(frame, label_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-
         render = render_result(model=self.model, image=frame, result=results[0])
-        render = np.array(render.convert('RGB'))
-
-        self.detect_fixation()
+        frame = np.array(render.convert('RGB'))
+        # self.detect_fixation()
         if self.fixation_detected:
-            cv2.putText(render, "Fixation Detected", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-
-        # draw gaze position
-        cv2.circle(render, self.gaze_position, 10, (0, 0, 255), 2)
-
-        cv2.imshow('YOLO Object Detection', render)
+            cv2.putText(frame, "Fixation Detected", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+        return frame
 
     def detect_zoom_in_with_pupil_core(self):
         camera = PupilCamera(frame_format="bgr")
-        gaze_x, gaze_y = None, None
-        fixation_x, fixation_y = None, None
         try:
             while True:
                 recent_world = None
+                gaze_x, gaze_y = None, None
+                gaze_x_list = []
+                gaze_y_list = []
+                fixation_x, fixation_y = None, None
+                # self.gaze_position = None
+                fixation_conf = 0
+                gaze_timestamp = None
+                frame_timestamp = None
                 while camera.has_new_data_available():
                     topic, msg = camera.recv_from_sub()
+                    # print(topic)
+
+                    # if topic.startswith("frame.") and msg["format"] != camera.FRAME_FORMAT:
+                    #     print(
+                    #         f"different frame format ({msg['format']}); "
+                    #         f"skipping frame from {topic}"
+                    #     )
+                    #     continue
 
                     if topic == "fixations":
-                        # print(
-                        #     f"Fixation: Normal Pos: {msg['norm_pos']}, Duration: {msg['duration']}, Confidence: {msg['confidence']}")
-                        fixation_x, fixation_y = msg['norm_pos']
-                        # map gaze position (percentage) to frame size
-
-                    if topic == "gaze.3d.1.":
+                        if msg["confidence"] > fixation_conf:
+                            fixation_conf = msg["confidence"]
+                            fixation_x, fixation_y = msg['norm_pos']
+                    elif topic == "gaze.3d.01.":
+                        # if msg['confidence'] > 0.1:
                         gaze_x, gaze_y = msg['norm_pos']
+                        gaze_x_list.append(gaze_x)
+                        gaze_y_list.append(gaze_y)
 
-                    if topic.startswith("frame.") and msg["format"] != camera.FRAME_FORMAT:
-                        print(
-                            f"different frame format ({msg['format']}); "
-                            f"skipping frame from {topic}"
-                        )
-                        continue
 
-                    if topic == "frame.world":
+                    elif topic == "frame.world":
                         recent_world = np.frombuffer(
                             msg["__raw_data__"][0], dtype=np.uint8
                         ).reshape(msg["height"], msg["width"], 3)
-
                 if recent_world is not None:
                     frame = recent_world
                     frame_height, frame_width = frame.shape[:2]
+                    self.frame_height = frame_height
+                    self.frame_width = frame_width
                     if fixation_x is not None and fixation_y is not None:
                         fixation_y = 1 - fixation_y
                         self.fixation_position = (int(fixation_x * frame_width), int(fixation_y * frame_height))
                         # print(f"Fixation: {self.fixation_position}")
                     if gaze_x is not None and gaze_y is not None:
-                        gaze_y = 1 - gaze_y
+                        gaze_x = float(np.array(gaze_x_list).mean())
+                        gaze_y = 1 - float(np.array(gaze_y_list).mean())
                         self.gaze_position = (int(gaze_x * frame_width), int(gaze_y * frame_height))
+                        # print(f"Gaze: {self.gaze_position} Conf: {conf}")
                         # print(f"Gaze: {self.gaze_position}")
 
                     self.process_frame(frame)
@@ -224,4 +240,4 @@ class ObjectDetector:
 if __name__ == '__main__':
     # Set simulate to False if you use Pupil Core. Set to True to use mouse cursor.
     detector = ObjectDetector(simulate=True)
-    detector.detect_zoom_in()
+    detector.detect_zoom_in_with_pupil_core()

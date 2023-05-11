@@ -98,7 +98,7 @@ You can also modify the prompt in this folder to improve the experience.
 ## Manipulation For Paper Review
 
 ### Step 1
-- Run ``python TravelApp.py``
+- Run ``python main.py``
 
 ### Step 2
 - Set up your device & task, including entering the user_id, selecting task type and output modality, and selecting your source for voice recording.

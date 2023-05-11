@@ -14,6 +14,11 @@ def take_picture(save_path=None):
     # read a frame from the camera
     ret, frame = cap.read()
 
+    # check if frame is captured successfully
+    if not ret:
+        print("Error capturing frame")
+        return None
+
     original_frame = frame.copy()
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -22,11 +27,6 @@ def take_picture(save_path=None):
     if save_path is not None:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         cv2.imwrite(save_path, original_frame)
-
-    # check if frame is captured successfully
-    if not ret:
-        print("Error capturing frame")
-        return None
 
     # release the camera and close the window
     cap.release()

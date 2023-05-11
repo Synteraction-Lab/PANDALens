@@ -7,6 +7,9 @@ import numpy as np
 import sounddevice as sd
 from src.Module.Audio.audio_record import AudioRecord
 from queue import Queue
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def show_devices():
@@ -18,7 +21,7 @@ def show_devices():
 
 
 class LiveTranscriber:
-    def __init__(self, model="base.en", device_index=1, duration=60, silence_threshold=0.02, overlapping_factor=0):
+    def __init__(self, model="small.en", device_index=1, duration=60, silence_threshold=0.02, overlapping_factor=0):
         self.prompt = None
         self.record_thread = None
         self.model = whisper.load_model(model)
@@ -40,11 +43,6 @@ class LiveTranscriber:
         self.audio_record = AudioRecord(channels, sample_rate, int(duration * sample_rate))
 
     def run(self):
-        # buffer_size = int(self.duration * self.audio_record.sampling_rate)
-        # input_length_in_second = float(buffer_size) / self.audio_record.sampling_rate
-        # interval_between_inference = input_length_in_second * (1 - self.overlapping_factor)
-        # pause_time = interval_between_inference * 0.1
-        # last_inference_time = time.time()
 
         self.audio_record.start_recording()
         self.is_recording = True
@@ -57,14 +55,14 @@ class LiveTranscriber:
         recording_started = False
         recording_start_time = 0
 
-        stored_previous_audio = None
+        # stored_previous_audio = None
 
         recording_thread_start_time_now = time.time()
 
         while not self.stop_event.is_set():
             now = time.time()
 
-            if now - recording_thread_start_time_now < 3:
+            if now - recording_thread_start_time_now < 1:
                 time.sleep(1)
                 continue
 
@@ -75,11 +73,11 @@ class LiveTranscriber:
 
             diff_since_start = now - recording_start_time
 
-            if (rms <= self.silence_threshold or diff_since_start >= self.duration-4) and recording_started:
+            if (rms <= self.silence_threshold or diff_since_start >= self.duration - 1) and recording_started:
                 # Save and transcribe the recorded data
                 recording_started = False
 
-                buffer_size = int((diff_since_start + 1.1) * self.audio_record.sampling_rate)
+                buffer_size = int((diff_since_start + 1) * self.audio_record.sampling_rate)
                 data = self.audio_record.read(buffer_size)
 
                 # data = np.concatenate((stored_previous_audio, data))
@@ -95,15 +93,15 @@ class LiveTranscriber:
                 # Start recording
                 recording_started = True
                 recording_start_time = now
-                stored_previous_audio = previous_1s_audio
+                # stored_previous_audio = previous_1s_audio
 
     def transcribe(self, file_path):
-        print("Transcribing...")
+        # print("Transcribing...")
         audio = whisper.load_audio(file_path)
         original_audio = audio
-        audio = whisper.pad_or_trim(audio)
-
-        mel = whisper.log_mel_spectrogram(audio).to(self.model.device)
+        # audio = whisper.pad_or_trim(audio)
+        #
+        # mel = whisper.log_mel_spectrogram(audio).to(self.model.device)
         options = whisper.DecodingOptions(language='en', fp16=False, prompt=self.prompt)
 
         # require the lock here

@@ -16,6 +16,7 @@ class SystemConfig:
         self.transcriber = None
         self.test_mode = False
         self.latest_photo_file_path = None
+        self.last_image_folder_in_test_mode = "/"
 
     def get_final_transcription(self):
         return self.final_transcription

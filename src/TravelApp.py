@@ -1,20 +1,17 @@
 import threading
 import time
 import tkinter as tk
-from datetime import datetime
-from multiprocessing import Process
-from tkinter import filedialog
 
-import cv2
+from multiprocessing import Process
+
 from PIL import Image, ImageTk
 
 import pandas
 
+from src.Command.Parser import parse
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
-from src.Module.Vision.huggingface_query import get_image_caption
-from src.Module.Vision.utilities import take_picture
 
 from src.UI.device_panel import DevicePanel
 from src.UI.widget_generator import get_button
@@ -26,9 +23,6 @@ from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-from src.Module.Vision.google_vision import get_image_labels
-from src.Utilities.json import detect_json
-
 
 def play_audio_response(response):
     response = response.replace("AI:", "")
@@ -39,12 +33,13 @@ def play_audio_response(response):
 
 
 class App:
-    def __init__(self, test_mode=True):
+    def __init__(self, test_mode=False):
         self.picture_window = None
         self.output_mode = None
         self.system_config = SystemConfig()
         self.system_config.set_test_mode(test_mode)
         self.root = tk.Tk()
+        self.root.title("UbiWriter")
         # self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
 
@@ -182,7 +177,7 @@ class App:
         self.record_button.place(relx=0.95, rely=.5, anchor='s')
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-        # self.root.attributes("-fullscreen", True)
+        self.root.attributes("-fullscreen", True)
         self.root.attributes("-alpha", 0.95)
 
     def on_close(self):
@@ -193,9 +188,7 @@ class App:
         self.determinate_voice_feedback_process()
         self.notification.config(text="Summarizing...")
         if not self.system_config.is_recording:
-            command_type = '{"User Command": "Write a full blog based on the previous chat history. ' \
-                           'Remember: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }"'
-            t = threading.Thread(target=self.thread_summarize, args=(command_type,), daemon=True)
+            t = threading.Thread(target=self.thread_summarize, daemon=True)
             t.start()
 
     def determinate_voice_feedback_process(self):
@@ -203,19 +196,9 @@ class App:
         if voice_feedback_process is not None:
             voice_feedback_process.terminate()
 
-    def thread_summarize(self, command_type):
-        gpt = self.system_config.get_GPT()
-        response = gpt.process_prompt_and_get_gpt_response(command=command_type)
-
-        json_response = detect_json(response)
-
-        try:
-            if json_response is not None:
-                response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
-                           f"Revision:\n{json_response['response']['revised parts']}\n"
-        except Exception as e:
-            pass
-
+    def thread_summarize(self):
+        summarizingCommand = parse("summary", self.system_config)
+        response = summarizingCommand.execute()
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
@@ -262,51 +245,12 @@ class App:
     def thread_new_recording_command(self, command_type):
         self.notification.config(text="Analyzing...")
 
-        audio = None
-        user_behavior = None
-
-        prompt = {}
-        if self.system_config.picture_window_status:
-            moment_idx = self.system_config.get_moment_idx()
-            moment_idx += 1
-            self.system_config.set_moment_idx(moment_idx)
-            prompt["no"] = moment_idx
-            photo_label = get_image_labels(self.system_config.latest_photo_file_path)
-            photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
-            if photo_label is not None:
-                prompt["photo_label"] = photo_label.rstrip()
-            if photo_caption is not None:
-                prompt["photo_caption"] = photo_caption.rstrip()
-
+        if self.picture_window:
             self.picture_window.destroy()
             self.picture_window = None
-            self.system_config.picture_window_status = False
-            self.system_config.set_picture_window_status(False)
 
-            if self.system_config.test_mode:
-                audio = input("Please input the simulated audio in the environment here: ")
-                user_behavior = input("Please input the simulated user behavior in the environment here: ")
-
-        if audio is not None:
-            prompt["audio"] = audio
-        if user_behavior is not None:
-            prompt["user_behavior"] = user_behavior
-
-        # Transcribe voice command and get response from GPT
-        voice_command = self.system_config.final_transcription
-        prompt["user comments/commands"] = voice_command
-
-        gpt = self.system_config.get_GPT()
-        response = gpt.process_prompt_and_get_gpt_response(command=str(prompt))
-
-        json_response = detect_json(response)
-
-        try:
-            if json_response is not None:
-                response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
-                           f"Questions:\n{json_response['response']['question to users']}\n"
-        except Exception as e:
-            pass
+        newRecordingCommand = parse("new", self.system_config)
+        response = newRecordingCommand.execute()
 
         # Render response
         self.render_response(response, self.output_mode)
@@ -316,23 +260,9 @@ class App:
         self.system_config.is_recording = False
 
     def on_photo(self):
-        if self.system_config.get_test_mode():
-            # enable users select an image from their local machine
-            latest_photo_file_path = filedialog.askopenfilename(initialdir="/", title="Select image file",
-                                                                filetypes=(
-                                                                    ("jpg files", "*.jpg"),
-                                                                    ("jpeg files", "*.jpeg"),
-                                                                    ("png files", "*.png"),
-                                                                    ("all files", "*.*")))
-            self.system_config.set_latest_photo_file_path(latest_photo_file_path)
-            frame = cv2.imread(latest_photo_file_path)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            self.render_picture(frame)
-        else:
-            image_folder = self.system_config.get_image_folder()
-            latest_photo_file_path = os.path.join(image_folder, f'{datetime.now().strftime("%H_%M_%S")}.png')
-            self.system_config.set_latest_photo_file_path(latest_photo_file_path)
-            frame = take_picture(latest_photo_file_path)
+        photoCommand = parse("photo", self.system_config)
+        frame = photoCommand.execute()
+        if frame is not None:
             self.render_picture(frame)
 
     def render_picture(self, frame):
