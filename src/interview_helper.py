@@ -1,11 +1,11 @@
 from datetime import datetime
+
+import pyttsx3
 import whisper
 import ssl
 import openai
 from src.Storage.writer import append_json_data
 import os
-from gtts import gTTS
-from playsound import playsound
 
 LOW_INTELLIGENCE = "low"
 HIGH_INTELLIGENCE = "high"
@@ -16,6 +16,14 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 audio_file = "interview.m4a"
 interview_file = "interview.txt"
+
+
+def play_audio_response(response):
+    response = response.replace("AI:", "")
+    speech_engine = pyttsx3.init(debug=True)
+    speech_engine.setProperty('rate', 120)
+    speech_engine.say(response)
+    speech_engine.runAndWait()
 
 
 class App:
@@ -32,6 +40,7 @@ class App:
 
         _ = self.get_response_from_gpt(self.chat_history, is_stored=False)
         self.transcribe_and_send_to_gpt()
+        self.output = VISUAL_OUTPUT
 
     def store(self, text):
         data = str(datetime.now()) + ": " + text.lstrip() + "\n"
@@ -74,15 +83,10 @@ class App:
         response = completion.choices[0].text
         return response
 
-
     def render_response(self, response):
         if self.output_mode == AUDIO_OUTPUT:
             response = response.replace("AI:", "")
-            voice_response = gTTS(text=response, lang='en', slow=False)
-            save_path = os.path.join(self.folder_path, "voice_reponse.mp3")
-            voice_response.save(save_path)
-            # Playing the converted file
-            playsound(save_path)
+            play_audio_response(response)
         else:
             print(response.lstrip())
 

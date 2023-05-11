@@ -10,7 +10,7 @@ from src.Module.LLM.GPT import GPT
 
 from src.UI.device_panel import DevicePanel
 from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
-from src.UI import get_button
+from src.UI.widget_generator import get_button
 
 from time import sleep
 import whisper

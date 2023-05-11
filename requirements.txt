@@ -20,3 +20,6 @@ mediapipe~=0.9.1.0
 wavio~=0.0.7
 Pillow~=9.5.0
 pyttsx3~=2.90
+future~=0.18.3
+geocoder~=1.38.1
+geopy~=2.3.0

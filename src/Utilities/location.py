@@ -8,11 +8,12 @@ from geopy.geocoders import Nominatim
 
 
 class LocationDelegate(NSObject):
+    location = None
+    location_updated_event = None
+
     def init(self):
-        self = super(LocationDelegate, self).init()
-        if self:
-            self.location = None
-            self.location_updated_event = threading.Event()
+        self.location = None
+        self.location_updated_event = threading.Event()
         return self
 
     def locationManager_didUpdateToLocation_fromLocation_(self, manager, newLocation, oldLocation):
@@ -21,15 +22,14 @@ class LocationDelegate(NSObject):
         if oldLocation is None:
             pass
         elif (
-                newLocation.coordinate().longitude == oldLocation.coordinate().longitude
-                and newLocation.coordinate().latitude == oldLocation.coordinate().latitude
-                and newLocation.horizontalAccuracy() == oldLocation.horizontalAccuracy()
+            newLocation.coordinate().longitude == oldLocation.coordinate().longitude
+            and newLocation.coordinate().latitude == oldLocation.coordinate().latitude
+            and newLocation.horizontalAccuracy() == oldLocation.horizontalAccuracy()
         ):
             return
 
         geolocator = Nominatim(user_agent="UbiLoc")
         self.location = geolocator.reverse(f"{newLocation.coordinate().latitude}, {newLocation.coordinate().longitude}")
-        # print(self.location.address)
         manager.stopUpdatingLocation()
         self.location_updated_event.set()
 
@@ -71,7 +71,7 @@ def get_current_location_based_on_ip():
 
 
 def get_current_location():
-    # run the blow code if the system is macOS
+    # run the below code if the system is macOS
     if sys.platform == "darwin":
         return get_current_location_macos()
     else:
