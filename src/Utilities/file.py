@@ -5,7 +5,7 @@ from pathlib import Path
 import platform
 from screeninfo import get_monitors
 
-from Utilities.constant import task_description_path
+from src.Utilities.constant import task_description_path
 
 ITEM = "item"
 DETAILS = "details"

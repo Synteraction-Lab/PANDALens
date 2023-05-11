@@ -5,7 +5,7 @@ import wavio as wv
 import whisper
 import numpy as np
 import sounddevice as sd
-from Module.Audio.audio_record import AudioRecord
+from src.Module.Audio.audio_record import AudioRecord
 from queue import Queue
 
 

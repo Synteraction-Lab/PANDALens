@@ -6,17 +6,17 @@ from multiprocessing import Process
 import pandas
 import pyperclip
 
-from Module.LLM.GPT import GPT
+from src.Module.LLM.GPT import GPT
 
-from UI.device_panel import DevicePanel
-from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
-from UI.widget_generator import get_button
+from src.UI.device_panel import DevicePanel
+from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
+from src.UI import get_button
 
 from time import sleep
 import whisper
 
-from Module.Audio.AudioCapture import AudioCapture
-from Utilities.clipboard import copy_content, get_clipboard_content
+from src.Module.Audio.AudioCapture import AudioCapture
+from src.Utilities.clipboard import copy_content, get_clipboard_content
 
 import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
@@ -79,7 +79,7 @@ class App:
                 print("Config file has an error!")
 
         # Set up path
-        self.folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
+        self.folder_path = os.path.join(os.path.join("../data", "recordings"), pid_num)
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
         chat_history_file_name = os.path.join(self.folder_path, chat_file)
         slim_history_file_name = os.path.join(self.folder_path, slim_history_file)

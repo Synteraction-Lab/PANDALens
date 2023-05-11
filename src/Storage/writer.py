@@ -1,7 +1,7 @@
 import json
 import os
 
-from Utilities.file import is_file_exists, ITEM, DETAILS
+from src.Utilities.file import is_file_exists, ITEM, DETAILS
 
 
 def append_json_data(file_name, new_data):

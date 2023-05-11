@@ -7,9 +7,9 @@ from threading import Lock
 import openai
 import tiktoken
 
-from Storage.reader import load_task_description
-from Storage.writer import append_json_data
-from Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
+from src.Storage.reader import load_task_description
+from src.Storage.writer import append_json_data
+from src.Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
 
 MAX_TOKENS = 2000
 MODEL_UPPER_TOKEN_LIMITATION = 4096

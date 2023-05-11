@@ -6,7 +6,7 @@ data/recordings
 data/device_config.csv
 data/audio/*
 data/test_data/*
-Module/LLM/keys.py
+src/Module/LLM/keys.py
 
 # System Files
 .DS_Store

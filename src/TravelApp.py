@@ -10,24 +10,22 @@ from PIL import Image, ImageTk
 
 import pandas
 
-from Module.Audio.live_transcriber import LiveTranscriber, show_devices
-from Module.LLM.GPT import GPT
-from Module.Vision.huggingface_query import get_image_caption
-from Module.Vision.utilities import take_picture
+from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
+from src.Module.LLM.GPT import GPT
+from src.Module.Vision.huggingface_query import get_image_caption
+from src.Module.Vision.utilities import take_picture
 
-from UI.device_panel import DevicePanel
-from Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
-    image_folder
-from UI.widget_generator import get_button
-
-import whisper
+from src.UI.device_panel import DevicePanel
+from src.UI.widget_generator import get_button
+from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
+    image_folder, project_root
 
 import os
 from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-from Module.Vision.google_vision import get_image_labels
+from src.Module.Vision.google_vision import get_image_labels
 
 
 def play_audio_response(response):
@@ -112,11 +110,6 @@ class App:
     def on_press(self, key):
         if str(key) == "'.'":
             pass
-            # keyboard = Controller()
-            # keyboard.press(Key.cmd)
-            # keyboard.press(Key.tab)
-            # keyboard.release(Key.tab)
-            # keyboard.release(Key.cmd)
         elif key == Key.left:
             self.hide_show_text()
         elif key == Key.up:
@@ -159,43 +152,44 @@ class App:
         self.root.configure(bg='black')
         self.is_hidden_text = False
         self.manipulation_frame = tk.Frame(self.root, bg='black')
-        self.manipulation_frame.grid_columnconfigure(0, weight=0)
-        self.manipulation_frame.grid_columnconfigure(2, weight=1)
-        self.manipulation_frame.grid_columnconfigure(1, weight=2)
-        self.manipulation_frame.grid_rowconfigure(0, weight=0)
-        self.manipulation_frame.grid_rowconfigure(2, weight=1)
-        self.manipulation_frame.grid_rowconfigure(1, weight=2)
-        self.text_frame = tk.Frame(self.manipulation_frame, bg='black', background="black")
-        self.text_frame.grid(row=1, column=1, sticky="NSEW")
-        self.text_frame.grid_columnconfigure(0, weight=1)
-        self.text_frame.grid_rowconfigure(0, weight=1)
+        self.manipulation_frame.place(relx=0.5, rely=0.5, anchor='center')
+        self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
+
+        self.text_frame = tk.Frame(self.manipulation_frame, bg='black', background="black", bd=0)
+        self.text_frame.place(relx=0.5, rely=0.5, anchor='center')
+        self.text_frame.place_configure(relx=0.5, rely=0.5, relwidth=0.8, relheight=0.8)
+
+        # maek the text border black
         self.text_widget = tk.Text(self.text_frame, height=10, width=50, fg='green', bg='black', font=('Arial', 40),
-                                   spacing1=10, spacing2=20, wrap="word")
+                                   spacing1=10, spacing2=20, wrap="word", highlightbackground='black',
+                                   highlightcolor='black')
+        self.text_widget.place(relwidth=1.0, relheight=1.0)
+
         self.last_y = None
         self.notification = tk.Label(self.root,
-                                     text="Use Arrows on your keyboard to manipulate: Up for Summarization, Right for Recording, Left for Hide/Show text, Down for Resize",
+                                     text="",
                                      fg='green', bg='black', font=('Arial', 20))
-        self.text_widget.insert(tk.END, "Welcome to use this system to record your idea.")
-        self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black')
-        self.text_widget.config(yscrollcommand=self.scrollbar.set)
-        self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        button = tk.Button
+        self.notification.place(relx=0.5, y=20, anchor='center')
+
+        self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black', troughcolor='black',
+                                      activebackground='black', highlightbackground='black', highlightcolor='black',
+                                      elementborderwidth=0, width=0)
+        self.scrollbar.place(relx=1.0, relheight=1.0, anchor='ne', width=20)
+        self.scrollbar.place_forget()
+
         self.top_button = get_button(self.manipulation_frame, text="Summarize", fg_color="green",
                                      command=self.on_summarize)
+        self.top_button.place(relx=0.5, rely=0.05, anchor='n')
+
         self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
                                       command=self.hide_show_text)
-        self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green",
-                                       command=self.on_photo)
-        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green",
-                                        command=self.on_new)
-        self.text_frame.grid(row=1, column=1, sticky="NSEW")
-        self.notification.pack()
-        self.top_button.grid(row=0, column=1, pady=5)
-        self.left_button.grid(row=1, column=0, padx=5)
-        self.record_button.grid(row=1, column=2, padx=5)
-        self.photo_button.grid(row=2, column=1, pady=5)
-        self.manipulation_frame.pack(fill="both", expand=True)
+        self.left_button.place(relx=0.05, rely=0.5, anchor='w')
+
+        self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green", command=self.on_photo)
+        self.photo_button.place(relx=0.5, rely=0.95, anchor='e')
+
+        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green", command=self.on_new)
+        self.record_button.place(relx=0.95, rely=.5, anchor='s')
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         # self.root.attributes("-fullscreen", True)
@@ -235,10 +229,12 @@ class App:
             self.text_widget.delete(1.0, tk.END)
             self.left_button.configure(text="Show")
             self.determinate_voice_feedback_process()
+            self.scrollbar.place()
         else:
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.insert(tk.END, self.stored_text_widget_content)
             self.left_button.configure(text="Hide")
+            self.scrollbar.place_forget()
 
         self.is_hidden_text = not self.is_hidden_text
 
@@ -260,7 +256,7 @@ class App:
             self.photo_button.grid(row=2, column=1, padx=5)
             self.record_button.grid(row=1, column=2, pady=5)
 
-    def thread_transcribe_and_render(self, command_type):
+    def thread_new_recording_command(self, command_type):
         self.notification.config(text="Analyzing...")
 
         audio = None
@@ -280,16 +276,12 @@ class App:
             self.picture_window.destroy()
             self.picture_window = None
 
-            # command_type = f'For this picture: "Labels: [{photo_label}]", ' \
-            #                f' I want to comment that: '
-
         if audio is not None:
             prompt["audio"] = audio
         if user_behavior is not None:
             prompt["user_behavior"] = user_behavior
 
         # Transcribe voice command and get response from GPT
-        # voice_command = self.transcribe_voice_command()
         voice_command = self.final_transcription
         prompt["user comments/commands"] = voice_command
 
@@ -354,18 +346,13 @@ class App:
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
             self.record_button.configure(text="Stop")
             self.start_recording()
-            # self.audio_capture = AudioCapture(self.audio_file_name, self.audio_device_idx)
-            # self.audio_capture.start_recording()
             self.is_recording = True
         else:
             self.stop_recording()
-            # if self.audio_capture is not None:
-            #     self.audio_capture.stop_recording()
-            #     sleep(0.5)
 
             command_type = ""
 
-            t = threading.Thread(target=self.thread_transcribe_and_render, args=(command_type,), daemon=True)
+            t = threading.Thread(target=self.thread_new_recording_command, args=(command_type,), daemon=True)
             t.start()
             self.record_button.configure(text="Record")
 
@@ -385,19 +372,10 @@ class App:
         if not self.transcriber.stop_event.is_set():
             self.root.after(100, self.update_transcription)
 
-    def transcribe_voice_command(self):
-        # transcribe audio to text
-        self.notification.config(text="start transcribing")
-        model = whisper.load_model("base.en")
-        result = model.transcribe(self.audio_file_name)
-        command = result['text']
-        self.render_response(command, VISUAL_OUTPUT)
-        return command
-
     def render_response(self, response, output_mode):
-        print(response.lstrip())
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, response.lstrip())
+        self.scrollbar.place()
         if output_mode == AUDIO_OUTPUT:
             self.voice_feedback_process = Process(target=play_audio_response, args=(response,))
             self.voice_feedback_process.start()

@@ -1,8 +1,5 @@
 import cv2
 import os
-import numpy as np
-
-from Utilities.file import check_saving_path
 
 
 def take_picture(save_path=None):

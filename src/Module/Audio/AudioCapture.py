@@ -2,7 +2,7 @@ import subprocess
 from time import sleep
 import os
 
-from Utilities.file import remove_file, get_system_name
+from src.Utilities.file import remove_file, get_system_name
 
 
 class AudioCapture:

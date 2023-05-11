@@ -1,11 +1,10 @@
 import multiprocessing
 import os
-import threading
 import tkinter as tk
 from multiprocessing import Process
 
-from Module.Audio.audio_classifier import AudioClassifierRunner
-from Module.Audio.live_transcriber import LiveTranscriber, show_devices
+from src.Module.Audio.audio_classifier import AudioClassifierRunner
+from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 
 
 class TranscriberGUI:

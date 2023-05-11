@@ -1,6 +1,3 @@
-import json
-
-
 def detect_json(string):
     start_index = string.find('{')
     end_index = string.rfind('}')

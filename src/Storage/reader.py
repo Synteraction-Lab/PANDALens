@@ -1,6 +1,6 @@
 import os
 
-from Utilities.constant import task_description_path
+from src.Utilities.constant import task_description_path
 
 
 def read_file(file_name):

@@ -1,4 +1,4 @@
-from UI.UI_config import COLOR_THEME
+from src.UI.UI_config import COLOR_THEME
 # translate color to the theme (ttkbootstrap)'s color name
 
 # color_theme = {'blue': 'primary',

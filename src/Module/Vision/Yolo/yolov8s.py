@@ -1,9 +1,10 @@
 import urllib
+from collections import deque
 
 import cv2
 import numpy as np
 from ultralyticsplus import YOLO, render_result
-from Module.Gaze.frame_stream import PupilCamera
+from src.Module.Gaze.frame_stream import PupilCamera
 import json
 
 import ssl
@@ -14,6 +15,10 @@ ssl._create_default_https_context = ssl._create_unverified_context
 class ObjectDetector:
     def __init__(self, simulate=False):
         # load model
+        self.GAZE_SLIDE_WINDOW_SIZE = 45  # Adjust the size according to your frame rate (e.g., 30 FPS = 45 for 1.5 seconds)
+        self.gaze_positions_window = deque(maxlen=self.GAZE_SLIDE_WINDOW_SIZE)
+        self.fixation_detected = False
+
         self.prev_object = None
         self.model = YOLO('ultralyticsplus/yolov8s')
 
@@ -48,6 +53,24 @@ class ObjectDetector:
         cv2.namedWindow('YOLO Object Detection')
         if simulate:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
+
+    def detect_fixation(self):
+        frame_height, frame_width = self.cap.read()[1].shape[:2]
+        threshold = 0.1 * min(frame_width, frame_height)
+
+        self.gaze_positions_window.append(self.gaze_position)
+
+        if len(self.gaze_positions_window) < self.GAZE_SLIDE_WINDOW_SIZE:
+            return
+
+        x_positions, y_positions = zip(*self.gaze_positions_window)
+        min_x, max_x = min(x_positions), max(x_positions)
+        min_y, max_y = min(y_positions), max(y_positions)
+
+        area_width = max_x - min_x
+        area_height = max_y - min_y
+
+        self.fixation_detected = area_width <= threshold and area_height <= threshold
 
     def map_imagenet_id(self):
         url = "https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json"
@@ -119,6 +142,10 @@ class ObjectDetector:
 
         render = render_result(model=self.model, image=frame, result=results[0])
         render = np.array(render.convert('RGB'))
+
+        self.detect_fixation()
+        if self.fixation_detected:
+            cv2.putText(render, "Fixation Detected", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
 
         # draw gaze position
         cv2.circle(render, self.gaze_position, 10, (0, 0, 255), 2)

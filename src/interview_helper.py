@@ -2,7 +2,7 @@ from datetime import datetime
 import whisper
 import ssl
 import openai
-from Storage.writer import append_json_data
+from src.Storage.writer import append_json_data
 import os
 from gtts import gTTS
 from playsound import playsound
@@ -21,7 +21,7 @@ interview_file = "interview.txt"
 class App:
     def __init__(self, user_id="u01", level=HIGH_INTELLIGENCE):
         self.is_recording = False
-        self.folder_path = os.path.join("data", user_id)
+        self.folder_path = os.path.join("../data", user_id)
         self.audio_file_name = os.path.join(self.folder_path, audio_file)
         self.interview_file_name = os.path.join(self.folder_path, interview_file)
         self.intelligent_level = level
