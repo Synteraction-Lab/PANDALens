@@ -8,7 +8,8 @@ def detect_json(string):
         return None
     try:
         return json.loads(string[start_index:end_index + 1])
-    except ValueError:
+    except ValueError as v:
+        print(v)
         return None
 
 

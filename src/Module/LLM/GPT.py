@@ -10,10 +10,11 @@ import tiktoken
 from src.Storage.reader import load_task_description
 from src.Storage.writer import append_json_data
 from src.Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
+from src.Utilities.json import detect_json
 
 MAX_TOKENS = 2000
 MODEL_UPPER_TOKEN_LIMITATION = 4096
-TEMPERATURE = 0.4
+TEMPERATURE = 0.5
 
 API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
 
@@ -97,7 +98,7 @@ class GPT:
         self.chat_history = self.task_description
         self.human_history = ""
         self.ai_history = ""
-        initial_message = {"role": ROLE_SYSTEM, "content": self.task_description}
+        initial_message = {"role": ROLE_HUMAN, "content": self.task_description}
         self.message_list.append(initial_message)
 
     def store(self, role=ROLE_HUMAN, text=None, path=None):
@@ -281,35 +282,29 @@ if __name__ == "__main__":
             "user behaviors": "the user is using a fork to cut a piece of food and placing it in their mouth"
         },
         {
-            "no": 7,
-            "label": "City 96% Skyline 94% Urban 92% Architecture 90% Skyscraper 88% Night 86% Lights 84% Modern 82% Travel 80% Downtown 78% Buildings 76% Reflection 74% River 72%",
-            "Caption": "A stunning city skyline at night with a river in the foreground",
-            "Audio": "ambient city noises, distant car honks",
-            "comment": "This city is breathtaking at night, the skyline looks like a postcard!",
-            "user behaviors": "the user is taking multiple pictures and pointing at a specific building"
-        },
-        {
-            "no": 8,
-            "label": "Concert 94% Music 92% Stage 90% Performance 88% Band 86% Audience 84% Lights 82% Entertainment 80% Singing 78% Live 76% Event 74% Party 72%",
-            "Caption": "A lively concert with a band performing on stage",
-            "Audio": "loud music, cheering, clapping",
-            "comment": "Ending the night with an awesome concert, the atmosphere is incredible!",
-            "user behaviors": "the user is dancing and singing along to the music"
-        },
-        {
             "User Command": "Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
         },
         {
-            "User Command": "Make it appealing. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+            "user comments/commands": "Make it appealing.",
         },
         {
-            "User Command": "Reorder the paragraph to improve the logic flow. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+            "user comments/commands": "Reorder the paragraph to improve the logic flow.}",
         },
         {
-            "User Command": "Change the writing to appealing twitter. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+            "user comments/commands": "Change the writing to appealing twitter.}",
         }
     ]
 
     for user_input in user_inputs:
         response = gpt.process_prompt_and_get_gpt_response(command=str(user_input))
-        print("GPT Response:", response)
+        print("GPT Response:")
+        json_response = detect_json(response)
+        try:
+            if json_response is not None:
+                print(json_response)
+            else:
+                print(response)
+        except Exception as e:
+            pass
+
+

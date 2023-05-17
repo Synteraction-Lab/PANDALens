@@ -3,7 +3,6 @@ import os
 
 from google.cloud import vision
 
-
 def get_image_labels(path):
     # Instantiates a client
     client = vision.ImageAnnotatorClient()
@@ -21,7 +20,7 @@ def get_image_labels(path):
     response = client.label_detection(image=image)
     labels = response.label_annotations
 
-    label_str = "Labels: "
+    label_str = ""
 
     # Print out the labels detected in the image
     for label in labels:
@@ -52,7 +51,7 @@ def get_image_texts(path):
             largest_area = area
             largest_text = text.description
 
-    return "Text: " + str(largest_text)
+    return "" + str(largest_text)
 
 if __name__ == '__main__':
     file_path = '/Users/Vincent/Downloads/panda.png'

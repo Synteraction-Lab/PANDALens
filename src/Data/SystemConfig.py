@@ -1,8 +1,71 @@
+import multiprocessing
 import os
+import threading
+
+from src.Module.Audio.audio_classifier import AudioClassifierRunner
+from src.Module.Vision.Yolo.yolov8s import ObjectDetector
+
+interesting_audioset_categories = [
+    'Music',
+    # 'Speech',
+    'Animal',
+    'Vehicle',
+    'Natural sounds',
+    # 'Human sounds',
+    'Musical instrument',
+    'Laughter',
+    'Thunderstorm',
+    'Fireworks',
+    'Applause',
+    'Babies crying',
+    'Footsteps',
+    'Water sounds',
+    'Wind',
+    # 'Typing',
+    'Door',
+    'Bird',
+    'Dog',
+    'Cat',
+    'Alarm',
+    'Phone ring',
+    'Chainsaw',
+    'Rain',
+    'Ocean waves',
+    'Train',
+    'Airplane',
+    'Helicopter',
+    'Car',
+    'Motorcycle',
+    'Bicycle',
+    'Siren',
+    'Church bells',
+    'Clock alarm',
+    'Cooking and kitchen sounds',
+    'Computer keyboard',
+    'Camera shutter',
+    'Crackling fire',
+    'Screaming',
+    'Whispering',
+    'Guitar',
+    'Piano',
+    'Violin',
+    'Drum',
+    'Trumpet',
+    'Saxophone',
+    'Harmonica',
+    'Cello',
+    'Choir singing',
+    'Rapping',
+    'Beatboxing',
+    'Humming'
+]
 
 
 class SystemConfig:
     def __init__(self):
+        self.vision_detector = None
+        self.audio_classifier_runner = None
+        self.audio_classifier_results = None
         self.final_transcription = ""
         self.previous_transcription = ""
         self.picture_window_status = False
@@ -97,3 +160,28 @@ class SystemConfig:
 
     def set_latest_photo_file_path(self, image_path):
         self.latest_photo_file_path = image_path
+
+    def set_bg_audio_analysis(self):
+        self.audio_classifier_results = multiprocessing.Queue()
+        self.audio_classifier_runner = AudioClassifierRunner(
+            model=os.path.join("src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
+            queue=self.audio_classifier_results)
+
+        multiprocessing.Process(target=self.audio_classifier_runner.run).start()
+
+    def get_bg_audio_analysis(self):
+        return self.audio_classifier_runner()
+
+    def get_bg_audio_analysis_result(self):
+        score, category_name = None, None
+        while not self.audio_classifier_results.empty():
+            score, category_name = self.audio_classifier_results.get()
+        return score, category_name
+
+    def get_bg_audio_interesting_categories(self):
+        return interesting_audioset_categories
+
+    def set_vision_analysis(self):
+        self.vision_detector = ObjectDetector(simulate=False, cv_imshow=False)
+        self.thread_vision = threading.Thread(target=self.vision_detector.run).start()
+

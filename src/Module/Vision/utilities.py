@@ -33,3 +33,9 @@ def take_picture(save_path=None):
 
     # return the captured frame
     return frame
+
+
+def compare_histograms(image1, image2):
+    hist1 = cv2.calcHist([image1], [0], None, [256], [0, 256])
+    hist2 = cv2.calcHist([image2], [0], None, [256], [0, 256])
+    return cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)

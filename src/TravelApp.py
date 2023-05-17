@@ -23,6 +23,8 @@ from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
+from src.test import compare_histograms
+
 
 def play_audio_response(response):
     response = response.replace("AI:", "")
@@ -34,6 +36,7 @@ def play_audio_response(response):
 
 class App:
     def __init__(self, test_mode=False):
+        self.previous_vision_frame = None
         self.picture_window = None
         self.output_mode = None
         self.system_config = SystemConfig()
@@ -51,8 +54,14 @@ class App:
         # Set up keyboard and mouse listener
         self.start_listener()
 
+        self.system_config.set_bg_audio_analysis()
+
+        self.system_config.set_vision_analysis()
+
         # Pack and run the main UI
         self.pack_layout()
+        self.start_bg_audio_analysis()
+        self.start_vision_analysis()
 
         self.root.mainloop()
 
@@ -151,10 +160,21 @@ class App:
         self.text_widget.place(relwidth=1.0, relheight=1.0)
 
         self.last_y = None
+
         self.notification = tk.Label(self.root,
                                      text="",
                                      fg='green', bg='black', font=('Arial', 20))
-        self.notification.place(relx=0.5, y=20, anchor='center')
+        self.notification.place(relx=0.5, rely=0.1, anchor='center')
+
+        self.audio_detector_notification = tk.Label(self.root,
+                                                    text="",
+                                                    fg='green', bg='black', font=('Arial', 20))
+        self.audio_detector_notification.place(relx=0, rely=0.1, anchor='w')
+
+        self.vision_detector_notification = tk.Label(self.root,
+                                                     text="",
+                                                     fg='green', bg='black', font=('Arial', 20))
+        self.vision_detector_notification.place(relx=1, rely=0.1, anchor='center')
 
         self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black', troughcolor='black',
                                       activebackground='black', highlightbackground='black', highlightcolor='black',
@@ -208,6 +228,7 @@ class App:
             self.picture_window.destroy()
             self.picture_window = None
             self.system_config.picture_window_status = False
+            self.update_vision_analysis()
             return
 
         if not self.is_hidden_text:
@@ -258,6 +279,7 @@ class App:
 
         # Enable new recording
         self.system_config.is_recording = False
+        self.update_vision_analysis()
 
     def on_photo(self):
         photoCommand = parse("photo", self.system_config)
@@ -274,7 +296,7 @@ class App:
         img = Image.fromarray(frame)
 
         # Resize the image to 1/4 of its original size
-        img = img.resize((int(img.width / 4), int(img.height / 4)))
+        img = img.resize((int(img.width / 2), int(img.height / 2)))
 
         img_tk = ImageTk.PhotoImage(img)
 
@@ -330,6 +352,59 @@ class App:
             self.system_config.set_previous_transcription(voice_transcriber.full_text)
         if not voice_transcriber.stop_event.is_set():
             self.root.after(100, self.update_transcription)
+
+    def start_bg_audio_analysis(self):
+        self.update_bg_audio_analysis()
+
+    def start_vision_analysis(self):
+        self.update_vision_analysis()
+
+    def update_bg_audio_analysis(self):
+        score, category = self.system_config.get_bg_audio_analysis_result()
+        if category is not None:
+            if category in self.system_config.get_bg_audio_interesting_categories():
+                self.audio_detector_notification.config(text=f"Detected your surrounding audio: {category}. "
+                                                             f"Any comments?")
+                self.root.after(5000, self.clear_audio_notification)
+            else:
+                self.clear_audio_notification()
+        else:
+            self.clear_audio_notification()
+
+    def clear_audio_notification(self):
+        self.audio_detector_notification.config(text="")
+        self.root.after(500, self.update_bg_audio_analysis)
+
+    def update_vision_analysis(self):
+        if self.picture_window:
+            return
+        frame_sim = 0
+        self.zoom_in = self.system_config.vision_detector.zoom_in
+        self.closest_object = self.system_config.vision_detector.closest_object
+        self.person_count = self.system_config.vision_detector.person_count
+        self.fixation_detected = self.system_config.vision_detector.fixation_detected
+        current_frame = self.system_config.vision_detector.original_frame
+        norm_pos = self.system_config.vision_detector.norm_gaze_position
+
+        if norm_pos is not None:
+            norm_pos_x, norm_pos_y = norm_pos
+            print(self.zoom_in, self.closest_object, self.person_count, self.fixation_detected, norm_pos_x, norm_pos_y)
+
+        if self.previous_vision_frame is not None:
+            frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
+            print(frame_sim)
+
+        if (self.zoom_in or self.fixation_detected) and frame_sim < 0.6 and norm_pos is not None:
+            self.vision_detector_notification.place(relx=norm_pos_x, rely=norm_pos_y, anchor=tk.CENTER)
+            self.vision_detector_notification.config(text=f"Do you want to take a picture?")
+            self.root.after(5000, self.clear_vision_notification)
+            self.previous_vision_frame = current_frame
+        else:
+            self.clear_vision_notification()
+
+    def clear_vision_notification(self):
+        self.vision_detector_notification.config(text="")
+        self.root.after(500, self.update_vision_analysis)
 
     def render_response(self, response, output_mode):
         self.text_widget.delete(1.0, tk.END)

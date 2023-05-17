@@ -1,5 +1,5 @@
 from src.Command.Command import Command
-from src.Module.Vision.google_vision import get_image_labels
+from src.Module.Vision.google_vision import get_image_labels, get_image_texts
 from src.Module.Vision.huggingface_query import get_image_caption
 from src.Utilities.json import detect_json
 
@@ -20,11 +20,14 @@ class NewRecordingCommand(Command):
             self.system_config.set_moment_idx(moment_idx)
             prompt["no"] = moment_idx
             photo_label = get_image_labels(self.system_config.latest_photo_file_path)
-            photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
+            photo_ocr = get_image_texts(self.system_config.latest_photo_file_path)
+            # photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
             if photo_label is not None:
                 prompt["photo_label"] = photo_label.rstrip()
-            if photo_caption is not None:
-                prompt["photo_caption"] = photo_caption.rstrip()
+            if photo_ocr is not None:
+                prompt["photo_ocr"] = photo_ocr.rstrip()
+            # if photo_caption is not None:
+            #     prompt["photo_caption"] = photo_caption.rstrip()
 
             self.system_config.picture_window_status = False
 
@@ -48,8 +51,13 @@ class NewRecordingCommand(Command):
 
         try:
             if json_response is not None:
-                response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
-                           f"Questions:\n{json_response['response']['question to users']}\n"
+                print(f"mode: {json_response['mode']}")
+                if json_response['mode'] == "full":
+                    response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
+                               f"Revision:\n{json_response['response']['revised parts']}\n"
+                elif json_response['mode'] == "authoring":
+                    response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
+                               f"Questions:\n{json_response['response']['question to users']}\n"
         except Exception as e:
             pass
 

@@ -86,7 +86,7 @@ class AudioClassifierRunner:
                 if self.classification_result_list:
                     if len(self.classification_result_list[0].classifications[0].categories) > 0:
                         top_category = self.classification_result_list[0].classifications[0].categories[0]
-                        print(f"score={top_category.score}, category_name='{top_category.category_name}'")
+                        # print(f"score={top_category.score}, category_name='{top_category.category_name}'")
                         if self.queue:
                             self.queue.put([top_category.score, top_category.category_name])
                             # threading.Thread(target=self.callback,

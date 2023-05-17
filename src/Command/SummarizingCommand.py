@@ -26,7 +26,7 @@ class SummarizingCommand(Command):
                 response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
                            f"Revision:\n{json_response['response']['revised parts']}\n"
         except Exception as e:
-            pass
+            print(e)
 
         return response
 
