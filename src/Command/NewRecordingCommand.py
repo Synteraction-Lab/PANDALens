@@ -21,19 +21,25 @@ class NewRecordingCommand(Command):
             prompt["no"] = moment_idx
             photo_label = get_image_labels(self.system_config.latest_photo_file_path)
             photo_ocr = get_image_texts(self.system_config.latest_photo_file_path)
-            # photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
+            photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
             if photo_label is not None:
                 prompt["photo_label"] = photo_label.rstrip()
             if photo_ocr is not None:
                 prompt["photo_ocr"] = photo_ocr.rstrip()
-            # if photo_caption is not None:
-            #     prompt["photo_caption"] = photo_caption.rstrip()
+            if photo_caption is not None:
+                prompt["photo_caption"] = photo_caption.rstrip()
 
             self.system_config.picture_window_status = False
 
             if self.system_config.test_mode:
                 audio = input("Please input the simulated audio in the environment here: ")
                 user_behavior = input("Please input the simulated user behavior in the environment here: ")
+            else:
+                score, audio = self.system_config.get_bg_audio_analysis_result()
+
+        if self.system_config.interesting_audio is not None:
+            audio = self.system_config.interesting_audio
+            self.system_config.interesting_audio = None
 
         if audio is not None:
             prompt["audio"] = audio

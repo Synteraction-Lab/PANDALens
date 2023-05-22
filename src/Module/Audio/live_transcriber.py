@@ -40,7 +40,7 @@ class LiveTranscriber:
         sample_rate = int(device['default_samplerate'])
 
         # Initialize an AudioRecord instance
-        self.audio_record = AudioRecord(channels, sample_rate, int(duration * sample_rate))
+        self.audio_record = AudioRecord(channels, sample_rate, int(duration * sample_rate), device_index)
 
     def run(self):
 

@@ -80,6 +80,7 @@ class SystemConfig:
         self.test_mode = False
         self.latest_photo_file_path = None
         self.last_image_folder_in_test_mode = "/"
+        self.interesting_audio = None
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -161,11 +162,11 @@ class SystemConfig:
     def set_latest_photo_file_path(self, image_path):
         self.latest_photo_file_path = image_path
 
-    def set_bg_audio_analysis(self):
+    def set_bg_audio_analysis(self, device):
         self.audio_classifier_results = multiprocessing.Queue()
         self.audio_classifier_runner = AudioClassifierRunner(
             model=os.path.join("src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
-            queue=self.audio_classifier_results)
+            queue=self.audio_classifier_results, device=device)
 
         multiprocessing.Process(target=self.audio_classifier_runner.run).start()
 

@@ -14,7 +14,7 @@ from src.Utilities.json import detect_json
 
 MAX_TOKENS = 2000
 MODEL_UPPER_TOKEN_LIMITATION = 4096
-TEMPERATURE = 0.5
+TEMPERATURE = 0.3
 
 API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
 

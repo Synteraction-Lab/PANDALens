@@ -30,7 +30,7 @@ from src.Module.Audio.audio_record import AudioRecord
 class AudioClassifierRunner:
 
     def __init__(self, model='lite-model_yamnet_classification.tflite',
-                 max_results=3, score_threshold=0.3, overlapping_factor=0.5, queue=None):
+                 max_results=3, score_threshold=0.3, overlapping_factor=0.5, queue=None, device=None):
         self.model = model
         self.max_results = max_results
         self.score_threshold = score_threshold
@@ -38,6 +38,7 @@ class AudioClassifierRunner:
         self.classification_result_list = []
         self.queue = queue
         self.is_recording = False
+        self.device = device
 
     def save_result(self, result: audio.AudioClassifierResult, timestamp_ms: int):
         result.timestamp_ms = timestamp_ms
@@ -59,7 +60,7 @@ class AudioClassifierRunner:
 
         buffer_size, sample_rate, num_channels = 15600, 16000, 1
         audio_format = containers.AudioDataFormat(num_channels, sample_rate)
-        record = AudioRecord(num_channels, sample_rate, buffer_size)
+        record = AudioRecord(num_channels, sample_rate, buffer_size, device=self.device)
         audio_data = containers.AudioData(buffer_size, audio_format)
 
         input_length_in_second = float(len(

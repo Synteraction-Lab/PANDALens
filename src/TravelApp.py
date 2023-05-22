@@ -12,6 +12,7 @@ from src.Command.Parser import parse
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
+from src.Module.Vision.utilities import compare_histograms
 
 from src.UI.device_panel import DevicePanel
 from src.UI.widget_generator import get_button
@@ -23,7 +24,6 @@ from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
 
-from src.test import compare_histograms
 
 
 def play_audio_response(response):
@@ -54,13 +54,11 @@ class App:
         # Set up keyboard and mouse listener
         self.start_listener()
 
-        self.system_config.set_bg_audio_analysis()
-
         self.system_config.set_vision_analysis()
 
         # Pack and run the main UI
         self.pack_layout()
-        self.start_bg_audio_analysis()
+
         self.start_vision_analysis()
 
         self.root.mainloop()
@@ -90,6 +88,8 @@ class App:
         self.system_config.set_folder_path(folder_path)
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
+        self.system_config.set_bg_audio_analysis(device=audio_device_idx)
+        self.start_bg_audio_analysis()
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
 
         chat_history_file_name = os.path.join(folder_path, chat_file)
@@ -109,7 +109,7 @@ class App:
         elif key == Key.up:
             self.on_summarize()
         elif key == Key.right:
-            self.on_new()
+            self.on_record()
         elif key == Key.down:
             # self.on_resize()
             self.on_photo()
@@ -193,7 +193,7 @@ class App:
         self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green", command=self.on_photo)
         self.photo_button.place(relx=0.5, rely=0.95, anchor='e')
 
-        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green", command=self.on_new)
+        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green", command=self.on_record)
         self.record_button.place(relx=0.95, rely=.5, anchor='s')
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -318,7 +318,7 @@ class App:
         label.pack()
         self.system_config.picture_window_status = True
 
-    def on_new(self):
+    def on_record(self):
         self.determinate_voice_feedback_process()
         if not self.system_config.is_recording:
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
@@ -362,9 +362,10 @@ class App:
     def update_bg_audio_analysis(self):
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is not None:
-            if category in self.system_config.get_bg_audio_interesting_categories():
+            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.3:
                 self.audio_detector_notification.config(text=f"Detected your surrounding audio: {category}. "
                                                              f"Any comments?")
+                self.system_config.interesting_audio = category
                 self.root.after(5000, self.clear_audio_notification)
             else:
                 self.clear_audio_notification()
@@ -372,6 +373,7 @@ class App:
             self.clear_audio_notification()
 
     def clear_audio_notification(self):
+        self.system_config.interesting_audio = None
         self.audio_detector_notification.config(text="")
         self.root.after(500, self.update_bg_audio_analysis)
 
@@ -388,7 +390,7 @@ class App:
 
         if norm_pos is not None:
             norm_pos_x, norm_pos_y = norm_pos
-            print(self.zoom_in, self.closest_object, self.person_count, self.fixation_detected, norm_pos_x, norm_pos_y)
+            # print(self.zoom_in, self.closest_object, self.person_count, self.fixation_detected, norm_pos_x, norm_pos_y)
 
         if self.previous_vision_frame is not None:
             frame_sim = compare_histograms(self.previous_vision_frame, current_frame)

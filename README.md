@@ -94,8 +94,12 @@ You can also modify the prompt in this folder to improve the experience.
       7. Click on the + sign which says Add an exclusion
       8. Select File, Folder, File Type or Process
 
+## MacOS specific issues
+- pyttsx3 issue
+  - If you meet the issue with `AttributeError: 'super' object has no attribute 'init'` when using the pyttsx3 on macOS
+    - Please follow the [instruction](https://github.com/RapidWareTech/pyttsx/pull/35/files) to add `from objc import super` at the top of the `/path_to_your_venv/pyttsx3/drivers/nsss.py` file.
 
-## Manipulation For Paper Review
+## Manipulation For Travel Blog
 
 ### Step 1
 - Run ``python main.py``

@@ -31,7 +31,7 @@ class AudioRecord(object):
     """A class to record audio in a streaming basis."""
 
     def __init__(self, channels: int, sampling_rate: int,
-                 buffer_size: int) -> None:
+                 buffer_size: int, device) -> None:
 
         # If microphone is not detected, may need to change default
         # You can list available devices from a Linux terminal with
@@ -84,6 +84,7 @@ class AudioRecord(object):
 
         # Create an input stream to continuously capture the audio data.
         self._stream = sd.InputStream(
+            device=device,
             channels=channels,
             samplerate=sampling_rate,
             callback=audio_callback,
