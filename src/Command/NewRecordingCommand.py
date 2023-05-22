@@ -58,7 +58,7 @@ class NewRecordingCommand(Command):
         try:
             if json_response is not None:
                 print(f"mode: {json_response['mode']}")
-                if json_response['mode'] == "full":
+                if "full" in json_response['mode']:
                     response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
                                f"Revision:\n{json_response['response']['revised parts']}\n"
                 elif json_response['mode'] == "authoring":

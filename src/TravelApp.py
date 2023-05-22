@@ -7,6 +7,7 @@ from multiprocessing import Process
 from PIL import Image, ImageTk
 
 import pandas
+from pynput import keyboard
 
 from src.Command.Parser import parse
 from src.Data.SystemConfig import SystemConfig
@@ -15,6 +16,7 @@ from src.Module.LLM.GPT import GPT
 from src.Module.Vision.utilities import compare_histograms
 
 from src.UI.device_panel import DevicePanel
+from src.UI.hierarchy_menu_config import HierarchyMenu
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
     image_folder
@@ -23,7 +25,6 @@ import os
 from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
 import pyttsx3
-
 
 
 def play_audio_response(response):
@@ -36,6 +37,7 @@ def play_audio_response(response):
 
 class App:
     def __init__(self, test_mode=False):
+        self.is_hidden_text = False
         self.previous_vision_frame = None
         self.picture_window = None
         self.output_mode = None
@@ -50,9 +52,6 @@ class App:
 
         # Open Setup panel
         DevicePanel(self.root, parent_object_save_command=self.update_config)
-
-        # Set up keyboard and mouse listener
-        self.start_listener()
 
         self.system_config.set_vision_analysis()
 
@@ -101,18 +100,39 @@ class App:
         # Set up output modality
         self.output_mode = output_modality
 
+        # Set up keyboard and mouse listener
+        self.start_mouse_key_listener()
+
     def on_press(self, key):
-        if str(key) == "'.'":
-            pass
-        elif key == Key.left:
-            self.hide_show_text()
-        elif key == Key.up:
-            self.on_summarize()
-        elif key == Key.right:
-            self.on_record()
-        elif key == Key.down:
-            # self.on_resize()
-            self.on_photo()
+        func = None
+        try:
+            if key == keyboard.Key.up:
+                func = self.menu.trigger('up')
+            elif key == keyboard.Key.down:
+                func = self.menu.trigger('down')
+            elif key == keyboard.Key.left:
+                func =self.menu.trigger('left')
+            elif key == keyboard.Key.right:
+                func =self.menu.trigger('right')
+            # elif key is 'v':
+            elif key.char == 'v':
+                fun = self.menu.trigger('show_voice_icon')
+            # elif key is 'p':
+            elif key.char == 'p':
+                func = self.menu.trigger('show_photo_icon')
+        except Exception as e:
+            print(e)
+
+        finally:
+            print(func)
+            if func == "Hide":
+                self.hide_show_text()
+            elif func == "Summary":
+                self.on_summarize()
+            elif func == "Voice" or func == "Stop":
+                self.on_record()
+            elif func == "Photo" or func == "Retake":
+                self.on_photo()
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -122,7 +142,7 @@ class App:
         except Exception as e:
             print(e)
 
-    def start_listener(self):
+    def start_mouse_key_listener(self):
         # self.root.bind("<Button-1>", self.on_click)
         self.mouse_listener = MouseListener(on_click=self.on_click)
         self.keyboard_listener = KeyboardListener(
@@ -182,23 +202,38 @@ class App:
         self.scrollbar.place(relx=1.0, relheight=1.0, anchor='ne', width=20)
         self.scrollbar.place_forget()
 
-        self.top_button = get_button(self.manipulation_frame, text="Summarize", fg_color="green",
-                                     command=self.on_summarize)
-        self.top_button.place(relx=0.5, rely=0.05, anchor='n')
+        # self.top_button = get_button(self.manipulation_frame, text="Summary", fg_color="green",
+        #                              command=self.on_summarize)
+        # self.top_button.place(relx=0.5, rely=0.05, anchor='n')
+        #
+        # self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
+        #                               command=self.hide_show_text)
+        # self.left_button.place(relx=0.05, rely=0.5, anchor='w')
+        #
+        # self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green", command=self.on_photo)
+        # self.photo_button.place(relx=0.5, rely=0.95, anchor='e')
+        #
+        # self.record_button = get_button(self.manipulation_frame, text="Voice", fg_color="green",
+        #                                 command=self.on_record)
+        # self.record_button.place(relx=0.95, rely=.5, anchor='s')
 
-        self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
-                                      command=self.hide_show_text)
-        self.left_button.place(relx=0.05, rely=0.5, anchor='w')
+        self.button_up = get_button(self.manipulation_frame, text='', fg_color="green")
+        self.button_down = get_button(self.manipulation_frame, text='', fg_color="green")
+        self.button_left = get_button(self.manipulation_frame, text='', fg_color="green")
+        self.button_right = get_button(self.manipulation_frame, text='', fg_color="green")
 
-        self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green", command=self.on_photo)
-        self.photo_button.place(relx=0.5, rely=0.95, anchor='e')
+        self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left, 'right': self.button_right}
+        self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.05, 'anchor': 'center'},
+                          'left': {'relx': 0.05, 'rely': 0.5, 'anchor': 'center'},
+                          'down': {'relx': 0.5, 'rely': 0.95, 'anchor': 'center'},
+                          'right': {'relx': 0.95, 'rely': 0.5, 'anchor': 'center'}}
 
-        self.record_button = get_button(self.manipulation_frame, text="Record", fg_color="green", command=self.on_record)
-        self.record_button.place(relx=0.95, rely=.5, anchor='s')
+        self.menu = HierarchyMenu(self.root, self.buttons, self.buttons_places)
+        self.menu.on_enter_state()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.attributes("-fullscreen", True)
-        self.root.attributes("-alpha", 0.95)
+        # self.root.attributes("-alpha", 0.95)
 
     def on_close(self):
         self.root.destroy()
@@ -234,34 +269,16 @@ class App:
         if not self.is_hidden_text:
             self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
             self.text_widget.delete(1.0, tk.END)
-            self.left_button.configure(text="Show")
+            # self.left_button.configure(text="Show")
             self.determinate_voice_feedback_process()
             self.scrollbar.place()
         else:
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.insert(tk.END, self.stored_text_widget_content)
-            self.left_button.configure(text="Hide")
+            # self.left_button.configure(text="Hide")
             self.scrollbar.place_forget()
 
         self.is_hidden_text = not self.is_hidden_text
-
-    def on_resize(self):
-        if self.root.attributes('-fullscreen'):
-            # If it is, restore the window to its previous size
-            self.root.attributes('-fullscreen', False)
-            self.root.geometry(self.init_screen_size)
-
-            self.top_button.grid_forget()
-            self.left_button.grid_forget()
-            self.photo_button.grid_forget()
-            self.record_button.grid_forget()
-        else:
-            # If it's not, set the window size to the screen size
-            self.root.attributes('-fullscreen', True)
-            self.top_button.grid(row=0, column=1, pady=5)
-            self.left_button.grid(row=1, column=0, padx=5)
-            self.photo_button.grid(row=2, column=1, padx=5)
-            self.record_button.grid(row=1, column=2, pady=5)
 
     def thread_new_recording_command(self, command_type):
         self.notification.config(text="Analyzing...")
@@ -322,7 +339,7 @@ class App:
         self.determinate_voice_feedback_process()
         if not self.system_config.is_recording:
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
-            self.record_button.configure(text="Stop")
+            # self.record_button.configure(text="Stop")
             self.start_recording()
             self.system_config.is_recording = True
         else:
@@ -332,7 +349,7 @@ class App:
 
             t = threading.Thread(target=self.thread_new_recording_command, args=(command_type,), daemon=True)
             t.start()
-            self.record_button.configure(text="Record")
+            # self.record_button.configure(text="Record")
 
     def start_recording(self):
         voice_transcriber = self.system_config.get_transcriber()
