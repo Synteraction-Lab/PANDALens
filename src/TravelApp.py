@@ -36,15 +36,17 @@ def play_audio_response(response):
 
 
 class App:
-    def __init__(self, test_mode=False):
+    def __init__(self, test_mode=False, ring_mouse_mode=False):
         self.stored_text_widget_content = None
         self.is_hidden_text = False
         self.previous_vision_frame = None
         self.picture_window = None
         self.output_mode = None
+        self.ring_mouse_mode = ring_mouse_mode
         self.system_config = SystemConfig()
         self.system_config.set_test_mode(test_mode)
         self.root = tk.Tk()
+        self.audio_lock = threading.Lock()
         self.root.title("UbiWriter")
         # self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
@@ -104,6 +106,15 @@ class App:
         # Set up keyboard and mouse listener
         self.start_mouse_key_listener()
 
+    def start_mouse_key_listener(self):
+        # self.root.bind("<Button-1>", self.on_click)
+        self.mouse_listener = MouseListener(on_click=self.on_click)
+        self.keyboard_listener = KeyboardListener(
+            on_press=self.on_press, on_release=self.on_release)
+        self.mouse_listener.start()
+        time.sleep(0.1)
+        self.keyboard_listener.start()
+
     def on_press(self, key):
         func = None
         try:
@@ -115,25 +126,26 @@ class App:
                 func = self.menu.trigger('left')
             elif key == keyboard.Key.right:
                 func = self.menu.trigger('right')
-            # elif key is 'v':
-            elif key.char == 'v':
-                fun = self.menu.trigger('show_voice_icon')
-            # elif key is 'p':
-            elif key.char == 'p':
-                func = self.menu.trigger('show_photo_icon')
+            # elif key.char == 'v':
+            #     func = self.menu.trigger('show_voice_icon')
+            # elif key.char == 'p':
+            #     func = self.menu.trigger('show_photo_icon')
         except Exception as e:
             print(e)
 
         finally:
             print(func)
-            if func == "Hide" or func == "Show":
-                self.hide_show_text(func)
-            elif func == "Summary":
-                self.on_summarize()
-            elif func == "Voice" or func == "Stop":
-                self.on_record()
-            elif func == "Photo" or func == "Retake":
-                self.on_photo()
+            self.parse_button_press(func)
+
+    def parse_button_press(self, func):
+        if func == "Hide" or func == "Show":
+            self.hide_show_text(func)
+        elif func == "Summary":
+            self.on_summarize()
+        elif func == "Voice" or func == "Stop":
+            self.on_record()
+        elif func == "Photo" or func == "Retake":
+            self.on_photo()
 
     def on_release(self, key):
         # Resume Previous conversation
@@ -143,19 +155,11 @@ class App:
         except Exception as e:
             print(e)
 
-    def start_mouse_key_listener(self):
-        # self.root.bind("<Button-1>", self.on_click)
-        self.mouse_listener = MouseListener(on_click=self.on_click)
-        self.keyboard_listener = KeyboardListener(
-            on_press=self.on_press, on_release=self.on_release)
-        self.mouse_listener.start()
-        time.sleep(0.1)
-        self.keyboard_listener.start()
-
     def on_click(self, x, y, button, pressed):
-        # self.hide_show_text()
-        if not pressed:
-            pass
+        if self.ring_mouse_mode:
+            if pressed:
+                func = self.menu.trigger('left')
+                self.parse_button_press(func)
 
     def pack_layout(self):
         # set the dimensions of the window to match the screen
@@ -225,6 +229,7 @@ class App:
     def on_close(self):
         self.root.destroy()
         self.keyboard_listener.stop()
+        self.mouse_listener.stop()
 
     def on_summarize(self):
         self.determinate_voice_feedback_process()
@@ -325,6 +330,9 @@ class App:
     def on_record(self):
         self.determinate_voice_feedback_process()
         if not self.system_config.is_recording:
+            with self.audio_lock:
+                self.system_config.interesting_audio_for_recording = self.system_config.interesting_audio
+            print(self.system_config.interesting_audio_for_recording)
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
             # self.record_button.configure(text="Stop")
             self.start_recording()
@@ -366,19 +374,27 @@ class App:
     def update_bg_audio_analysis(self):
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is not None:
-            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.3:
+            if category in self.system_config.get_bg_audio_interesting_categories() \
+                    and score > 0.5 \
+                    and category != self.system_config.previous_interesting_audio:
                 self.audio_detector_notification.config(text=f"Detected your surrounding audio: {category}. "
                                                              f"Any comments?")
-                self.system_config.interesting_audio = category
-                self.root.after(5000, self.clear_audio_notification)
+                self.menu.trigger('show_voice_icon')
+                with self.audio_lock:
+                    self.system_config.interesting_audio = category
+                self.system_config.previous_interesting_audio = category
+                self.root.after(8000, self.clear_audio_notification)
             else:
                 self.clear_audio_notification()
         else:
             self.clear_audio_notification()
 
     def clear_audio_notification(self):
-        self.system_config.interesting_audio = None
-        self.audio_detector_notification.config(text="")
+        with self.audio_lock:
+            if self.system_config.interesting_audio is not None:
+                self.system_config.interesting_audio = None
+                self.audio_detector_notification.config(text="")
+                self.menu.trigger('ignore_voice_icon')
         self.root.after(500, self.update_bg_audio_analysis)
 
     def update_vision_analysis(self):
@@ -403,13 +419,16 @@ class App:
         if (self.zoom_in or self.fixation_detected) and frame_sim < 0.6 and norm_pos is not None:
             self.vision_detector_notification.place(relx=norm_pos_x, rely=norm_pos_y, anchor=tk.CENTER)
             self.vision_detector_notification.config(text=f"Do you want to take a picture?")
-            self.root.after(5000, self.clear_vision_notification)
+            self.menu.trigger('show_photo_icon')
+            self.root.after(8000, self.clear_vision_notification)
             self.previous_vision_frame = current_frame
         else:
             self.clear_vision_notification()
 
     def clear_vision_notification(self):
-        self.vision_detector_notification.config(text="")
+        if self.vision_detector_notification.cget("text") != "":
+            self.vision_detector_notification.config(text="")
+            self.menu.trigger('ignore_photo_icon')
         self.root.after(500, self.update_vision_analysis)
 
     def render_response(self, response, output_mode):
@@ -418,6 +437,7 @@ class App:
         self.text_widget.insert(tk.END, response)
         self.stored_text_widget_content = response
         self.scrollbar.place()
+        self.menu.trigger('get_response')
         if output_mode == AUDIO_OUTPUT:
             voice_feedback_process = Process(target=play_audio_response, args=(response,))
             self.system_config.set_voice_feedback_process(voice_feedback_process)

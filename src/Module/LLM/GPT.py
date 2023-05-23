@@ -98,7 +98,7 @@ class GPT:
         self.chat_history = self.task_description
         self.human_history = ""
         self.ai_history = ""
-        initial_message = {"role": ROLE_HUMAN, "content": self.task_description}
+        initial_message = {"role": ROLE_SYSTEM, "content": self.task_description}
         self.message_list.append(initial_message)
 
     def store(self, role=ROLE_HUMAN, text=None, path=None):
@@ -189,7 +189,7 @@ class GPT:
                 else:
                     self.message_list = concise_context_messages + previous_iteration + [new_message]
 
-                gpt_response = generate_gpt_response(self.message_list)
+                gpt_response = generate_gpt_response(self.message_list, api_key_idx=1)
 
         return gpt_response
 

@@ -1,10 +1,11 @@
 from transitions import Machine
 
 # Define the hierarchy menu states
-states = ['init', 'full', 'voice', 'photo', 'photo_comments', 'voice_recording']
+states = ['init', 'full', 'voice', 'photo', 'photo_comments', 'voice_recording', 'init_with_response']
 
 menu_icons = {
     'init': {'up': None, 'down': None, 'left': 'Show', 'right': None},
+    'init_with_response': {'up': None, 'down': None, 'left': 'Hide', 'right': None},
     'full': {'up': 'Summary', 'down': 'Photo', 'left': 'Hide', 'right': 'Voice'},
     'voice': {'up': None, 'down': None, 'left': None, 'right': 'Voice'},
     'photo': {'up': None, 'down': 'Photo', 'left': None, 'right': None},
@@ -18,12 +19,15 @@ transitions = [
     {'trigger': 'down', 'source': 'init', 'dest': 'full'},
     {'trigger': 'left', 'source': 'init', 'dest': 'full'},
     {'trigger': 'right', 'source': 'init', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'init', 'dest': 'init_with_response'},
+    {'trigger': 'left', 'source': 'init_with_response', 'dest': 'init'},
     {'trigger': 'show_voice_icon', 'source': 'init', 'dest': 'voice'},
     {'trigger': 'show_photo_icon', 'source': 'init', 'dest': 'photo'},
     {'trigger': 'ignore_voice_icon', 'source': 'voice', 'dest': 'init'},
     {'trigger': 'ignore_photo_icon', 'source': 'photo', 'dest': 'init'},
     {'trigger': 'down', 'source': 'photo', 'dest': 'photo_comments'},
-    {'trigger': 'show_results', 'source': 'voice', 'dest': 'full'},
+    {'trigger': 'right', 'source': 'voice', 'dest': 'voice_recording'},
+    {'trigger': 'show_results', 'source': 'voice_recording', 'dest': 'full'},
     {'trigger': 'show_results', 'source': 'photo_comments', 'dest': 'full'},
     {'trigger': 'right', 'source': 'photo_comments', 'dest': 'voice_recording'},
     {'trigger': 'right', 'source': 'full', 'dest': 'voice_recording'},
@@ -65,6 +69,7 @@ class HierarchyMenu:
         self.root.update_idletasks()
 
     def trigger(self, trigger_name):
+        current_state = self.menu_layer.state
         current_press_icon = None
         if trigger_name in menu_icons[self.menu_layer.state].keys():
             current_press_icon = menu_icons[self.menu_layer.state][trigger_name]
@@ -72,6 +77,8 @@ class HierarchyMenu:
         if trigger_name in self.machine.get_triggers(self.menu_layer.state):
             self.menu_layer.trigger(trigger_name)  # Call the trigger method
             self.on_enter_state()  # Update the GUI whenever a trigger happens
+
+        print(current_state, trigger_name, self.menu_layer.state)
 
         return current_press_icon
 

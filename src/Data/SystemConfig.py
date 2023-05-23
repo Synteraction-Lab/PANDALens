@@ -66,6 +66,8 @@ class SystemConfig:
         self.vision_detector = None
         self.audio_classifier_runner = None
         self.audio_classifier_results = None
+        self.previous_interesting_audio = None
+        self.interesting_audio_for_recording = None
         self.final_transcription = ""
         self.previous_transcription = ""
         self.picture_window_status = False

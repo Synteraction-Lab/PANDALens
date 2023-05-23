@@ -37,9 +37,9 @@ class NewRecordingCommand(Command):
             else:
                 score, audio = self.system_config.get_bg_audio_analysis_result()
 
-        if self.system_config.interesting_audio is not None:
-            audio = self.system_config.interesting_audio
-            self.system_config.interesting_audio = None
+        if self.system_config.interesting_audio_for_recording is not None:
+            audio = self.system_config.interesting_audio_for_recording
+            self.system_config.interesting_audio_for_recording = None
 
         if audio is not None:
             prompt["audio"] = audio
