@@ -78,8 +78,6 @@ class HierarchyMenu:
             self.menu_layer.trigger(trigger_name)  # Call the trigger method
             self.on_enter_state()  # Update the GUI whenever a trigger happens
 
-        print(current_state, trigger_name, self.menu_layer.state)
-
         return current_press_icon
 
 

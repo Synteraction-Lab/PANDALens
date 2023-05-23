@@ -333,7 +333,6 @@ class App:
         if not self.system_config.is_recording:
             with self.audio_lock:
                 self.system_config.interesting_audio_for_recording = self.system_config.interesting_audio
-            print(self.system_config.interesting_audio_for_recording)
             self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
             # self.record_button.configure(text="Stop")
             self.start_recording()

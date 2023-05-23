@@ -2,6 +2,7 @@ from src.Command.Command import Command
 from src.Module.Vision.google_vision import get_image_labels, get_image_texts
 from src.Module.Vision.huggingface_query import get_image_caption
 from src.Utilities.json import detect_json
+from src.Utilities.location import get_current_location
 
 
 class NewRecordingCommand(Command):
@@ -14,6 +15,9 @@ class NewRecordingCommand(Command):
         user_behavior = None
 
         prompt = {}
+        is_recording_interesting_moment = self.system_config.picture_window_status or \
+                                          (self.system_config.interesting_audio_for_recording is not None)
+
         if self.system_config.picture_window_status:
             moment_idx = self.system_config.get_moment_idx()
             moment_idx += 1
@@ -45,6 +49,13 @@ class NewRecordingCommand(Command):
             prompt["audio"] = audio
         if user_behavior is not None:
             prompt["user_behavior"] = user_behavior
+
+        if is_recording_interesting_moment:
+            if self.system_config.test_mode:
+                location = input("Please input the simulated location in the environment here: ")
+            else:
+                location = get_current_location()
+            prompt["location"] = location
 
         # Transcribe voice command and get response from GPT
         voice_command = self.system_config.final_transcription
