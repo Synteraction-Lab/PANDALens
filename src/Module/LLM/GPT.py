@@ -52,7 +52,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
     return num_tokens
 
 
-def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPERATURE, api_key_idx=0):
+def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPERATURE, api_key_idx=0, retry_count=3):
     try:
         openai.api_key = API_KEYS[api_key_idx]
         model_engine = "gpt-3.5-turbo"
@@ -61,17 +61,30 @@ def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPER
 
         max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - num_tokens_from_messages(sent_prompt))
 
-        response = openai.ChatCompletion.create(
-            model=model_engine,
-            messages=sent_prompt,
-            max_tokens=max_tokens,
-            n=1,
-            stop=None,
-            temperature=temperature,
-        )
-        response = response['choices'][0]['message']['content']
+        for _ in range(retry_count):
+            try:
+                response = openai.ChatCompletion.create(
+                    model=model_engine,
+                    messages=sent_prompt,
+                    max_tokens=max_tokens,
+                    n=1,
+                    stop=None,
+                    temperature=temperature,
+                )
+                response = response['choices'][0]['message']['content']
+                return response
+            except openai.error.APIError as e:
+                print(e)
+                if e.status == 500:
+                    # Retry the request
+                    continue
+                else:
+                    # Handle other API errors
+                    raise e
 
-        return response
+        # If all retries fail, raise an exception
+        raise Exception("Failed to retrieve response after multiple retries.")
+
     except Exception as e:
         print(e)
 
@@ -189,7 +202,7 @@ class GPT:
                 else:
                     self.message_list = concise_context_messages + previous_iteration + [new_message]
 
-                gpt_response = generate_gpt_response(self.message_list, api_key_idx=1)
+                gpt_response = generate_gpt_response(self.message_list)
 
         return gpt_response
 
@@ -215,7 +228,7 @@ class GPT:
             new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
             # print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(new_message, max_tokens=1000)
+            response = generate_gpt_response(new_message, max_tokens=1000, api_key_idx=1)
 
             with self.history_lock:
                 self.slim_history = response.lstrip()

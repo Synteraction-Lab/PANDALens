@@ -134,10 +134,11 @@ class App:
             print(e)
 
         finally:
-            print(func)
             self.parse_button_press(func)
 
     def parse_button_press(self, func):
+        if func is None:
+            return
         if func == "Hide" or func == "Show":
             self.hide_show_text(func)
         elif func == "Summary":
@@ -433,7 +434,7 @@ class App:
 
     def render_response(self, response, output_mode):
         self.text_widget.delete(1.0, tk.END)
-        response = response.lstrip().rstrip()
+        response = response.strip()
         self.text_widget.insert(tk.END, response)
         self.stored_text_widget_content = response
         self.scrollbar.place()

@@ -128,7 +128,7 @@ class LiveTranscriber:
         self.record_thread.join()
         final_result = self.full_text
         self.full_text = ""
-        return final_result
+        return final_result.strip()
 
 
 if __name__ == '__main__':
