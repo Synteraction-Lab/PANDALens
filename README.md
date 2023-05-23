@@ -78,7 +78,8 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 
         - Option 2: Set your ‘OPENAI_API_KEY’ Environment Variable using bash:
           Follow the directions in Option 1, replacing `.zshrc` with `.bash_profile`.
-4. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
+4. Follow the same approach above, add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
+5. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
 You can also modify the prompt in this folder to improve the experience.
 
 ## Windows specific issues
