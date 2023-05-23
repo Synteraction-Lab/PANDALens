@@ -37,6 +37,7 @@ def play_audio_response(response):
 
 class App:
     def __init__(self, test_mode=False):
+        self.stored_text_widget_content = None
         self.is_hidden_text = False
         self.previous_vision_frame = None
         self.picture_window = None
@@ -111,9 +112,9 @@ class App:
             elif key == keyboard.Key.down:
                 func = self.menu.trigger('down')
             elif key == keyboard.Key.left:
-                func =self.menu.trigger('left')
+                func = self.menu.trigger('left')
             elif key == keyboard.Key.right:
-                func =self.menu.trigger('right')
+                func = self.menu.trigger('right')
             # elif key is 'v':
             elif key.char == 'v':
                 fun = self.menu.trigger('show_voice_icon')
@@ -125,8 +126,8 @@ class App:
 
         finally:
             print(func)
-            if func == "Hide":
-                self.hide_show_text()
+            if func == "Hide" or func == "Show":
+                self.hide_show_text(func)
             elif func == "Summary":
                 self.on_summarize()
             elif func == "Voice" or func == "Stop":
@@ -202,31 +203,17 @@ class App:
         self.scrollbar.place(relx=1.0, relheight=1.0, anchor='ne', width=20)
         self.scrollbar.place_forget()
 
-        # self.top_button = get_button(self.manipulation_frame, text="Summary", fg_color="green",
-        #                              command=self.on_summarize)
-        # self.top_button.place(relx=0.5, rely=0.05, anchor='n')
-        #
-        # self.left_button = get_button(self.manipulation_frame, text="Hide", fg_color="green",
-        #                               command=self.hide_show_text)
-        # self.left_button.place(relx=0.05, rely=0.5, anchor='w')
-        #
-        # self.photo_button = get_button(self.manipulation_frame, text="Photo", fg_color="green", command=self.on_photo)
-        # self.photo_button.place(relx=0.5, rely=0.95, anchor='e')
-        #
-        # self.record_button = get_button(self.manipulation_frame, text="Voice", fg_color="green",
-        #                                 command=self.on_record)
-        # self.record_button.place(relx=0.95, rely=.5, anchor='s')
-
         self.button_up = get_button(self.manipulation_frame, text='', fg_color="green")
         self.button_down = get_button(self.manipulation_frame, text='', fg_color="green")
         self.button_left = get_button(self.manipulation_frame, text='', fg_color="green")
         self.button_right = get_button(self.manipulation_frame, text='', fg_color="green")
 
-        self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left, 'right': self.button_right}
+        self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
+                        'right': self.button_right}
         self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.05, 'anchor': 'center'},
-                          'left': {'relx': 0.05, 'rely': 0.5, 'anchor': 'center'},
-                          'down': {'relx': 0.5, 'rely': 0.95, 'anchor': 'center'},
-                          'right': {'relx': 0.95, 'rely': 0.5, 'anchor': 'center'}}
+                               'left': {'relx': 0.05, 'rely': 0.5, 'anchor': 'center'},
+                               'down': {'relx': 0.5, 'rely': 0.95, 'anchor': 'center'},
+                               'right': {'relx': 0.95, 'rely': 0.5, 'anchor': 'center'}}
 
         self.menu = HierarchyMenu(self.root, self.buttons, self.buttons_places)
         self.menu.on_enter_state()
@@ -257,7 +244,7 @@ class App:
         self.render_response(response, self.output_mode)
         self.notification.config(text="")
 
-    def hide_show_text(self):
+    def hide_show_text(self, mode):
         # Check if the picture window is open and close it if necessary
         if self.picture_window:
             self.picture_window.destroy()
@@ -266,13 +253,13 @@ class App:
             self.update_vision_analysis()
             return
 
-        if not self.is_hidden_text:
-            self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
+        if mode == "Hide":
+            # self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
             self.text_widget.delete(1.0, tk.END)
             # self.left_button.configure(text="Show")
             self.determinate_voice_feedback_process()
             self.scrollbar.place()
-        else:
+        elif self.stored_text_widget_content is not None:
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.insert(tk.END, self.stored_text_widget_content)
             # self.left_button.configure(text="Hide")
@@ -427,7 +414,9 @@ class App:
 
     def render_response(self, response, output_mode):
         self.text_widget.delete(1.0, tk.END)
-        self.text_widget.insert(tk.END, response.lstrip())
+        response = response.lstrip().rstrip()
+        self.text_widget.insert(tk.END, response)
+        self.stored_text_widget_content = response
         self.scrollbar.place()
         if output_mode == AUDIO_OUTPUT:
             voice_feedback_process = Process(target=play_audio_response, args=(response,))

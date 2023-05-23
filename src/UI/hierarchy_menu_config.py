@@ -4,7 +4,7 @@ from transitions import Machine
 states = ['init', 'full', 'voice', 'photo', 'photo_comments', 'voice_recording']
 
 menu_icons = {
-    'init': {'up': None, 'down': None, 'left': None, 'right': None},
+    'init': {'up': None, 'down': None, 'left': 'Show', 'right': None},
     'full': {'up': 'Summary', 'down': 'Photo', 'left': 'Hide', 'right': 'Voice'},
     'voice': {'up': None, 'down': None, 'left': None, 'right': 'Voice'},
     'photo': {'up': None, 'down': 'Photo', 'left': None, 'right': None},
