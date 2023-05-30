@@ -1,3 +1,5 @@
+import datetime
+
 from src.Command.Command import Command
 from src.Module.Vision.google_vision import get_image_labels, get_image_texts
 from src.Module.Vision.huggingface_query import get_image_caption
@@ -40,6 +42,9 @@ class NewRecordingCommand(Command):
                 user_behavior = input("Please input the simulated user behavior in the environment here: ")
             else:
                 score, audio = self.system_config.get_bg_audio_analysis_result()
+                if self.system_config.user_behavior_when_recording is not None:
+                    user_behavior = self.system_config.user_behavior_when_recording
+                    self.system_config.user_behavior_when_recording = None
 
         if self.system_config.interesting_audio_for_recording is not None:
             audio = self.system_config.interesting_audio_for_recording
@@ -51,11 +56,15 @@ class NewRecordingCommand(Command):
             prompt["user_behavior"] = user_behavior
 
         if is_recording_interesting_moment:
+            # add location to prompt
             if self.system_config.test_mode:
                 location = input("Please input the simulated location in the environment here: ")
             else:
                 location = get_current_location()
             prompt["location"] = location
+
+            # add current time to prompt in YY MM DD HH MM format
+            prompt["time"] = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M")
 
         # Transcribe voice command and get response from GPT
         voice_command = self.system_config.final_transcription
@@ -65,20 +74,24 @@ class NewRecordingCommand(Command):
         response = gpt.process_prompt_and_get_gpt_response(command=str(prompt))
 
         json_response = detect_json(response)
+        text_response = response
+        audio_response = response
 
         try:
             if json_response is not None:
                 print(f"mode: {json_response['mode']}")
                 if "full" in json_response['mode']:
-                    response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
+                    text_response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
                                f"Revision:\n{json_response['response']['revised parts']}\n"
+                    audio_response = f"Revision: {json_response['response']['revised parts']}"
                 elif json_response['mode'] == "authoring":
-                    response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
+                    text_response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
                                f"Questions:\n{json_response['response']['question to users']}\n"
+                    audio_response = f"Questions: {json_response['response']['question to users']}"
         except Exception as e:
             pass
 
-        return response
+        return text_response, audio_response
 
     def undo(self):
         pass

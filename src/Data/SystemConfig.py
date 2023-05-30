@@ -83,6 +83,11 @@ class SystemConfig:
         self.latest_photo_file_path = None
         self.last_image_folder_in_test_mode = "/"
         self.interesting_audio = None
+        self.user_behavior = None
+        self.user_behavior_when_recording = None
+        self.previous_interesting_audio_time = {}
+        self.emotion_classifier = None
+        self.previous_emotion_scores = None
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -187,4 +192,7 @@ class SystemConfig:
     def set_vision_analysis(self):
         self.vision_detector = ObjectDetector(simulate=False, cv_imshow=False)
         self.thread_vision = threading.Thread(target=self.vision_detector.run).start()
+
+    def set_emotion_classifier(self, emotion_classifier):
+        self.emotion_classifier = emotion_classifier
 

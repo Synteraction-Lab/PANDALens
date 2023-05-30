@@ -4,6 +4,7 @@ import subprocess
 import pandas
 import tkinter as tk
 
+from src.Module.Audio.live_transcriber import get_recording_devices
 from src.UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label
 from src.Utilities.constant import CONFIG_FILE_NAME, VISUAL_OUTPUT, AUDIO_OUTPUT
 from src.Utilities.file import get_system_name, get_second_monitor_original_pos, \
@@ -43,16 +44,20 @@ class DevicePanel:
                             (get_second_monitor_original_pos()[3] - self.root.winfo_height()) // 2))
 
     def load_recording_device_index(self):
-        if get_system_name() == "Darwin":
-            command = 'ffmpeg -f avfoundation -list_devices true -i ""'
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            output = process.communicate()[1].decode("utf-8")
-            self.get_mac_device(output)
-        elif get_system_name() == "Windows":
-            command = 'ffmpeg -list_devices true -f dshow -i dummy'
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            output = process.communicate()[1].decode("utf-8")
-            self.get_windows_device(output)
+        input_devices = get_recording_devices()
+        for device in input_devices:
+            self.audio_device_list.append(device["name"])
+
+        # if get_system_name() == "Darwin":
+        #     command = 'ffmpeg -f avfoundation -list_devices true -i ""'
+        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        #     output = process.communicate()[1].decode("utf-8")
+        #     self.get_mac_device(output)
+        # elif get_system_name() == "Windows":
+        #     command = 'ffmpeg -list_devices true -f dshow -i dummy'
+        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        #     output = process.communicate()[1].decode("utf-8")
+        #     self.get_windows_device(output)
 
     def get_mac_device(self, output):
         is_audio_line = False
@@ -72,7 +77,7 @@ class DevicePanel:
 
     def set_default_device_config(self, path):
         self.pid_num = os.path.join("p1", "01")
-        self.task_name = "paper_review"
+        self.task_name = "travel_blog"
         self.output_modality = AUDIO_OUTPUT
         self.audio_device_idx = 0
         save_device_config(path, "pid", self.pid_num)

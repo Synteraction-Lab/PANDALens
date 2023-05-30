@@ -10,7 +10,7 @@ menu_icons = {
     'voice': {'up': None, 'down': None, 'left': None, 'right': 'Voice'},
     'photo': {'up': None, 'down': 'Photo', 'left': None, 'right': None},
     'voice_recording': {'up': None, 'down': None, 'left': None, 'right': 'Stop'},
-    'photo_comments': {'up': None, 'down': 'Retake', 'left': 'Hide', 'right': 'Voice'}
+    'photo_comments': {'up': 'Discard', 'down': 'Retake', 'left': 'Hide', 'right': 'Voice'}
 }
 
 # Define the transitions
@@ -19,8 +19,13 @@ transitions = [
     {'trigger': 'down', 'source': 'init', 'dest': 'full'},
     {'trigger': 'left', 'source': 'init', 'dest': 'full'},
     {'trigger': 'right', 'source': 'init', 'dest': 'full'},
-    {'trigger': 'get_response', 'source': 'init', 'dest': 'init_with_response'},
-    {'trigger': 'left', 'source': 'init_with_response', 'dest': 'init'},
+    {'trigger': 'get_response', 'source': 'init', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'full', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'voice', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'photo', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'photo_comments', 'dest': 'full'},
+    {'trigger': 'get_response', 'source': 'voice_recording', 'dest': 'full'},
+    # {'trigger': 'left', 'source': 'init_with_response', 'dest': 'init'},
     {'trigger': 'show_voice_icon', 'source': 'init', 'dest': 'voice'},
     {'trigger': 'show_photo_icon', 'source': 'init', 'dest': 'photo'},
     {'trigger': 'ignore_voice_icon', 'source': 'voice', 'dest': 'init'},
@@ -33,10 +38,11 @@ transitions = [
     {'trigger': 'right', 'source': 'full', 'dest': 'voice_recording'},
     {'trigger': 'left', 'source': 'voice', 'dest': 'init'},
     {'trigger': 'left', 'source': 'photo_comments', 'dest': 'init'},
+    {'trigger': 'up', 'source': 'photo_comments', 'dest': 'init'},
     {'trigger': 'left', 'source': 'full', 'dest': 'init'},
     {'trigger': 'down', 'source': 'full', 'dest': 'photo_comments'},
     {'trigger': 'left', 'source': 'photo', 'dest': 'init'},
-    {'trigger': 'left', 'source': 'voice_recording', 'dest': 'init'},
+    # {'trigger': 'left', 'source': 'voice_recording', 'dest': 'init'},
     {'trigger': 'right', 'source': 'voice_recording', 'dest': 'full'},
 ]
 

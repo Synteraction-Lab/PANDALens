@@ -16,12 +16,19 @@ def show_devices():
     """
     Print a list of available input devices.
     """
+    print(get_recording_devices())
+
+
+def get_recording_devices():
     devices = sd.query_devices()
-    print(devices)
+    input_devices = [device for device in devices if device['max_input_channels'] > 0]
+    return input_devices
 
 
 class LiveTranscriber:
     def __init__(self, model="small.en", device_index=1, duration=60, silence_threshold=0.02, overlapping_factor=0):
+        self.on_processing_count = 0
+        self.silence_duration = 0
         self.prompt = None
         self.record_thread = None
         self.model = whisper.load_model(model)
@@ -43,7 +50,7 @@ class LiveTranscriber:
         self.audio_record = AudioRecord(channels, sample_rate, int(duration * sample_rate), device_index)
 
     def run(self):
-
+        self.on_processing_count = 0
         self.audio_record.start_recording()
         self.is_recording = True
 
@@ -54,6 +61,10 @@ class LiveTranscriber:
         idx = 0
         recording_started = False
         recording_start_time = 0
+
+        self.silence_duration = 0
+        silence_start_time = 0
+        silence_start = False
 
         # stored_previous_audio = None
 
@@ -73,6 +84,14 @@ class LiveTranscriber:
 
             diff_since_start = now - recording_start_time
 
+            if rms <= self.silence_threshold:
+                if not silence_start:
+                    silence_start = True
+                    silence_start_time = now
+                self.silence_duration = now - silence_start_time
+            else:
+                silence_start = False
+
             if (rms <= self.silence_threshold or diff_since_start >= self.duration - 1) and recording_started:
                 # Save and transcribe the recorded data
                 recording_started = False
@@ -83,10 +102,11 @@ class LiveTranscriber:
                 # data = np.concatenate((stored_previous_audio, data))
 
                 idx += 1
-                idx %= 2
+                idx %= 3
                 file_path = os.path.join(dir_path, f"recording{idx}.wav")
                 wv.write(file_path, data, self.audio_record.sampling_rate, sampwidth=2)
 
+                self.on_processing_count += 1
                 threading.Thread(target=self.transcribe, args=(file_path,)).start()
 
             elif rms > self.silence_threshold and not recording_started:
@@ -117,6 +137,9 @@ class LiveTranscriber:
             self.full_text += result['text'] + " "
             # self.transcription_queue.put(result['text'])
             print(result['text'])
+
+        with self.transcribe_lock:
+            self.on_processing_count -= 1
 
     def start(self):
         self.stop_event.clear()

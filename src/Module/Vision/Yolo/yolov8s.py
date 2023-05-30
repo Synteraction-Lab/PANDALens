@@ -45,7 +45,7 @@ class ObjectDetector:
 
         # load the mapping file
         self.class_idx = None
-        self.map_imagenet_id()
+        # self.map_imagenet_id()
 
         # open webcam
         self.cap = cv2.VideoCapture(0)
