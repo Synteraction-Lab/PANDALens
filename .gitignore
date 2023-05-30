@@ -7,7 +7,9 @@ data/device_config.csv
 data/audio/*
 data/test_data/*
 src/Module/LLM/keys.py
-
+*.wav
+*.pt
+*/test.py
 # System Files
 .DS_Store
 Thumbs.db
