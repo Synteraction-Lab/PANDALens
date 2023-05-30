@@ -413,7 +413,7 @@ class App:
         if self.system_config.get_previous_transcription() != voice_transcriber.full_text:
             self.render_response(text_response=voice_transcriber.full_text, output_mode=VISUAL_OUTPUT)
             self.system_config.set_previous_transcription(voice_transcriber.full_text)
-        print(voice_transcriber.silence_duration)
+        # print(voice_transcriber.silence_duration)
         # Help user automatically stop recording if there is no sound for a while
         if voice_transcriber.silence_duration > SILENCE_TIME_THRESHOLD_FOR_STOP_RECORDING \
                 and voice_transcriber.on_processing_count <= 0 and self.system_config.is_recording:
@@ -515,10 +515,8 @@ class App:
             frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
             # print(frame_sim)
 
-        if self.zoom_in or self.fixation_detected:
-            print(f"Zoom in: {self.zoom_in}, fixation: {self.fixation_detected}, frame_sim: {frame_sim}")
-
         if (self.zoom_in or self.fixation_detected) and frame_sim < 0.6 and norm_pos is not None:
+            print(f"Zoom in: {self.zoom_in}, fixation: {self.fixation_detected}, frame_sim: {frame_sim}")
             self.vision_detector_notification.place(relx=norm_pos[0], rely=norm_pos[1], anchor=tk.CENTER)
             self.vision_detector_notification.config(text=f"Take a picture for current moment?")
 
