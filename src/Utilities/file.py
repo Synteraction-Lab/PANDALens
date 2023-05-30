@@ -9,6 +9,7 @@ from src.Utilities.constant import task_description_path
 
 ITEM = "item"
 DETAILS = "details"
+TIME = "time"
 
 _isMacOS = sys.platform.startswith('darwin')
 _isWindows = sys.platform.startswith('win')

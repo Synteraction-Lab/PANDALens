@@ -15,6 +15,7 @@ from src.Module.Audio.emotion_classifer import EmotionClassifier
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
 from src.Module.Vision.utilities import compare_histograms
+from src.Storage.writer import log_manipulation
 
 from src.UI.device_panel import DevicePanel
 from src.UI.hierarchy_menu_config import HierarchyMenu
@@ -40,6 +41,7 @@ def play_audio_response(response):
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.log_path = None
         self.person_count = 0
         self.picture_window_hidden = False
         self.stored_text_widget_content = None
@@ -106,6 +108,7 @@ class App:
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.start_bg_audio_analysis()
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
+        self.log_path = os.path.join(folder_path, "log.csv")
 
         chat_history_file_name = os.path.join(folder_path, chat_file)
         slim_history_file_name = os.path.join(folder_path, slim_history_file)
@@ -152,6 +155,7 @@ class App:
     def parse_button_press(self, func):
         if func is None:
             return
+        log_manipulation(self.log_path, func)
         if func == "Hide" or func == "Show":
             self.hide_show_content(func)
         elif func == "Summary":
@@ -454,6 +458,7 @@ class App:
             if positive_score > 0.5:
                 self.emotion_detector_notification.config(text=f"Detected your positive tone.\n"
                                                                f"Want to record this moment?")
+                log_manipulation(self.log_path, "positive tone detected")
                 self.root.after(10000, self.clear_emotion_notification)
             self.system_config.previous_emotion_scores = emotion_scores
 
@@ -477,6 +482,7 @@ class App:
                 if time.time() - last_time > 60:
                     self.audio_detector_notification.config(text=f"Detected your surrounding audio: {category}. "
                                                                  f"Any comments?")
+                    log_manipulation(self.log_path, "audio notification")
                     self.menu.trigger('show_voice_icon')
                     with self.audio_lock:
                         self.system_config.interesting_audio = category
@@ -523,10 +529,13 @@ class App:
             # Conditions to determine the user's behavior
             if self.zoom_in and self.fixation_detected:
                 self.system_config.user_behavior = f"Moving close to and looking at: {self.closest_object}"
+                log_manipulation(self.log_path, "Moving close to and Fixation detected")
             elif self.zoom_in:
                 self.system_config.user_behavior = f"Moving close to: {self.closest_object}"
+                log_manipulation(self.log_path, "Moving close")
             elif self.fixation_detected:
                 self.system_config.user_behavior = f"Looking at: {self.closest_object}"
+                log_manipulation(self.log_path, "Fixation detected")
 
             self.menu.trigger('show_photo_icon')
             self.root.after(10000, self.clear_vision_notification)
