@@ -60,7 +60,7 @@ class LiveTranscriber:
         else:
             raise ValueError(f"No microphone named \"{mic_name}\" found")
 
-        self.recorder.adjust_for_ambient_noise(self.source)
+        # self.recorder.adjust_for_ambient_noise(self.source)
         self.audio_model = whisper.load_model(self.model)
 
         self.temp_file = NamedTemporaryFile().name

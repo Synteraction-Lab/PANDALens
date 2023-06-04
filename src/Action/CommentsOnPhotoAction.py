@@ -47,6 +47,6 @@ class CommentsOnPhotoAction(Action):
             text_feedback, audio_feedback = send_gpt_request_command.execute(user_request)
             # print(f"The text feedback is: {text_feedback}, and the audio feedback is: {audio_feedback}")
             self.system_config.text_feedback_to_show = text_feedback
-            self.system_config.audio_feedback_to_play = audio_feedback
+            self.system_config.audio_feedback_to_show = audio_feedback
 
 

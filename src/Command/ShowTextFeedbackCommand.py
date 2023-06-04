@@ -7,5 +7,5 @@ class ShowTextFeedbackCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
-        print(f"\nText feedback:{self.system_config.text_feedback_to_show}")
+        print(f"\nText feedback:\n{self.system_config.text_feedback_to_show}")
         self.system_config.text_feedback_to_show = None
