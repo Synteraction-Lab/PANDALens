@@ -1,8 +1,9 @@
 import os
+import platform
 import sys
 from os.path import isfile, join
 from pathlib import Path
-import platform
+
 from screeninfo import get_monitors
 
 from src.Utilities.constant import task_description_path

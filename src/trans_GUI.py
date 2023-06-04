@@ -12,8 +12,8 @@ class TranscriberGUI:
         self.audio_classifier_results = multiprocessing.Queue()
         self.audio_classifier_runner = AudioClassifierRunner(
             model=os.path.join("Module", "Audio", "lite-model_yamnet_classification.tflite"),
-            queue=self.audio_classifier_results, device=0)
-        self.transcriber = LiveTranscriber(device_index=0)
+            queue=self.audio_classifier_results, device="MacBook Pro Microphone")
+        self.transcriber = LiveTranscriber()
         self.score = None
         self.category_name = None
 

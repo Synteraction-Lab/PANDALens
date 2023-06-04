@@ -1,3 +1,5 @@
+import json
+import ssl
 import time
 import urllib
 from collections import deque
@@ -5,10 +7,8 @@ from collections import deque
 import cv2
 import numpy as np
 from ultralyticsplus import YOLO, render_result
-from src.Module.Gaze.frame_stream import PupilCamera
-import json
 
-import ssl
+from src.Module.Gaze.frame_stream import PupilCamera
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -63,7 +63,7 @@ class ObjectDetector:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
 
     def detect_fixation(self, frame):
-        if frame is None:
+        if frame is None or self.gaze_position == (0, 0):
             return None
 
         self.frame_height, self.frame_width = frame.shape[:2]
@@ -267,6 +267,7 @@ class ObjectDetector:
                 continue
 
             self.frame_height, self.frame_width = frame.shape[:2]
+            self.original_frame = frame
             self.process_frame(frame)
 
             # press 'q' to quit
@@ -285,5 +286,5 @@ class ObjectDetector:
 
 if __name__ == '__main__':
     # Set simulate to False if you use Pupil Core. Set to True to use mouse cursor.
-    detector = ObjectDetector(simulate=False)
+    detector = ObjectDetector(simulate=True)
     detector.run()

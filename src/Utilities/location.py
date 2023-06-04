@@ -2,7 +2,6 @@ import sys
 import threading
 
 import geocoder
-
 from geopy.geocoders import Nominatim
 
 if sys.platform == "darwin":

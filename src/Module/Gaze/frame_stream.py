@@ -1,7 +1,7 @@
+import cv2
+import numpy as np
 import zmq
 from msgpack import unpackb, packb
-import numpy as np
-import cv2
 
 
 class PupilCamera:

@@ -1,32 +1,28 @@
+import os
 import threading
 import time
 import tkinter as tk
-
 from multiprocessing import Process
 
-from PIL import Image, ImageTk
-
 import pandas
+import pyttsx3
+from PIL import Image, ImageTk
 from pynput import keyboard
+from pynput.keyboard import Key, Listener as KeyboardListener
+from pynput.mouse import Listener as MouseListener
 
-from src.Command.Parser import parse
+from src.Command.CommandParser import parse
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Audio.emotion_classifer import EmotionClassifier
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
 from src.Module.Vision.utilities import compare_histograms
 from src.Storage.writer import log_manipulation
-
 from src.UI.device_panel import DevicePanel
 from src.UI.hierarchy_menu_config import HierarchyMenu
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
     image_folder
-
-import os
-from pynput.keyboard import Key, Listener as KeyboardListener
-from pynput.mouse import Listener as MouseListener
-import pyttsx3
 
 SILENCE_TIME_THRESHOLD_FOR_STOP_RECORDING = 8
 

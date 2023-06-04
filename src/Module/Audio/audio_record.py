@@ -13,6 +13,7 @@
 # limitations under the License.
 """A module to record audio in a streaming basis."""
 import threading
+
 import numpy as np
 
 try:

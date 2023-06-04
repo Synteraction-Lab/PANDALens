@@ -56,7 +56,7 @@ def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPER
     try:
         openai.api_key = API_KEYS[api_key_idx]
         model_engine = "gpt-3.5-turbo"
-        print(f"\nSent Prompt:\n{sent_prompt}\n")
+        # print(f"\nSent Prompt:\n{sent_prompt}\n")
         print(f"total token count: {num_tokens_from_messages(sent_prompt)}\n")
 
         max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - num_tokens_from_messages(sent_prompt))

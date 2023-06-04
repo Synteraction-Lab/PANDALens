@@ -88,6 +88,9 @@ class SystemConfig:
         self.previous_interesting_audio_time = {}
         self.emotion_classifier = None
         self.previous_emotion_scores = None
+        self.potential_interested_frame = None
+        self.text_feedback_to_show = None
+        self.audio_feedback_to_show = None
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -171,8 +174,9 @@ class SystemConfig:
 
     def set_bg_audio_analysis(self, device):
         self.audio_classifier_results = multiprocessing.Queue()
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.audio_classifier_runner = AudioClassifierRunner(
-            model=os.path.join("src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
+            model=os.path.join(project_root, "src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
             queue=self.audio_classifier_results, device=device)
 
         multiprocessing.Process(target=self.audio_classifier_runner.run).start()
@@ -190,7 +194,7 @@ class SystemConfig:
         return interesting_audioset_categories
 
     def set_vision_analysis(self):
-        self.vision_detector = ObjectDetector(simulate=False, cv_imshow=False)
+        self.vision_detector = ObjectDetector(simulate=True, cv_imshow=False)
         self.thread_vision = threading.Thread(target=self.vision_detector.run).start()
 
     def set_emotion_classifier(self, emotion_classifier):

@@ -1,8 +1,10 @@
 import tkinter as tk
-from customtkinter import CTkOptionMenu, CTkCheckBox, CTkButton, CTkSlider
-from src.UI.entry_with_placeholder import EntryWithPlaceholder
-import src.UI.UI_config
+
 from PIL import Image, ImageTk
+from customtkinter import CTkOptionMenu, CTkCheckBox, CTkButton, CTkSlider
+
+import src.UI.UI_config
+from src.UI.entry_with_placeholder import EntryWithPlaceholder
 
 
 def get_circular_button(root, text=None, command=None):

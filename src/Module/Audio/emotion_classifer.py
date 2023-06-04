@@ -1,31 +1,28 @@
-import whisper
-from torch import device as torch_device, cuda, nn
-from torch.nn.functional import softmax
-from torchaudio.transforms import Resample
-import torchaudio
-from transformers import AutoConfig, Wav2Vec2FeatureExtractor, pipeline
-
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 import os.path
+import ssl
 import threading
 import time
-import wavio as wv
+from typing import Optional, Tuple
 
 import numpy as np
 import sounddevice as sd
-from src.Module.Audio.audio_record import AudioRecord
-
+import torch
+import torchaudio
+import wavio as wv
+import whisper
+from torch import device as torch_device, cuda, nn
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn.functional import softmax
+from torchaudio.transforms import Resample
+from transformers import AutoConfig, Wav2Vec2FeatureExtractor, pipeline
+from transformers.file_utils import ModelOutput
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
     Wav2Vec2PreTrainedModel,
     Wav2Vec2Model
 )
 
-import ssl
-
+from src.Module.Audio.audio_record import AudioRecord
 from src.Module.Audio.live_transcriber import show_devices
-from typing import Optional, Tuple
-import torch
-from transformers.file_utils import ModelOutput
 
 ssl._create_default_https_context = ssl._create_unverified_context
 

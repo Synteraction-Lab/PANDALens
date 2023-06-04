@@ -3,6 +3,7 @@ import os
 
 from google.cloud import vision
 
+
 def get_image_labels(path):
     # Instantiates a client
     client = vision.ImageAnnotatorClient()
