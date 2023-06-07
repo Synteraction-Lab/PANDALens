@@ -43,6 +43,7 @@ class LiveTranscriber:
         self.record_timeout = 2
         self.silence_threshold = silence_threshold
         self.stop_event = threading.Event()
+        self.stop_event.set()
         self.full_text = ""
 
         self.recorder = sr.Recognizer()

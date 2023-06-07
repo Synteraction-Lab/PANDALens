@@ -1,6 +1,7 @@
 from src.Command.AskUserCommentOnPhotoCommand import AskUserCommentOnPhotoCommand
 from src.Command.AutoPhotoCommand import AutoPhotoCommand
 from src.Command.GetImageInfoCommand import GetImageInfoCommand
+from src.Command.ManualPhotoCommand import ManualPhotoCommand
 from src.Command.NewRecordingCommand import NewRecordingCommand
 from src.Command.PhotoCommand import PhotoCommand
 from src.Command.SentGPTRequestCommand import SendGPTRequestCommand
@@ -26,6 +27,8 @@ def parse(command_string, sys_config):
         return PhotoCommand(sys_config)
     elif command_string == "auto_photo":
         return AutoPhotoCommand(sys_config)
+    elif command_string == "manual_photo":
+        return ManualPhotoCommand(sys_config)
     elif command_string == "ask_user_comment_on_photo":
         return AskUserCommentOnPhotoCommand(sys_config)
     elif command_string == "transcribe_voice":

@@ -8,4 +8,5 @@ class AskUserCommentOnPhotoCommand(Command):
 
     def execute(self):
         notification = f"We find you seem to interested in your front scene. Any comments?"
-        print(notification)
+        self.system_config.notification = notification
+        self.system_config.audio_feedback_to_show = notification

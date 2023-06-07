@@ -18,6 +18,8 @@ class CommentsOnPhotoAction(Action):
         transcribe_command = CommandParser.parse("transcribe_voice", self.system_config)
         if transcribe_command is not None:
             voice_transcription = transcribe_command.execute()
+            if voice_transcription == "":
+                return False
             user_request["user_voice_transcription"] = voice_transcription
 
         # get image info
@@ -27,7 +29,11 @@ class CommentsOnPhotoAction(Action):
             user_request["image_info"] = image_info
 
         # get location & time
-        user_request["location"] = get_current_location()
+        try:
+            user_request["location"] = get_current_location()
+        except Exception as e:
+            print("Error: cannot get location")
+
         user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
 
         # get background audio
@@ -45,8 +51,11 @@ class CommentsOnPhotoAction(Action):
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)
         if send_gpt_request_command is not None:
             text_feedback, audio_feedback = send_gpt_request_command.execute(user_request)
-            # print(f"The text feedback is: {text_feedback}, and the audio feedback is: {audio_feedback}")
+
             self.system_config.text_feedback_to_show = text_feedback
             self.system_config.audio_feedback_to_show = audio_feedback
+            print(f"The text feedback is: {self.system_config.text_feedback_to_show}, "
+                  f"and the audio feedback is: {self.system_config.audio_feedback_to_show}")
 
+        return True
 

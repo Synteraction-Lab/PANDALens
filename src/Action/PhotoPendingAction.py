@@ -11,6 +11,3 @@ class PhotoPendingAction(Action):
         auto_photo_command = CommandParser.parse("auto_photo", self.system_config)
         if auto_photo_command is not None:
             auto_photo_command.execute()
-
-
-            

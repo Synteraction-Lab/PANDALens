@@ -89,8 +89,11 @@ class SystemConfig:
         self.emotion_classifier = None
         self.previous_emotion_scores = None
         self.potential_interested_frame = None
+        self.frame_shown_in_picture_window = None
         self.text_feedback_to_show = None
         self.audio_feedback_to_show = None
+        self.notification = None
+        self.audio_feedback_finished_playing = True
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -194,7 +197,7 @@ class SystemConfig:
         return interesting_audioset_categories
 
     def set_vision_analysis(self):
-        self.vision_detector = ObjectDetector(simulate=True, cv_imshow=False)
+        self.vision_detector = ObjectDetector(simulate=False, cv_imshow=False)
         self.thread_vision = threading.Thread(target=self.vision_detector.run).start()
 
     def set_emotion_classifier(self, emotion_classifier):

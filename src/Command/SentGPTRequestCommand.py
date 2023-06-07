@@ -22,12 +22,14 @@ class SendGPTRequestCommand(Command):
                 if "full" in json_response['mode']:
                     text_response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
                                     f"Revision:\n{json_response['response']['revised parts']}\n"
-                    audio_response = f"Revision: {json_response['response']['revised parts']}"
+                    audio_response = f"Here is your full writing: {json_response['response']['full writing']}"
                 elif json_response['mode'] == "authoring":
-                    text_response = f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
-                                    f"Questions:\n{json_response['response']['question to users']}\n"
-                    audio_response = f"Questions: {json_response['response']['question to users']}"
+                    # text_response = f"Questions:\n{json_response['response']['question to users']}\n"
+                                     # f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
+
+                    audio_response = f"May I ask: {json_response['response']['question to users']}"
+                    text_response = audio_response
         except Exception as e:
-            pass
+            print(e)
 
         return text_response, audio_response

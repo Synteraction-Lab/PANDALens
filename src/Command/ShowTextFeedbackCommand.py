@@ -6,6 +6,7 @@ class ShowTextFeedbackCommand(Command):
         super().__init__()
         self.system_config = sys_config
 
-    def execute(self):
+    def execute(self, ui):
         print(f"\nText feedback:\n{self.system_config.text_feedback_to_show}")
-        self.system_config.text_feedback_to_show = None
+        # ui.listen_feedback_from_backend()
+        # self.system_config.text_feedback_to_show = None

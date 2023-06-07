@@ -32,7 +32,7 @@ def find_best_quality_img(img_directory, prefix):
     return best_img_filename, best_quality, best_quality_img
 
 
-AUTO_PHOTO_NUM = 3
+AUTO_PHOTO_NUM = 2
 
 
 class AutoPhotoCommand(Command):

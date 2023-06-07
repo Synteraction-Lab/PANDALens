@@ -10,6 +10,8 @@ from ultralyticsplus import YOLO, render_result
 
 from src.Module.Gaze.frame_stream import PupilCamera
 
+from scipy.spatial import distance
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -67,7 +69,7 @@ class ObjectDetector:
             return None
 
         self.frame_height, self.frame_width = frame.shape[:2]
-        threshold_area = 0.05 * 0.05 * self.frame_width * self.frame_height
+        threshold_area = 0.05 * self.frame_width * 0.05 * self.frame_height
 
         # Add a timestamp to each gaze position
         self.gaze_positions_window.append((self.gaze_position, time.time()))
@@ -79,39 +81,43 @@ class ObjectDetector:
             return frame
 
         x_positions, y_positions, timestamps = zip(*[(x, y, t) for ((x, y), t) in self.gaze_positions_window])
-        min_x, max_x = min(x_positions), max(x_positions)
-        min_y, max_y = min(y_positions), max(y_positions)
 
-        rect_width = max_x - min_x
-        rect_height = max_y - min_y
+        gaze_points = np.column_stack((x_positions, y_positions))
+        num_gazes = len(gaze_points)
+        num_cluster_gazes = int(0.9 * num_gazes)
+
+        pairwise_distances = distance.cdist(gaze_points, gaze_points, 'euclidean')
+        smallest_sum_idx = np.argmin(
+            np.sum(np.partition(pairwise_distances, num_cluster_gazes - 1, axis=1)[:, :num_cluster_gazes], axis=1))
+
+        closest_gazes = gaze_points[
+            np.argpartition(pairwise_distances[smallest_sum_idx], num_cluster_gazes - 1)[:num_cluster_gazes]]
+        outlier_gazes = gaze_points[
+            np.argpartition(pairwise_distances[smallest_sum_idx], num_cluster_gazes - 1)[num_cluster_gazes:]]
+
+        min_x, min_y = np.min(closest_gazes, axis=0)
+        max_x, max_y = np.max(closest_gazes, axis=0)
 
         # Calculate the area of the bounding rectangle
-        rect_area = rect_width * rect_height
+        rect_area = (max_x - min_x) * (max_y - min_y)
 
-        # Calculate the area of the frame
-        frame_area = self.frame_width * self.frame_height
-
-        # Count the number of gazes within the area defined by the threshold
-        gazes_within_threshold = sum(
-            1 for x, y in zip(x_positions, y_positions) if min_x <= x <= max_x and min_y <= y <= max_y)
-
-        # Check if 90% of gazes are located within the area defined by the threshold
-        self.fixation_detected = gazes_within_threshold / len(
-            self.gaze_positions_window) >= 0.9 and rect_area <= threshold_area
+        self.fixation_detected = rect_area <= threshold_area
 
         if self.cv_imshow:
-            # Draw bounding rectangle for visual representation (if needed)
-            cv2.rectangle(frame, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
+            # Draw bounding rectangle for visual representation
+            cv2.rectangle(frame, (int(min_x), int(min_y)), (int(max_x), int(max_y)), (0, 255, 0), 2)
 
-            # put text on the frame about rect_area/frame_area in percentage format
-            cv2.putText(frame, "{:.2f}%".format(rect_area / frame_area * 100), (min_x, min_y - 10),
+            # Mark the outlier points in blue
+            for outlier in outlier_gazes:
+                cv2.circle(frame, (int(outlier[0]), int(outlier[1])), radius=3, color=(255, 0, 0), thickness=-1)
+
+            # Display the area value of the bounding rectangle
+            cv2.putText(frame, "Area: {:.2f}".format(rect_area/threshold_area), (int(min_x), int(min_y) - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        # Print the time window
         if self.debug_info:
             time_window = timestamps[-1] - timestamps[0]
             print(f"Time window: {time_window} seconds")
-
         return frame
 
     def map_imagenet_id(self):
@@ -286,5 +292,5 @@ class ObjectDetector:
 
 if __name__ == '__main__':
     # Set simulate to False if you use Pupil Core. Set to True to use mouse cursor.
-    detector = ObjectDetector(simulate=True)
+    detector = ObjectDetector(simulate=False, debug_info=True, cv_imshow=True)
     detector.run()

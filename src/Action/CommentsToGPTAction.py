@@ -1,11 +1,8 @@
-from datetime import datetime
-
 from src.Action.Action import Action
 from src.Command import CommandParser
-from src.Utilities.location import get_current_location
 
 
-class CommentsOnGPTResponseAction(Action):
+class CommentsToGPTAction(Action):
     def __init__(self, sys_config):
         super().__init__()
         self.system_config = sys_config
@@ -17,6 +14,8 @@ class CommentsOnGPTResponseAction(Action):
         transcribe_command = CommandParser.parse("transcribe_voice", self.system_config)
         if transcribe_command is not None:
             voice_transcription = transcribe_command.execute()
+            if voice_transcription == "":
+                return False
             user_request["user_voice_transcription"] = voice_transcription
 
         # send request to GPT
@@ -24,6 +23,8 @@ class CommentsOnGPTResponseAction(Action):
         if send_gpt_request_command is not None:
             text_feedback, audio_feedback = send_gpt_request_command.execute(user_request)
             self.system_config.text_feedback_to_show = text_feedback
-            self.system_config.audio_feedback_to_play = audio_feedback
+            self.system_config.audio_feedback_to_show = audio_feedback
+
+        return True
 
 
