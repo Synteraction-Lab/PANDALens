@@ -52,7 +52,7 @@ def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_F
                      hover_color=src.UI.UI_config.BUTTON_HOVER_COLOR, height=height, width=width, border_width=0,
                      border_color=src.UI.UI_config.BUTTON_BORDER_COLOR, corner_radius=corner_radius,
                      text_color=src.UI.UI_config.BUTTON_TEXT_COLOR,
-                     command=command, font=(None, font_size))
+                     command=command, font=(src.UI.UI_config.MAIN_FONT[0], font_size))
 
 
 def get_checkbutton(root, text=None, variable=None, command=None, fg_color=src.UI.UI_config.CHECK_BUTTON_FG_COLOR,

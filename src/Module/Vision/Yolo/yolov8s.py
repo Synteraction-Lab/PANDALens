@@ -65,13 +65,14 @@ class ObjectDetector:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
 
     def detect_fixation(self, frame):
+        return
         if frame is None or self.gaze_position == (0, 0):
             return None
 
         self.frame_height, self.frame_width = frame.shape[:2]
-        threshold_area = 0.05 * self.frame_width * 0.05 * self.frame_height
+        threshold_area = 0.06 * self.frame_width * 0.06 * self.frame_height
 
-        # Add a timestamp to each gaze position
+        # Add a timestamp to each gaze positionå
         self.gaze_positions_window.append((self.gaze_position, time.time()))
 
         if len(self.gaze_positions_window) > self.GAZE_SLIDE_WINDOW_SIZE:
@@ -84,7 +85,7 @@ class ObjectDetector:
 
         gaze_points = np.column_stack((x_positions, y_positions))
         num_gazes = len(gaze_points)
-        num_cluster_gazes = int(0.9 * num_gazes)
+        num_cluster_gazes = int(0.8 * num_gazes)
 
         pairwise_distances = distance.cdist(gaze_points, gaze_points, 'euclidean')
         smallest_sum_idx = np.argmin(
@@ -101,7 +102,7 @@ class ObjectDetector:
         # Calculate the area of the bounding rectangle
         rect_area = (max_x - min_x) * (max_y - min_y)
 
-        self.fixation_detected = rect_area <= threshold_area
+        # self.fixation_detected = rect_area <= threshold_area
 
         if self.cv_imshow:
             # Draw bounding rectangle for visual representation
@@ -250,6 +251,9 @@ class ObjectDetector:
                     if fixation_x is not None and fixation_y is not None:
                         fixation_y = 1 - fixation_y
                         self.fixation_position = (int(fixation_x * frame_width), int(fixation_y * frame_height))
+                        self.fixation_detected = True
+                    else:
+                        self.fixation_detected = False
                     if gaze_x is not None and gaze_y is not None:
                         gaze_x = float(np.array(gaze_x_list).mean())
                         gaze_y = 1 - float(np.array(gaze_y_list).mean())

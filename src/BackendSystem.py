@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 class BackendSystem:
     def __init__(self, system_config, ui=None):
+        self.previous_sentiment_scores = None
         self.user_explicit_input = None
         self.silence_start_time = None
         self.simulated_fixation = False
@@ -59,10 +60,24 @@ class BackendSystem:
                 continue
 
             if current_state == 'init':
+                emotion_classifier = self.system_config.emotion_classifier
+                if emotion_classifier is not None:
+                    if emotion_classifier.stop_event.is_set():
+                        emotion_classifier.start()
                 if self.detect_gaze_and_zoom_in():
                     self.system_status.trigger('gaze')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
+                elif self.detect_positive_tone():
+                    self.system_status.set_state('manual_photo_comments_pending')
+                    action = self.system_status.get_current_state()
+                    ActionParser.parse(action, self.system_config).execute()
+                    self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                elif self.detect_interested_audio():
+                    self.system_status.set_state('audio_comments_pending')
+                    action = self.system_status.get_current_state()
+                    ActionParser.parse(action, self.system_config).execute()
+
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
                     self.system_status.trigger('move_to_another_place')
@@ -70,7 +85,8 @@ class BackendSystem:
                     ActionParser.parse(action, self.system_config).execute()
             elif current_state == 'photo_comments_pending' \
                     or current_state == 'manual_photo_comments_pending' \
-                    or current_state == 'show_gpt_response':
+                    or current_state == 'show_gpt_response'\
+                    or current_state == 'audio_comments_pending':
                 if self.system_config.audio_feedback_finished_playing \
                         and self.system_config.audio_feedback_to_show is None:
                     if self.detect_user_speak():
@@ -87,28 +103,28 @@ class BackendSystem:
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
             elif current_state == 'comments_on_photo' or current_state == 'comments_to_gpt' \
-                    or current_state == 'full_writing_pending':
+                    or current_state == 'full_writing_pending' or current_state == 'comments_on_audio':
                 if self.detect_gpt_response():
                     self.system_config.notification = None
                     self.system_status.trigger('gpt_generate_response')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute(self.ui)
             # elif current_state == 'show_gpt_response':
-                # if self.system_config.audio_feedback_finished_playing \
-                #         and self.system_config.audio_feedback_to_show is None:
-                #     if self.detect_user_speak():
-                #         self.system_config.text_feedback_to_show = ""
-                #         self.system_status.trigger('speak')
-                #         action = self.system_status.get_current_state()
-                #         success = ActionParser.parse(action, self.system_config).execute()
-                #         if not success:
-                #             self.system_status.set_state("init")
-                #         self.system_config.notification = None
-                #
-                #     elif self.detect_user_ignore():
-                #         self.system_status.trigger('ignore')
-                #         self.system_config.notification = None
-                #         self.system_config.text_feedback_to_show = ""
+            # if self.system_config.audio_feedback_finished_playing \
+            #         and self.system_config.audio_feedback_to_show is None:
+            #     if self.detect_user_speak():
+            #         self.system_config.text_feedback_to_show = ""
+            #         self.system_status.trigger('speak')
+            #         action = self.system_status.get_current_state()
+            #         success = ActionParser.parse(action, self.system_config).execute()
+            #         if not success:
+            #             self.system_status.set_state("init")
+            #         self.system_config.notification = None
+            #
+            #     elif self.detect_user_ignore():
+            #         self.system_status.trigger('ignore')
+            #         self.system_config.notification = None
+            #         self.system_config.text_feedback_to_show = ""
             # elif current_state == 'comments_to_gpt':
             #     if self.detect_gpt_response():
             #         self.system_status.trigger('gpt_generate_response')
@@ -194,6 +210,34 @@ class BackendSystem:
         time.sleep(0.2)
         return False
 
+    def detect_positive_tone(self):
+        emotion_classifier = self.system_config.emotion_classifier
+        if emotion_classifier is None:
+            return False
+
+        scores = emotion_classifier.scores
+
+        if scores is None:
+            return False
+
+        if scores['joy'] + scores['surprise'] > 0.7 and scores != self.previous_sentiment_scores:
+            self.previous_sentiment_scores = scores
+            print("Positive tone detected")
+            emotion_classifier.stop()
+            return True
+
+    def detect_interested_audio(self):
+        score, category = self.system_config.get_bg_audio_analysis_result()
+        if category is not None:
+            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.5:
+                last_time = self.system_config.previous_interesting_audio_time.get(category, 0)
+                if time.time() - last_time > 60:
+                    self.system_config.interesting_audio = category
+                    self.system_config.previous_interesting_audio_time[category] = time.time()
+                    return True
+
+        return False
+
     def detect_user_ignore(self):
         if self.silence_start_time is None:
             self.silence_start_time = time.time()
@@ -234,7 +278,6 @@ def test():
     import os
 
     def on_press(key):
-        func = None
         try:
             if key == Key.up:
                 backend_system.simulate_func('gaze')
@@ -242,12 +285,6 @@ def test():
                 backend_system.set_user_explicit_input('voice_comment')
             elif key == Key.left:
                 backend_system.set_user_explicit_input('take_photo')
-            # elif key == keyboard.Key.right:
-            #     func = menu.trigger('right')
-            # elif key.char == 'v':
-            #     func = menu.trigger('show_voice_icon')
-            # elif key.char == 'p':
-            #     func = menu.trigger('show_photo_icon')
         except Exception as e:
             print(e)
 

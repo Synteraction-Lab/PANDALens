@@ -1,271 +1,151 @@
 import os.path
 import ssl
 import threading
-import time
-from typing import Optional, Tuple
 
 import numpy as np
 import sounddevice as sd
-import torch
-import torchaudio
-import wavio as wv
-import whisper
-from torch import device as torch_device, cuda, nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from torch.nn.functional import softmax
-from torchaudio.transforms import Resample
-from transformers import AutoConfig, Wav2Vec2FeatureExtractor, pipeline
-from transformers.file_utils import ModelOutput
-from transformers.models.wav2vec2.modeling_wav2vec2 import (
-    Wav2Vec2PreTrainedModel,
-    Wav2Vec2Model
-)
 
-from src.Module.Audio.audio_record import AudioRecord
-from src.Module.Audio.live_transcriber import show_devices
+import io
+import os
+import speech_recognition as sr
+import whisper
+import torch
+
+from datetime import datetime, timedelta
+from queue import Queue
+from tempfile import NamedTemporaryFile
+from time import sleep
+
+from transformers import pipeline
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-class SpeechClassifierOutput(ModelOutput):
-    loss: Optional[torch.FloatTensor] = None
-    logits: torch.FloatTensor = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
+def show_devices():
+    """
+    Print a list of available input devices.
+    """
+    devices = sd.query_devices()
+    input_devices = [device for device in devices if device['max_input_channels'] > 0]
+    print(input_devices)
 
 
-class Wav2Vec2ClassificationHead(nn.Module):
-    """Head for wav2vec classification task."""
-
-    def __init__(self, config):
-        super().__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(config.final_dropout)
-        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
-
-    def forward(self, features, **kwargs):
-        x = features
-        x = self.dropout(x)
-        x = self.dense(x)
-        x = torch.tanh(x)
-        x = self.dropout(x)
-        x = self.out_proj(x)
-        return x
-
-
-class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.num_labels = config.num_labels
-        self.pooling_mode = config.pooling_mode
-        self.config = config
-
-        self.wav2vec2 = Wav2Vec2Model(config)
-        self.classifier = Wav2Vec2ClassificationHead(config)
-
-        self.init_weights()
-
-    def freeze_feature_extractor(self):
-        self.wav2vec2.feature_extractor._freeze_parameters()
-
-    def merged_strategy(
-            self,
-            hidden_states,
-            mode="mean"
-    ):
-        if mode == "mean":
-            outputs = torch.mean(hidden_states, dim=1)
-        elif mode == "sum":
-            outputs = torch.sum(hidden_states, dim=1)
-        elif mode == "max":
-            outputs = torch.max(hidden_states, dim=1)[0]
-        else:
-            raise Exception(
-                "The pooling method hasn't been defined! Your pooling mode must be one of these ['mean', 'sum', 'max']")
-
-        return outputs
-
-    def forward(
-            self,
-            input_values,
-            attention_mask=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            labels=None,
-    ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        outputs = self.wav2vec2(
-            input_values,
-            attention_mask=attention_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-        hidden_states = outputs[0]
-        hidden_states = self.merged_strategy(hidden_states, mode=self.pooling_mode)
-        logits = self.classifier(hidden_states)
-
-        loss = None
-        if labels is not None:
-            if self.config.problem_type is None:
-                if self.num_labels == 1:
-                    self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
-                    self.config.problem_type = "single_label_classification"
-                else:
-                    self.config.problem_type = "multi_label_classification"
-
-            if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels)
-            elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
-
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return SpeechClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+def get_recording_devices():
+    devices = sd.query_devices()
+    input_devices = [device for device in devices if device['max_input_channels'] > 0]
+    return input_devices
 
 
 class EmotionClassifier:
-    def __init__(self, model_name_or_path="harshit345/xlsr-wav2vec-speech-emotion-recognition", device_index=1,
-                 duration=60, silence_threshold=0.02, overlapping_factor=0):
-        self.device = torch_device("cuda" if cuda.is_available() else "cpu")
-        self.config = AutoConfig.from_pretrained(model_name_or_path)
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name_or_path)
-        self.model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(self.device)
-        self.sampling_rate = self.feature_extractor.sampling_rate
-
-        self.device_index = device_index
-        self.duration = duration
-        self.silence_threshold = silence_threshold
-        self.overlapping_factor = overlapping_factor
-        self.stop_event = threading.Event()
-        self.transcribe_lock = threading.Lock()
-        self.model = whisper.load_model("small.en")
-
-        device = sd.query_devices(device_index)
-        channels = device['max_input_channels']
-        sample_rate = int(device['default_samplerate'])
-        self.audio_record = AudioRecord(channels, sample_rate, int(duration * sample_rate), device_index)
+    def __init__(self, model="small.en", device_index='MacBook Pro Microphone', silence_threshold=0.02):
         self.scores = None
+        self.stop_listening = None
+        self.model = model
+        self.device_index = device_index
+        self.phrase_timeout = 3
+        self.record_timeout = 2
+        self.silence_threshold = silence_threshold
+        self.stop_event = threading.Event()
+        self.stop_event.set()
+        self.full_text = ""
 
-    def speech_file_to_array_fn(self, path):
-        speech_array, _sampling_rate = torchaudio.load(path)
-        resampler = Resample(_sampling_rate)
-        speech = resampler(speech_array).squeeze().numpy()
-        return speech
+        self.recorder = sr.Recognizer()
+        self.recorder.energy_threshold = 1000
+        self.recorder.dynamic_energy_threshold = False
 
-    def transcribe(self, file_path):
-        audio = whisper.load_audio(file_path)
-        original_audio = audio
-        options = whisper.DecodingOptions(language='en', fp16=False)
+        self.silence_start = None
+        self.silence_end = None
 
-        # require the lock here
-        with self.transcribe_lock:
-            result = self.model.transcribe(
-                original_audio,
-                no_speech_threshold=0.2,
-                logprob_threshold=None,
-                verbose=False,
-                **options.__dict__
-            )
-            # self.prompt = result['text']
+        mic_name = sd.query_devices(self.device_index)['name']
+        for index, name in enumerate(sr.Microphone.list_microphone_names()):
+            if mic_name in name:
+                self.source = sr.Microphone(sample_rate=16000, device_index=index)
+                break
+        else:
+            raise ValueError(f"No microphone named \"{mic_name}\" found")
 
-            # print(result['text'])
-            classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base",
-                                  return_all_scores=True)
-            # Flattening the data
-            data = classifier(result['text'])[0]
+        # self.recorder.adjust_for_ambient_noise(self.source)
+        self.audio_model = whisper.load_model(self.model)
 
-            # Create a dictionary to store scores
-            score_dict = {}
+        self.temp_file = NamedTemporaryFile().name
+        self.transcription = ['']
 
-            # Iterating over the data and storing scores in dictionary
-            for d in data:
-                score_dict[d['label']] = d['score']
+        with self.source:
+            self.recorder.adjust_for_ambient_noise(self.source)
 
-            # print(f"Joy score: {score_dict['joy']}", f"Surprise score: {score_dict['surprise']}")
-            self.scores = score_dict
+        self.data_queue = Queue()
 
-    def emotion_analyze(self, file_path):
-        speech = self.speech_file_to_array_fn(file_path)
-        inputs = self.feature_extractor(speech, sampling_rate=self.sampling_rate, return_tensors="pt", padding=True)
-        inputs = {key: inputs[key].to(self.device) for key in inputs}
-        with torch.no_grad():
-            logits = self.model(**inputs).logits
-        scores = softmax(logits, dim=1).detach().cpu().numpy()[0]
-        outputs = [{"Emotion": self.config.id2label[i], "Score": f"{round(score * 100, 3):.1f}%"} for i, score in
-                   enumerate(scores)]
-        print(outputs)
-        return outputs
+    def rms(self, data):
+        """
+        Calculates the root mean square of the audio data.
+        """
+        audio_data = np.frombuffer(data, dtype=np.int16)
+        return np.sqrt(np.mean(np.square(audio_data)))
+
+    def record_callback(self, _, audio: sr.AudioData) -> None:
+        data = audio.get_raw_data()
+        self.data_queue.put(data)
 
     def run(self):
-        self.audio_record.start_recording()
-        self.is_recording = True
+        last_sample = bytes()
+        phrase_time = None
 
-        dir_path = os.path.join("data", "audio")
-        if not os.path.isdir(dir_path):
-            os.makedirs(dir_path)
-
-        idx = 0
-        recording_started = False
-        recording_start_time = 0
-
-        self.silence_duration = 0
-        silence_start_time = 0
-        silence_start = False
-
-        recording_thread_start_time_now = time.time()
+        self.stop_listening = self.recorder.listen_in_background(self.source, self.record_callback,
+                                                                 phrase_time_limit=self.record_timeout)
 
         while not self.stop_event.is_set():
-            now = time.time()
+            now = datetime.utcnow()
+            if not self.data_queue.empty():
+                phrase_complete = False
+                if phrase_time and now - phrase_time > timedelta(seconds=self.phrase_timeout):
+                    last_sample = bytes()
+                    phrase_complete = True
+                phrase_time = now
 
-            if now - recording_thread_start_time_now < 1:
-                time.sleep(1)
-                continue
+                while not self.data_queue.empty():
+                    data = self.data_queue.get()
+                    last_sample += data
 
-            previous_1s_audio = self.audio_record.read(self.audio_record.sampling_rate * 1)
+                audio_data = sr.AudioData(last_sample, self.source.SAMPLE_RATE, self.source.SAMPLE_WIDTH)
+                wav_data = io.BytesIO(audio_data.get_wav_data())
 
-            rms = np.sqrt(np.mean(np.square(previous_1s_audio)))
+                with open(self.temp_file, 'w+b') as f:
+                    f.write(wav_data.read())
 
-            diff_since_start = now - recording_start_time
+                result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                     no_speech_threshold=0.2,
+                                                     logprob_threshold=None, )
+                text = result['text'].strip()
 
-            if rms <= self.silence_threshold:
-                if not silence_start:
-                    silence_start = True
-                    silence_start_time = now
-                self.silence_duration = now - silence_start_time
-            else:
-                silence_start = False
+                if phrase_complete:
+                    self.transcription.append(text)
+                    self.analyze_emotion(text)
+                else:
+                    self.transcription[-1] = text
 
-            if (rms <= self.silence_threshold or diff_since_start >= self.duration - 1) and recording_started:
-                recording_started = False
+                os.system('clear' if os.name == 'posix' else 'cls')
+                # for line in self.transcription:
+                #     print(line)
+                if self.scores:
+                    print(f"Joy score: {self.scores['joy']}", f"Surprise score: {self.scores['surprise']}")
+                print('', end='', flush=True)
 
-                buffer_size = int((diff_since_start + 1) * self.audio_record.sampling_rate)
-                data = self.audio_record.read(buffer_size)
+                sleep(0.25)
 
-                idx += 1
-                idx %= 3
-                file_path = os.path.join(dir_path, f"emotion{idx}.wav")
-                wv.write(file_path, data, self.audio_record.sampling_rate, sampwidth=2)
+    def analyze_emotion(self, text):
+        classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base",
+                              return_all_scores=True)
+        # Flattening the data
+        data = classifier(text)[0]
 
-                threading.Thread(target=self.transcribe, args=(file_path,)).start()
+        # Create a dictionary to store scores
+        score_dict = {}
 
-            elif rms > self.silence_threshold and not recording_started:
-                recording_started = True
-                recording_start_time = now
+        # Iterating over the data and storing scores in dictionary
+        for d in data:
+            score_dict[d['label']] = d['score']
+
+        self.scores = score_dict
 
     def start(self):
         self.stop_event.clear()
@@ -274,14 +154,12 @@ class EmotionClassifier:
 
     def stop(self):
         self.stop_event.set()
+        self.stop_listening(wait_for_stop=False)
         self.record_thread.join()
 
 
 if __name__ == '__main__':
-    show_devices()
-    device_index = input("Enter device index: ")
-
-    transcriber = EmotionClassifier(device_index=device_index)
-    transcriber.start()
-    input("Press Enter to stop recording...")
-    print(transcriber.stop())
+    emotion_classifier = EmotionClassifier()
+    emotion_classifier.start()
+    input("Press enter to stop")
+    print(emotion_classifier.stop())

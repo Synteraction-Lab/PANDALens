@@ -17,11 +17,11 @@ MAIN_ULTRA_FONT_SIZE = 36
 # MAIN_BOLD_FONT = 'helvetica {} bold'.format(MAIN_SMALL_FONT_SIZE)
 # MAIN_MID_FONT = 'helvetica {}'.format(MAIN_MID_FONT_SIZE)
 # MAIN_LARGE_FONT = 'helvetica {}'.format(MAIN_ULTRA_FONT_SIZE)
-MAIN_SMALL_FONT = ('helvetica', MAIN_SMALL_FONT_SIZE)
-MAIN_FONT = ('helvetica', MAIN_FONT_SIZE)
-MAIN_BOLD_FONT = ('helvetica bold', MAIN_SMALL_FONT_SIZE)
-MAIN_MID_FONT = ('helvetica', MAIN_MID_FONT_SIZE)
-MAIN_LARGE_FONT = ('helvetica', MAIN_ULTRA_FONT_SIZE)
+MAIN_SMALL_FONT = ('open sans pro', MAIN_SMALL_FONT_SIZE)
+MAIN_FONT = ('open sans pro', MAIN_FONT_SIZE)
+MAIN_BOLD_FONT = ('open sans pro bold', MAIN_SMALL_FONT_SIZE)
+MAIN_MID_FONT = ('open sans pro', MAIN_MID_FONT_SIZE)
+MAIN_LARGE_FONT = ('open sans pro', MAIN_ULTRA_FONT_SIZE)
 
 BUTTON_BORDER_COLOR = "black"
 BUTTON_TEXT_COLOR = "white"

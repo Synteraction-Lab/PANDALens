@@ -19,6 +19,7 @@ class ManualPhotoCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
+        print("Manual photo command is executed")
         image_folder = self.system_config.get_image_folder()
         now_time = datetime.now().strftime("%H_%M_%S")
 
@@ -37,7 +38,7 @@ class ManualPhotoCommand(Command):
 
         self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
-        notification = f"We find you seem to interested in your front scene. Any comments?"
+        notification = f"You seem to interested in your front scene. Any comments?"
         self.system_config.notification = notification
         self.system_config.audio_feedback_to_show = notification
 

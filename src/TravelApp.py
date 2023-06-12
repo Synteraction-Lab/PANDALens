@@ -30,6 +30,7 @@ SILENCE_TIME_THRESHOLD_FOR_STOP_RECORDING = 8
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.shown_button = False
         self.backend_system = None
         self.log_path = None
         self.person_count = 0
@@ -123,13 +124,13 @@ class App:
         func = None
         try:
             if key == keyboard.Key.up:
-                func = self.menu.trigger('up')
+                func = "Summary"
             elif key == keyboard.Key.down:
-                func = self.menu.trigger('down')
+                func = "Photo"
             elif key == keyboard.Key.left:
-                func = self.menu.trigger('left')
+                func = "Hide"
             elif key == keyboard.Key.right:
-                func = self.menu.trigger('right')
+                func = "Voice"
         except Exception as e:
             print(e)
 
@@ -140,8 +141,8 @@ class App:
         if func is None:
             return
         log_manipulation(self.log_path, func)
-        # if func == "Hide" or func == "Show":
-        #     self.hide_show_content(func)
+        if func == "Hide" or func == "Show":
+            self.hide_show_content()
         if func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
         elif func == "Photo" or func == "Retake":
@@ -166,7 +167,7 @@ class App:
             return
         if self.ring_mouse_mode:
             if pressed:
-                func = self.menu.trigger('left')
+                func = "Hide"
                 self.parse_button_press(func)
 
     def pack_layout(self):
@@ -218,12 +219,13 @@ class App:
                                       activebackground='black', highlightbackground='black', highlightcolor='black',
                                       elementborderwidth=0, width=0)
         self.scrollbar.place(relx=1.2, relheight=1.0, anchor='ne', width=20)
+
         # self.scrollbar.place_forget()
 
-        self.button_up = get_button(self.manipulation_frame, text='', fg_color="green")
-        self.button_down = get_button(self.manipulation_frame, text='', fg_color="green")
-        self.button_left = get_button(self.manipulation_frame, text='', fg_color="green")
-        self.button_right = get_button(self.manipulation_frame, text='', fg_color="green")
+        self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color="green")
+        self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color="green")
+        self.button_left = get_button(self.manipulation_frame, text='Hide', fg_color="green")
+        self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color="green")
 
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
                         'right': self.button_right}
@@ -232,14 +234,16 @@ class App:
                                'down': {'relx': 0.5, 'rely': 0.95, 'anchor': 'center'},
                                'right': {'relx': 0.95, 'rely': 0.5, 'anchor': 'center'}}
 
-        self.menu = HierarchyMenu(self.root, self.buttons, self.buttons_places)
-        self.menu.on_enter_state()
+        # self.menu = HierarchyMenu(self.root, self.buttons, self.buttons_places)
+        # self.menu.on_enter_state()
+        self.shown_button = False
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.attributes("-fullscreen", True)
         self.listen_notification_from_backend()
         self.listen_feedback_from_backend()
         self.listen_frame_from_backend()
+        self.start_emotion_analysis()
         # self.root.attributes("-alpha", 0.95)
 
     def on_close(self):
@@ -280,9 +284,20 @@ class App:
 
         self.root.after(200, self.listen_feedback_from_backend)
 
-    def hide_show_content(self, mode):
+    def hide_show_buttons(self):
+        if self.shown_button:
+            for direction, button in self.buttons.items():
+                button.place_forget()
+        else:
+            for direction, button in self.buttons.items():
+                button.place(**self.buttons_places[direction])  # Place the button
+
+
+    def hide_show_content(self):
         self.hide_show_picture_window()
-        self.hide_show_text(mode)
+        self.hide_show_text()
+        self.hide_show_buttons()
+        self.shown_button = not self.shown_button
 
     def destroy_picture_window(self):
         # Check if the picture window is open and close it if necessary
@@ -293,8 +308,8 @@ class App:
             # self.update_vision_analysis()
             return
 
-    def hide_show_text(self, mode):
-        if mode == "Hide":
+    def hide_show_text(self):
+        if self.shown_button:
             # self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
             self.text_widget.delete(1.0, tk.END)
             self.determinate_voice_feedback_process()
@@ -453,11 +468,10 @@ class App:
     # def start_vision_analysis(self):
     #     self.update_vision_analysis()
     #
-    # def start_emotion_analysis(self):
-    #     emotion_classifier = self.system_config.emotion_classifier
-    #     if emotion_classifier is not None:
-    #         emotion_classifier.start()
-    #         self.update_emotion_analysis()
+    def start_emotion_analysis(self):
+        emotion_classifier = self.system_config.emotion_classifier
+        if emotion_classifier is not None:
+            emotion_classifier.start()
     #
     # def stop_emotion_analysis(self):
     #     emotion_classifier = self.system_config.emotion_classifier
