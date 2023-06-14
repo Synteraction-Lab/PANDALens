@@ -22,6 +22,10 @@ class TranscribeVoiceCommand(Command):
 
         # Stop the transcriber when no voice is detected for 6 seconds
         while True:
+            if self.system_config.stop_recording_command:
+                self.system_config.stop_recording_command = False
+                time.sleep(1)
+                break
             if not self.detect_user_speak():
                 if self.silence_start_time is None:
                     self.silence_start_time = time.time()
@@ -36,7 +40,7 @@ class TranscribeVoiceCommand(Command):
                 self.silence_start_time = None
             time.sleep(0.5)
 
-        full_transcription = voice_transcriber.stop()
+        full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
         self.system_config.notification = f"Processing your command..."
         return full_transcription

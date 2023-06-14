@@ -94,6 +94,10 @@ class SystemConfig:
         self.audio_feedback_to_show = None
         self.notification = None
         self.audio_feedback_finished_playing = True
+        self.previous_interesting_object_time = {}
+        self.interesting_object = None
+        self.stop_recording_command = False
+        self.show_interest_icon = False
 
     def get_final_transcription(self):
         return self.final_transcription

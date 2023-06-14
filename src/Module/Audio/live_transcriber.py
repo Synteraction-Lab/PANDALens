@@ -16,6 +16,8 @@ from queue import Queue
 from tempfile import NamedTemporaryFile
 from time import sleep
 
+from transformers import pipeline
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -37,6 +39,7 @@ def get_recording_devices():
 class LiveTranscriber:
     def __init__(self, model="small.en", device_index='MacBook Pro Microphone', silence_threshold=0.02):
         self.stop_listening = None
+        self.scores = None
         self.model = model
         self.device_index = device_index
         self.phrase_timeout = 3
@@ -49,6 +52,9 @@ class LiveTranscriber:
         self.recorder = sr.Recognizer()
         self.recorder.energy_threshold = 1000
         self.recorder.dynamic_energy_threshold = False
+
+        # mode is either voice_transcription or emotion_classification
+        self.mode = "emotion_classification"
 
         self.silence_start = None
         self.silence_end = None
@@ -66,6 +72,8 @@ class LiveTranscriber:
 
         self.temp_file = NamedTemporaryFile().name
         self.transcription = ['']
+
+        self.lock = threading.Lock()
 
         with self.source:
             self.recorder.adjust_for_ambient_noise(self.source)
@@ -109,25 +117,76 @@ class LiveTranscriber:
                 with open(self.temp_file, 'w+b') as f:
                     f.write(wav_data.read())
 
-                result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available())
-                text = result['text'].strip()
+                if self.mode == "voice_transcription":
+                    with self.lock:
+                        result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available())
+                        text = result['text'].strip()
 
-                if phrase_complete:
-                    self.transcription.append(text)
+                        if phrase_complete:
+                            self.transcription.append(text)
+                        else:
+                            self.transcription[-1] = text
+
+                        # os.system('clear' if os.name == 'posix' else 'cls')
+                        # for line in self.transcription:
+                        #     print(line)
+                        print(" ".join(self.transcription))
                 else:
-                    self.transcription[-1] = text
+                    result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                         no_speech_threshold=0.2,
+                                                         logprob_threshold=None, )
+                    text = result['text'].strip()
 
-                os.system('clear' if os.name == 'posix' else 'cls')
-                for line in self.transcription:
-                    print(line)
+                    if phrase_complete:
+                        self.transcription.append(text)
+                        if text != "":
+                            self.analyze_emotion(text)
+                    else:
+                        self.transcription[-1] = text
+
+                    os.system('clear' if os.name == 'posix' else 'cls')
+                    # for line in self.transcription:
+                    #     print(line)
+                    if self.scores:
+                        print(f"Sentence: {text}, Joy score: {self.scores['joy']}",
+                              f"Surprise score: {self.scores['surprise']}")
                 print('', end='', flush=True)
 
                 sleep(0.25)
+
+    def analyze_emotion(self, text):
+        classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base",
+                              return_all_scores=True)
+        # Flattening the data
+        data = classifier(text)[0]
+
+        # Create a dictionary to store scores
+        score_dict = {}
+
+        # Iterating over the data and storing scores in dictionary
+        for d in data:
+            score_dict[d['label']] = d['score']
+
+        self.scores = score_dict
 
     def start(self):
         self.stop_event.clear()
         self.record_thread = threading.Thread(target=self.run)
         self.record_thread.start()
+
+    def stop_transcription_and_start_emotion_classification(self):
+        with self.lock:
+            final_result = " ".join(self.transcription)
+        self.full_text = ""
+        self.transcription = ['']
+        self.mode = "emotion_classification"
+        return final_result.strip()
+
+    def stop_emotion_classification_and_start_transcription(self):
+        with self.lock:
+            self.full_text = ""
+            self.transcription = ['']
+        self.mode = "voice_transcription"
 
     def stop(self):
         self.stop_event.set()

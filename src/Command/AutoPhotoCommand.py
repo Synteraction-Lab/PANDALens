@@ -32,7 +32,7 @@ def find_best_quality_img(img_directory, prefix):
     return best_img_filename, best_quality, best_quality_img
 
 
-AUTO_PHOTO_NUM = 2
+AUTO_PHOTO_NUM = 1
 
 
 class AutoPhotoCommand(Command):
@@ -54,16 +54,18 @@ class AutoPhotoCommand(Command):
 
             os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
             cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        if AUTO_PHOTO_NUM > 1:
+            latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
+            # remove all the photos other than the best one
+            for filename in os.listdir(image_folder):
+                if filename.startswith(now_time) and (filename.endswith('.png') or filename.endswith('.jpg')):
+                    if filename != latest_photo_filename:
+                        os.remove(os.path.join(image_folder, filename))
+        else:
+            latest_photo_filename = f'{now_time}_0.png'
+            frame = PIL.Image.open(os.path.join(image_folder, latest_photo_filename))
 
-        latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
         self.system_config.set_latest_photo_file_path(os.path.join(image_folder, latest_photo_filename))
-
-        # remove all the photos other than the best one
-        for filename in os.listdir(image_folder):
-            if filename.startswith(now_time) and (filename.endswith('.png') or filename.endswith('.jpg')):
-                if filename != latest_photo_filename:
-                    os.remove(os.path.join(image_folder, filename))
-
         self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
         return frame
 

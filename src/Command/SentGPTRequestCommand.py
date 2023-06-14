@@ -28,6 +28,8 @@ class SendGPTRequestCommand(Command):
                                      # f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
 
                     audio_response = f"May I ask: {json_response['response']['question to users']}"
+                    if audio_response.strip() == "May I ask: None":
+                        audio_response = "I have no question for you. Anything you want to add?"
                     text_response = audio_response
         except Exception as e:
             print(e)

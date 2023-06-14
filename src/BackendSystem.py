@@ -1,6 +1,9 @@
 import os
 import time
 
+import cv2
+import numpy as np
+
 from src.Data.SystemConfig import SystemConfig
 from src.Data.SystemStatus import SystemStatus
 from src.Module.Audio.live_transcriber import LiveTranscriber
@@ -26,6 +29,7 @@ class BackendSystem:
         self.simulated_fixation = False
         self.zoom_in = None
         self.previous_vision_frame = None
+        self.previous_norm_pos = None
         self.system_config = system_config
         self.system_status = SystemStatus()
         self.log_path = os.path.join(self.system_config.folder_path + "log.csv")
@@ -45,7 +49,11 @@ class BackendSystem:
                     self.system_status.set_state('comments_to_gpt')
                     action = self.system_status.get_current_state()
                     print("Action: " + action)
-                    ActionParser.parse(action, self.system_config).execute()
+                    success = ActionParser.parse(action, self.system_config).execute()
+                    if not success:
+                        self.system_status.set_state("init")
+                        self.system_config.notification = None
+                        self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
@@ -60,11 +68,12 @@ class BackendSystem:
                 continue
 
             if current_state == 'init':
-                emotion_classifier = self.system_config.emotion_classifier
+                emotion_classifier = self.system_config.get_transcriber()
                 if emotion_classifier is not None:
                     if emotion_classifier.stop_event.is_set():
                         emotion_classifier.start()
                 if self.detect_gaze_and_zoom_in():
+                    self.system_config.show_interest_icon = True
                     self.system_status.trigger('gaze')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
@@ -77,6 +86,11 @@ class BackendSystem:
                     self.system_status.set_state('audio_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
+                elif self.detect_interested_object():
+                    self.system_status.set_state('manual_photo_comments_pending')
+                    action = self.system_status.get_current_state()
+                    ActionParser.parse(action, self.system_config).execute()
+                    self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
 
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
@@ -85,7 +99,7 @@ class BackendSystem:
                     ActionParser.parse(action, self.system_config).execute()
             elif current_state == 'photo_comments_pending' \
                     or current_state == 'manual_photo_comments_pending' \
-                    or current_state == 'show_gpt_response'\
+                    or current_state == 'show_gpt_response' \
                     or current_state == 'audio_comments_pending':
                 if self.system_config.audio_feedback_finished_playing \
                         and self.system_config.audio_feedback_to_show is None:
@@ -109,30 +123,6 @@ class BackendSystem:
                     self.system_status.trigger('gpt_generate_response')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute(self.ui)
-            # elif current_state == 'show_gpt_response':
-            # if self.system_config.audio_feedback_finished_playing \
-            #         and self.system_config.audio_feedback_to_show is None:
-            #     if self.detect_user_speak():
-            #         self.system_config.text_feedback_to_show = ""
-            #         self.system_status.trigger('speak')
-            #         action = self.system_status.get_current_state()
-            #         success = ActionParser.parse(action, self.system_config).execute()
-            #         if not success:
-            #             self.system_status.set_state("init")
-            #         self.system_config.notification = None
-            #
-            #     elif self.detect_user_ignore():
-            #         self.system_status.trigger('ignore')
-            #         self.system_config.notification = None
-            #         self.system_config.text_feedback_to_show = ""
-            # elif current_state == 'comments_to_gpt':
-            #     if self.detect_gpt_response():
-            #         self.system_status.trigger('gpt_generate_response')
-            #         action = self.system_status.get_current_state()
-            #         ActionParser.parse(action, self.system_config).execute(self.ui)
-            # Check if the system should be terminated
-            # if self.system_status.is_terminated():
-            #     break
 
     def take_user_explict_input(self, user_input):
         self.system_status.trigger(user_input)
@@ -154,18 +144,27 @@ class BackendSystem:
             fixation_detected = True
             norm_pos = (0.5, 0.5)
 
-        if self.previous_vision_frame is not None:
-            previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
-            if self.system_config.potential_interested_frame is not None:
-                last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame,
-                                                               current_frame)
+        if self.previous_norm_pos == norm_pos:
+            return False
+
+        self.previous_norm_pos = norm_pos
+
+
+        if self.system_config.potential_interested_frame is not None:
+            last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame,
+                                                           current_frame)
+                # print(last_interested_frame_sim, previous_frame_sim)
             # print(frame_sim)
 
-        not_similar_frame = previous_frame_sim < 0.6 and last_interested_frame_sim < 0.3
+        not_similar_frame = last_interested_frame_sim < 0.6
+
+        print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
+              f"last_interested_frame_sim: {last_interested_frame_sim}, "
+              f"not_similar_frame: {not_similar_frame}")
 
         if (zoom_in or fixation_detected) and not_similar_frame and norm_pos is not None:
-            print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
-                  f"frame_sim: {last_interested_frame_sim, previous_frame_sim}")
+            # print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
+            #       f"frame_sim: {last_interested_frame_sim, previous_frame_sim}")
 
             # Conditions to determine the user's behavior
             if zoom_in and fixation_detected:
@@ -178,18 +177,29 @@ class BackendSystem:
             log_manipulation(self.log_path, self.system_config.user_behavior)
             self.previous_vision_frame = current_frame
             return True
-
+        self.previous_vision_frame = current_frame
         return False
 
     def detect_user_move_to_another_place(self):
         current_frame = self.system_config.vision_detector.original_frame
         fixation_detected = self.system_config.vision_detector.fixation_detected
-        if self.system_config.potential_interested_frame is not None and not fixation_detected:
+        # norm_pos = self.system_config.vision_detector.norm_gaze_position
+        difference = cv2.subtract(current_frame, self.previous_vision_frame)
+        result = not np.any(difference)
+        if result:
+            return False
+        else:
+            cv2.imwrite("diff.jpg", difference)
+        # if self.previous_norm_pos == norm_pos:
+        #     return False
+        # self.previous_norm_pos = norm_pos
+        # print(f"Fixation detected: {fixation_detected}, {self.system_config.potential_interested_frame is not None}")
+        if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
             previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
-            # print(potential_frame_sim, previous_frame_sim)
-            if potential_frame_sim < 0.3 and previous_frame_sim < 0.6:
-                self.previous_vision_frame = current_frame
+            print(potential_frame_sim, previous_frame_sim)
+            self.previous_vision_frame = current_frame
+            if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
                 self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                 return True
         return False
@@ -198,7 +208,9 @@ class BackendSystem:
         voice_transcribe = self.system_config.get_transcriber()
         if voice_transcribe.stop_event.is_set():
             voice_transcribe.start()
-            print("start to transcribe")
+        else:
+            voice_transcribe.stop_emotion_classification_and_start_transcription()
+            # print("start to transcribe")
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is None:
             return False
@@ -211,7 +223,7 @@ class BackendSystem:
         return False
 
     def detect_positive_tone(self):
-        emotion_classifier = self.system_config.emotion_classifier
+        emotion_classifier = self.system_config.get_transcriber()
         if emotion_classifier is None:
             return False
 
@@ -229,12 +241,23 @@ class BackendSystem:
     def detect_interested_audio(self):
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is not None:
-            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.5:
+            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.7:
                 last_time = self.system_config.previous_interesting_audio_time.get(category, 0)
                 if time.time() - last_time > 60:
                     self.system_config.interesting_audio = category
                     self.system_config.previous_interesting_audio_time[category] = time.time()
                     return True
+
+        return False
+
+    def detect_interested_object(self):
+        if self.system_config.vision_detector.potential_interested_object is not None:
+            potential_interested_object = self.system_config.vision_detector.potential_interested_object
+            last_time = self.system_config.previous_interesting_object_time.get(potential_interested_object, 0)
+            if time.time() - last_time > 60:
+                self.system_config.interesting_object = potential_interested_object
+                self.system_config.previous_interesting_object_time[potential_interested_object] = time.time()
+                return True
 
         return False
 
@@ -249,7 +272,7 @@ class BackendSystem:
                 self.silence_start_time = None
                 voice_transcribe = self.system_config.get_transcriber()
                 if not voice_transcribe.stop_event.is_set():
-                    voice_transcribe.stop()
+                    voice_transcribe.stop_transcription_and_start_emotion_classification()
                 return True
 
         time.sleep(1)
@@ -267,6 +290,10 @@ class BackendSystem:
 
     def set_user_explicit_input(self, user_input):
         self.user_explicit_input = user_input
+
+        if self.user_explicit_input == 'stop_recording':
+            self.system_config.stop_recording_command = True
+            self.user_explicit_input = None
 
     def simulate_func(self, func):
         if func == "gaze":

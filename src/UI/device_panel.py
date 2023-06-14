@@ -179,7 +179,7 @@ class DevicePanel:
 
         self.close_frame = tk.Frame(self.frame)
         self.close_frame.pack(pady=10)
-        self.close_btn = get_button(self.close_frame, text="Save", command=self.on_close_window, pattern=0)
+        self.close_btn = get_button(self.close_frame, text="Save", command=self.on_close_window)
         self.close_btn.pack()
 
 

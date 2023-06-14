@@ -1,5 +1,6 @@
 import tkinter as tk
 
+import customtkinter
 from PIL import Image, ImageTk
 from customtkinter import CTkOptionMenu, CTkCheckBox, CTkButton, CTkSlider
 
@@ -15,7 +16,8 @@ def get_circular_button(root, text=None, command=None):
                      command=command, font=(None, src.UI.UI_config.CIRCULAR_BUTTON_FONT_SIZE))
 
 
-def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_FG_COLOR, pattern=0):
+def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_FG_COLOR, border_width=0,
+               text_color=src.UI.UI_config.BUTTON_TEXT_COLOR, font_size=src.UI.UI_config.BUTTON_SIZE_0_FONT_SIZE,):
     """
     :param root: master window
     :param text: text in the button
@@ -24,35 +26,20 @@ def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_F
     :param width: button width
     :param font_size: text font size
     :param fg_color: button foreground color
-    :param pattern: button's size patter. From 0-3, the larger number, the larger button size
     :return: a button
     """
-    if pattern == 3:
-        height = src.UI.UI_config.BUTTON_SIZE_3_HEIGHT
-        width = src.UI.UI_config.BUTTON_SIZE_3_WIDTH
-        font_size = src.UI.UI_config.BUTTON_SIZE_3_FONT_SIZE
-        corner_radius = src.UI.UI_config.BUTTON_SIZE_3_CORNER_RADIUS
-    elif pattern == 1:
-        height = src.UI.UI_config.BUTTON_SIZE_1_HEIGHT
-        width = src.UI.UI_config.BUTTON_SIZE_1_WIDTH
-        font_size = src.UI.UI_config.BUTTON_SIZE_1_FONT_SIZE
-        corner_radius = src.UI.UI_config.BUTTON_SIZE_1_CORNER_RADIUS
-    elif pattern == 0:
-        height = src.UI.UI_config.BUTTON_SIZE_0_HEIGHT
-        width = src.UI.UI_config.BUTTON_SIZE_0_WIDTH
-        font_size = src.UI.UI_config.BUTTON_SIZE_0_FONT_SIZE
-        corner_radius = src.UI.UI_config.BUTTON_SIZE_0_CORNER_RADIUS
-    else:
-        height = src.UI.UI_config.BUTTON_SIZE_0_HEIGHT
-        width = src.UI.UI_config.BUTTON_SIZE_0_WIDTH
-        font_size = src.UI.UI_config.BUTTON_SIZE_0_FONT_SIZE
-        corner_radius = src.UI.UI_config.BUTTON_SIZE_0_CORNER_RADIUS
+
+    height = src.UI.UI_config.BUTTON_SIZE_0_HEIGHT
+    width = src.UI.UI_config.BUTTON_SIZE_0_WIDTH
+    corner_radius = src.UI.UI_config.BUTTON_SIZE_0_CORNER_RADIUS
+    font = customtkinter.CTkFont(size=font_size)
 
     return CTkButton(root, text=text, fg_color=fg_color,
-                     hover_color=src.UI.UI_config.BUTTON_HOVER_COLOR, height=height, width=width, border_width=0,
-                     border_color=src.UI.UI_config.BUTTON_BORDER_COLOR, corner_radius=corner_radius,
-                     text_color=src.UI.UI_config.BUTTON_TEXT_COLOR,
-                     command=command, font=(src.UI.UI_config.MAIN_FONT[0], font_size))
+                     hover_color=src.UI.UI_config.BUTTON_HOVER_COLOR, height=height, width=width,
+                     border_width=border_width,
+                     border_color=src.UI.UI_config.BUTTON_FG_COLOR, corner_radius=corner_radius,
+                     text_color=text_color,
+                     command=command, font=font)
 
 
 def get_checkbutton(root, text=None, variable=None, command=None, fg_color=src.UI.UI_config.CHECK_BUTTON_FG_COLOR,

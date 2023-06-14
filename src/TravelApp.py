@@ -3,11 +3,10 @@ import subprocess
 import threading
 import time
 import tkinter as tk
-from multiprocessing import Process
 
+import customtkinter
 import cv2
 import pandas
-import pyttsx3
 from PIL import Image, ImageTk
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
@@ -15,21 +14,19 @@ from pynput.mouse import Listener as MouseListener
 
 from src.BackendSystem import BackendSystem
 from src.Data.SystemConfig import SystemConfig
-from src.Module.Audio.emotion_classifer import EmotionClassifier
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
 from src.Storage.writer import log_manipulation
 from src.UI.device_panel import DevicePanel
-from src.UI.hierarchy_menu_config import HierarchyMenu
 from src.UI.widget_generator import get_button
-from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path, \
-    image_folder
-
-SILENCE_TIME_THRESHOLD_FOR_STOP_RECORDING = 8
+from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
 
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.last_text_feedback_to_show = None
+        self.last_notification = None
+        self.picture_label = None
         self.shown_button = False
         self.backend_system = None
         self.log_path = None
@@ -38,7 +35,6 @@ class App:
         self.stored_text_widget_content = None
         self.is_hidden_text = False
         self.previous_vision_frame = None
-        self.picture_window = None
         self.output_mode = None
         self.config_updated = False
         self.ring_mouse_mode = ring_mouse_mode
@@ -71,19 +67,16 @@ class App:
         if not os.path.isfile(config_path):
             pid_num = os.path.join("p1", "01")
             task_name = "travel_blog"
-            output_modality = AUDIO_OUTPUT
             audio_device_idx = 0
         else:
             try:
                 df = pandas.read_csv(config_path)
                 pid_num = df[df['item'] == 'pid']['details'].item()
                 task_name = df[df['item'] == 'task']['details'].item()
-                output_modality = df[df['item'] == 'output']['details'].item()
                 audio_device_idx = df[df['item'] == 'audio_device']['details'].item()
             except Exception as e:
                 pid_num = os.path.join("p1", "01")
                 task_name = "travel_blog"
-                output_modality = AUDIO_OUTPUT
                 audio_device_idx = 0
                 print("Config file has an error!")
 
@@ -92,7 +85,7 @@ class App:
         self.system_config.set_folder_path(folder_path)
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
-        self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
+        # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
@@ -103,8 +96,6 @@ class App:
                                        slim_history_file_name=slim_history_file_name),
                                    task_name=task_name)
 
-        # Set up output modality
-        self.output_mode = output_modality
         self.config_updated = True
 
         self.backend_system = BackendSystem(self.system_config, self)
@@ -123,13 +114,19 @@ class App:
             return
         func = None
         try:
-            if key == keyboard.Key.up:
+            current_system_state = self.backend_system.system_status.get_current_state()
+            print(current_system_state)
+            if key == keyboard.Key.right and current_system_state in ["comments_on_audio",
+                                                                      "comments_on_photo",
+                                                                      "comments_to_gpt"]:
+                func = "Stop Recording"
+            elif key == keyboard.Key.up and self.shown_button:
                 func = "Summary"
-            elif key == keyboard.Key.down:
+            elif key == keyboard.Key.down and self.shown_button:
                 func = "Photo"
             elif key == keyboard.Key.left:
                 func = "Hide"
-            elif key == keyboard.Key.right:
+            elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
         except Exception as e:
             print(e)
@@ -151,6 +148,8 @@ class App:
             self.backend_system.set_user_explicit_input('full_writing')
         elif func == "Discard":
             self.destroy_picture_window()
+        elif func == "Stop Recording":
+            self.backend_system.set_user_explicit_input('stop_recording')
 
     def on_release(self, key):
         if not self.config_updated:
@@ -183,59 +182,50 @@ class App:
         self.manipulation_frame.place(relx=0.5, rely=0.5, anchor='center')
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
 
-        self.text_frame = tk.Frame(self.manipulation_frame, bg='black', background="black", bd=0)
-        self.text_frame.place(relx=0.5, rely=0.5, anchor='center')
-        self.text_frame.place_configure(relx=0.5, rely=0.5, relwidth=0.8, relheight=0.8)
-
         # maek the text border black
-        self.text_widget = tk.Text(self.text_frame, height=10, width=50, fg='green', bg='black', font=('Arial', 40),
-                                   spacing1=10, spacing2=50, wrap="word", highlightbackground='black',
-                                   highlightcolor='black')
-        self.text_widget.place(relwidth=1.0, relheight=1.0)
+        self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50, bg_color="#000000",
+                                                    text_color="#59C9A0", font=('Arial', 36),
+                                                    spacing1=10, spacing2=50, wrap="word")
 
         self.last_y = None
 
-        self.notification = tk.Label(self.root,
-                                     text="",
-                                     fg='green', bg='black', font=('Arial', 20))
-        self.notification.place(relx=0.5, rely=0.1, anchor='center')
+        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color="#59C9A0")
 
-        self.audio_detector_notification = tk.Label(self.root,
-                                                    text="",
-                                                    fg='green', bg='black', font=('Arial', 20))
-        self.audio_detector_notification.place(relx=0.05, rely=0.1, anchor='w')
+        self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color='black', border_width=3,
+                                    text_color="#59C9A0", font_size=10)
+        self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
+                                      text_color="#59C9A0", font_size=14)
+        self.button_left = get_button(self.manipulation_frame, text='Hide')
+        self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
+                                       text_color="#59C9A0", font_size=14)
 
-        self.emotion_detector_notification = tk.Label(self.root,
-                                                      text="",
-                                                      fg='green', bg='black', font=('Arial', 20))
-        self.emotion_detector_notification.place(relx=0.65, rely=0.1, anchor='w')
+        self.asset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "UI", "assets")
 
-        self.vision_detector_notification = tk.Label(self.root,
-                                                     text="",
-                                                     fg='green', bg='black', font=('Arial', 20))
-        self.vision_detector_notification.place(relx=1, rely=0.1, anchor='center')
+        # set a image as a button
+        self.voice_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "voice_icon.png")),
+                                                       size=(30, 30))
+        self.button_right.configure(image=self.voice_icon_image, compound="top")
 
-        self.scrollbar = tk.Scrollbar(self.text_frame, command=self.text_widget.yview, bg='black', troughcolor='black',
-                                      activebackground='black', highlightbackground='black', highlightcolor='black',
-                                      elementborderwidth=0, width=0)
-        self.scrollbar.place(relx=1.2, relheight=1.0, anchor='ne', width=20)
+        self.summary_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "summary_icon.png")),
+                                                         size=(30, 30))
+        self.button_up.configure(image=self.summary_icon_image, compound="top")
 
-        # self.scrollbar.place_forget()
+        self.photo_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "photo_icon.png")),
+                                                       size=(30, 30))
+        self.button_down.configure(image=self.photo_icon_image, compound="top")
 
-        self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color="green")
-        self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color="green")
-        self.button_left = get_button(self.manipulation_frame, text='Hide', fg_color="green")
-        self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color="green")
+        self.notification_box = customtkinter.CTkImage(
+            Image.open(os.path.join(self.asset_path, "notification_box.png")),
+            size=(630, 90))
+        self.notification.configure(image=self.notification_box, compound="center")
 
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
                         'right': self.button_right}
-        self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.05, 'anchor': 'center'},
-                               'left': {'relx': -0.05, 'rely': 0.5, 'anchor': 'center'},
-                               'down': {'relx': 0.5, 'rely': 0.95, 'anchor': 'center'},
-                               'right': {'relx': 0.95, 'rely': 0.5, 'anchor': 'center'}}
+        self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.1, 'anchor': 'center'},
+                               'left': {'relx': -0.1, 'rely': 0.5, 'anchor': 'center'},
+                               'down': {'relx': 0.5, 'rely': 0.9, 'anchor': 'center'},
+                               'right': {'relx': 0.9, 'rely': 0.5, 'anchor': 'center'}}
 
-        # self.menu = HierarchyMenu(self.root, self.buttons, self.buttons_places)
-        # self.menu.on_enter_state()
         self.shown_button = False
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -243,8 +233,8 @@ class App:
         self.listen_notification_from_backend()
         self.listen_feedback_from_backend()
         self.listen_frame_from_backend()
-        self.start_emotion_analysis()
-        # self.root.attributes("-alpha", 0.95)
+        self.listen_show_interest_icon_from_backend()
+        # self.start_emotion_analysis()
 
     def on_close(self):
         self.root.destroy()
@@ -258,21 +248,46 @@ class App:
 
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
-        if notification is not None:
-            self.notification.config(text=notification)
-            self.root.update_idletasks()
-            self.notification.update()
-        else:
-            self.notification.config(text="")
-            self.root.update_idletasks()
-            self.notification.update()
-            # self.system_config.notification = None
+        if notification != self.last_notification:
+            if notification is not None:
+                if self.last_notification is None:
+                    self.hide_show_buttons()
+                    self.show_notification_widget()
+                self.notification.configure(text=notification)
+            elif notification is None:
+                self.remove_notification()
+            self.last_notification = notification
         self.root.after(200, self.listen_notification_from_backend)
+
+    def show_notification_widget(self):
+        self.notification.configure(image=self.notification_box, compound="center")
+        self.notification.place(relx=0.5, rely=0.16, anchor='center')
+
+    def remove_notification(self):
+        self.notification.destroy()
+        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color="#59C9A0")
+
+    def listen_show_interest_icon_from_backend(self):
+        if self.system_config.show_interest_icon:
+            self.show_interest_icon()
+            self.system_config.show_interest_icon = False
+        self.root.after(200, self.listen_show_interest_icon_from_backend)
+
+    def show_interest_icon(self):
+        self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
+                                                    size=(20, 20))
+        self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
+        self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
+        self.root.after(10000, self.remove_interest_icon)
+
+    def remove_interest_icon(self):
+        self.interest_icon_label.destroy()
 
     def listen_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
         audio_feedback_to_show = self.system_config.audio_feedback_to_show
-        if text_feedback_to_show is not None:
+        if text_feedback_to_show is not None and text_feedback_to_show != self.last_text_feedback_to_show:
+            self.last_text_feedback_to_show = text_feedback_to_show
             self.render_text_response(text_feedback_to_show)
             # self.system_config.text_feedback_to_show = None
         if audio_feedback_to_show is not None:
@@ -286,50 +301,71 @@ class App:
 
     def hide_show_buttons(self):
         if self.shown_button:
-            for direction, button in self.buttons.items():
-                button.place_forget()
+            self.hide_button()
         else:
-            for direction, button in self.buttons.items():
-                button.place(**self.buttons_places[direction])  # Place the button
+            self.show_button()
 
+        self.manipulation_frame.update_idletasks()
+        self.manipulation_frame.update()
+        self.root.update_idletasks()
+        self.root.update()
+
+    def hide_button(self):
+        for direction, button in self.buttons.items():
+            button.place_forget()
+
+    def show_button(self):
+        for direction, button in self.buttons.items():
+            button.place(**self.buttons_places[direction])  # Place the button
 
     def hide_show_content(self):
         self.hide_show_picture_window()
-        self.hide_show_text()
-        self.hide_show_buttons()
+        if self.shown_button:
+            self.hide_text()
+            self.hide_button()
+        else:
+            self.show_text()
+            self.show_button()
+        self.root.update_idletasks()
+        self.root.update()
         self.shown_button = not self.shown_button
 
     def destroy_picture_window(self):
         # Check if the picture window is open and close it if necessary
-        if self.picture_window:
-            self.picture_window.destroy()
-            self.picture_window = None
+        if self.picture_label:
+            self.picture_label.destroy()
+            print("destroy picture window")
+            self.picture_label = None
             self.system_config.picture_window_status = False
             # self.update_vision_analysis()
             return
 
     def hide_show_text(self):
-        if self.shown_button:
-            # self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
-            self.text_widget.delete(1.0, tk.END)
-            self.determinate_voice_feedback_process()
-            # self.scrollbar.place()
-        elif self.stored_text_widget_content is not None:
-            self.text_widget.delete(1.0, tk.END)
-            self.text_widget.insert(tk.END, self.stored_text_widget_content)
-            # self.scrollbar.place_forget()
+        if not self.is_hidden_text:
+            self.hide_text()
+        elif self.is_hidden_text:
+            self.show_text()
 
-        self.is_hidden_text = not self.is_hidden_text
+    def hide_text(self):
+        if self.text_widget is not None:
+            self.stored_text_widget_content = self.text_widget.get("1.0", tk.END)
+            self.text_widget.place_forget()
+            self.is_hidden_text = True
+
+    def show_text(self):
+        if self.stored_text_widget_content is not None:
+            self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
+            self.text_widget.place_configure(relwidth=0.65, relheight=0.55)
+            self.is_hidden_text = False
 
     def hide_show_picture_window(self):
-        if self.picture_window and not self.picture_window_hidden:
-            self.picture_window.withdraw()
+        if self.picture_label and not self.picture_window_hidden:
+            self.picture_label.place_forget()
             self.system_config.picture_window_status = False
             # self.update_vision_analysis()
             self.picture_window_hidden = True
-        elif self.picture_window and self.picture_window_hidden:
-            self.picture_window.update_idletasks()
-            self.picture_window.deiconify()
+        elif self.picture_label and self.picture_window_hidden:
+            self.picture_label.place()
             self.system_config.picture_window_status = True
             # self.update_vision_analysis()
             self.picture_window_hidden = False
@@ -342,9 +378,8 @@ class App:
             self.root.after(200, self.listen_frame_from_backend)
 
     def render_picture(self, frame):
-        if self.picture_window:
-            self.picture_window.destroy()
-            self.system_config.picture_window_status = False
+        if self.picture_label:
+            self.destroy_picture_window()
 
         # convert the image from opencv to PIL format
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -355,29 +390,20 @@ class App:
 
         img_tk = ImageTk.PhotoImage(img)
 
-        # Create a new window to display the image
-        self.picture_window = tk.Toplevel(self.root)
-        self.picture_window.wm_attributes("-topmost", True)
-
-        # Over direct the window to remove the border
-        # self.picture_window.overrideredirect(True)
-
-        # make the pic window transparent by change its alpha value
-        self.picture_window.wm_attributes("-alpha", 0.7)
-        self.picture_window.lift()
-        self.picture_window.geometry(
-            f"{img.width}x{img.height}+{int((self.root.winfo_screenwidth() - img.width) / 2)}+{int((self.root.winfo_screenheight() - img.height) / 2)}")
-
         # Create a label widget to display the image
-        label = tk.Label(self.picture_window, image=img_tk)
-        label.image = img_tk
-        label.pack()
+        self.picture_label = tk.Label(self.root)
+        self.picture_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        # Set the image on the label widget
+        self.picture_label.configure(image=img_tk)
+        self.picture_label.image = img_tk
+
         self.system_config.picture_window_status = True
 
         # Check Users' surrounding environment
         print(f"Person count: {self.person_count}")
         if self.person_count > 3:
-            self.notification.config(text="Too many people nearby. You may hide the pic and comment it later.")
+            self.notification.configure(text="Too many people nearby. You may hide the pic and comment it later.")
 
         self.system_config.frame_shown_in_picture_window = None
 
@@ -388,13 +414,18 @@ class App:
         self.root.after(200, self.listen_frame_from_backend)
 
     def render_text_response(self, text_response):
-        self.text_widget.delete(1.0, tk.END)
-        text_response = text_response.strip()
-        self.text_widget.insert(tk.END, text_response)
-        self.stored_text_widget_content = text_response
-        # self.scrollbar.place()
-        self.root.update_idletasks()
-        self.text_widget.update()
+        if text_response == "":
+            self.hide_text()
+            return
+        else:
+            self.text_widget.delete(1.0, tk.END)
+            self.text_widget.insert(tk.END, text_response)
+            self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
+            self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
+            self.stored_text_widget_content = text_response
+            # self.scrollbar.place()
+            self.root.update_idletasks()
+            self.text_widget.update()
 
     def render_audio_response(self, audio_response):
         # self.determinate_voice_feedback_process()
@@ -414,38 +445,6 @@ class App:
             self.system_config.audio_feedback_to_show = None
             self.system_config.audio_feedback_finished_playing = True
             print("Audio feedback finished playing")
-
-    # def on_record(self):
-    #     self.determinate_voice_feedback_process()
-    #     if not self.system_config.is_recording:
-    #         with self.audio_lock:
-    #             self.system_config.interesting_audio_for_recording = self.system_config.interesting_audio
-    #         self.system_config.user_behavior_when_recording = self.system_config.user_behavior
-    #         self.notification.config(text="Reminder: Press \"Right\" button again to stop recording!")
-    #         # self.record_button.configure(text="Stop")
-    #         self.stop_emotion_analysis()
-    #         self.start_recording()
-    #         self.system_config.is_recording = True
-    #     else:
-    #         self.stop_recording()
-    #
-    #         command_type = ""
-    #
-    #         t = threading.Thread(target=self.thread_new_recording_command, args=(command_type,), daemon=True)
-    #         t.start()
-    #         self.start_emotion_analysis()
-    #         # self.record_button.configure(text="Record")
-    #
-    # def start_recording(self):
-    #     voice_transcriber = self.system_config.get_transcriber()
-    #     if voice_transcriber is not None:
-    #         voice_transcriber.start()
-    #         self.update_transcription()
-    #
-    # def stop_recording(self):
-    #     voice_transcriber = self.system_config.get_transcriber()
-    #     if voice_transcriber is not None:
-    #         self.system_config.set_final_transcription(voice_transcriber.stop())
 
     # def update_transcription(self):
     #     voice_transcriber = self.system_config.get_transcriber()
@@ -468,58 +467,10 @@ class App:
     # def start_vision_analysis(self):
     #     self.update_vision_analysis()
     #
-    def start_emotion_analysis(self):
-        emotion_classifier = self.system_config.emotion_classifier
-        if emotion_classifier is not None:
-            emotion_classifier.start()
-    #
-    # def stop_emotion_analysis(self):
+    # def start_emotion_analysis(self):
     #     emotion_classifier = self.system_config.emotion_classifier
     #     if emotion_classifier is not None:
-    #         emotion_classifier.stop()
-    #
-    # def update_emotion_analysis(self):
-    #     emotion_classifier = self.system_config.emotion_classifier
-    #     # if not enable notification or text_widget is not empty, skip this update
-    #     if not self.enable_interest_detection_notification or self.text_widget.get("1.0", "end-1c") != "":
-    #         self.root.after(500, self.update_emotion_analysis)
-    #         return
-    #
-    #     emotion_scores = emotion_classifier.scores
-    #     if emotion_scores != self.system_config.previous_emotion_scores:
-    #         print(f"Emotion scores: {emotion_scores}")
-    #         positive_score = emotion_scores['joy'] + emotion_scores['surprise']
-    #         if positive_score > 0.5:
-    #             self.emotion_detector_notification.config(text=f"Detected your positive tone.\n"
-    #                                                            f"Want to record this moment?")
-    #             log_manipulation(self.log_path, "positive tone detected")
-    #             self.root.after(10000, self.clear_emotion_notification)
-    #         self.system_config.previous_emotion_scores = emotion_scores
-    #
-    #     if not emotion_classifier.stop_event.is_set():
-    #         self.root.after(500, self.update_emotion_analysis)
-    #
-    #
-    # def update_bg_audio_analysis(self):
-    #     score, category = self.system_config.get_bg_audio_analysis_result()
-    #     if category is not None:
-    #         if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.5:
-    #             last_time = self.system_config.previous_interesting_audio_time.get(category, 0)
-    #             if time.time() - last_time > 60:
-    #                 self.audio_detector_notification.config(text=f"Detected your surrounding audio: {category}. "
-    #                                                              f"Any comments?")
-    #                 log_manipulation(self.log_path, "audio notification")
-    #                 self.menu.trigger('show_voice_icon')
-    #                 with self.audio_lock:
-    #                     self.system_config.interesting_audio = category
-    #                 self.system_config.previous_interesting_audio_time[category] = time.time()
-    #                 self.root.after(10000, self.clear_audio_notification)
-    #             else:
-    #                 self.clear_audio_notification()
-    #         else:
-    #             self.clear_audio_notification()
-    #     else:
-    #         self.clear_audio_notification()
+    #         emotion_classifier.start()
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ transitions = [
     {'trigger': 'interested_audio', 'source': 'init', 'dest': 'audio_comments_pending'},
     {'trigger': 'speak', 'source': 'audio_comments_pending', 'dest': 'comments_on_audio'},
     {'trigger': 'ignore', 'source': 'audio_comments_pending', 'dest': 'init'},
-    {'trigger': 'get_generate_response', 'source': 'comments_on_audio', 'dest': 'show_gpt_response'},
+    {'trigger': 'gpt_generate_response', 'source': 'comments_on_audio', 'dest': 'show_gpt_response'},
     {'trigger': 'move_to_another_place', 'source': 'photo_pending', 'dest': 'photo_comments_pending'},
     {'trigger': 'speak', 'source': 'manual_photo_comments_pending', 'dest': 'comments_on_photo'},
     {'trigger': 'ignore', 'source': 'manual_photo_comments_pending', 'dest': 'init'},

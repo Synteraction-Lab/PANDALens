@@ -17,6 +17,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 class ObjectDetector:
     def __init__(self, simulate=False, debug_info=False, cv_imshow=True):
+        self.potential_interested_object = None
         self.original_frame = None
         self.norm_gaze_position = None
         self.zoom_in = False
@@ -63,6 +64,8 @@ class ObjectDetector:
         cv2.namedWindow('YOLO Object Detection')
         if simulate:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
+
+        self.interested_categories = ['cat', 'dog']
 
     def detect_fixation(self, frame):
         return
@@ -152,15 +155,18 @@ class ObjectDetector:
         closest_distance = float('inf')
         closest_size = 0
         person_count = 0
+        potential_interested_object = None
 
         # Sort the boxes by whether they contain gaze_position and their area
         sorted_boxes = sorted(zip(boxes.xyxy, boxes.conf, boxes.cls), key=lambda box: (
             not (box[0][0] <= self.gaze_position[0] <= box[0][2] and box[0][1] <= self.gaze_position[1] <= box[0][3]),
             (box[0][2] - box[0][0]) * (box[0][3] - box[0][1])
         ))
+
         for xyxy, conf, cls in sorted_boxes:
             if cls == 0:
                 person_count += 1
+
             object_label = self.model.model.names[int(cls)]
             dx = max(xyxy[0] - self.gaze_position[0], 0, self.gaze_position[0] - xyxy[2])
             dy = max(xyxy[1] - self.gaze_position[1], 0, self.gaze_position[1] - xyxy[3])
@@ -171,13 +177,16 @@ class ObjectDetector:
                 closest_distance = distance
                 closest_size = (xyxy[2] - xyxy[0]) * (xyxy[3] - xyxy[1])
 
+            # Check if the current object belongs to any interested category
+            if object_label in self.interested_categories:
+                potential_interested_object = object_label
+
         if closest_distance <= self.distance_threshold and closest_object is not None:
             self.closest_object = closest_object
 
             # Compare sizes only if the current and previous objects are the same
             if self.prev_object == closest_object and closest_size > self.prev_size * (1 + self.zoom_threshold):
                 self.zoom_in = True
-
             else:
                 self.zoom_in = False
 
@@ -189,6 +198,9 @@ class ObjectDetector:
             self.zoom_in = False
 
         self.detect_fixation(frame)
+
+        if potential_interested_object != closest_object:
+            self.potential_interested_object = potential_interested_object
 
         render = render_result(model=self.model, image=frame, result=results[0])
         frame = np.array(render.convert('RGB'))
