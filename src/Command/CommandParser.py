@@ -2,7 +2,6 @@ from src.Command.AskUserCommentOnPhotoCommand import AskUserCommentOnPhotoComman
 from src.Command.AutoPhotoCommand import AutoPhotoCommand
 from src.Command.GetImageInfoCommand import GetImageInfoCommand
 from src.Command.ManualPhotoCommand import ManualPhotoCommand
-from src.Command.NewRecordingCommand import NewRecordingCommand
 from src.Command.PhotoCommand import PhotoCommand
 from src.Command.SentGPTRequestCommand import SendGPTRequestCommand
 from src.Command.ShowAudioFeedbackCommand import ShowAudioFeedbackCommand
@@ -19,9 +18,7 @@ def parse(command_string, sys_config):
     "summary": summarize the recording
     "photo": take a photo
     """
-    if command_string == "new":
-        return NewRecordingCommand(sys_config)
-    elif command_string == "summary":
+    if command_string == "summary":
         return SummarizingCommand(sys_config)
     elif command_string == "photo":
         return PhotoCommand(sys_config)

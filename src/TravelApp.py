@@ -7,7 +7,8 @@ import tkinter as tk
 import customtkinter
 import cv2
 import pandas
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
+from customtkinter import CTkProgressBar
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
@@ -17,13 +18,21 @@ from src.Data.SystemConfig import SystemConfig
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
 from src.Storage.writer import log_manipulation
+from src.UI.UI_config import MAIN_GREEN_COLOR
 from src.UI.device_panel import DevicePanel
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
 
+INTEREST_ICON_SHOW_DURATION = 5
+
+IMAGE_FRAME_SHOW_DURATION = 10
+
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.progress_bar = None
+        self.frame_placed_time = None
+        self.interest_icon_placed_time = None
         self.last_text_feedback_to_show = None
         self.last_notification = None
         self.picture_label = None
@@ -184,20 +193,20 @@ class App:
 
         # maek the text border black
         self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50, bg_color="#000000",
-                                                    text_color="#59C9A0", font=('Arial', 36),
+                                                    text_color=MAIN_GREEN_COLOR, font=('Arial', 36),
                                                     spacing1=10, spacing2=50, wrap="word")
 
         self.last_y = None
 
-        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color="#59C9A0")
+        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color=MAIN_GREEN_COLOR)
 
         self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color='black', border_width=3,
-                                    text_color="#59C9A0", font_size=10)
+                                    text_color=MAIN_GREEN_COLOR, font_size=10)
         self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
-                                      text_color="#59C9A0", font_size=14)
+                                      text_color=MAIN_GREEN_COLOR, font_size=14)
         self.button_left = get_button(self.manipulation_frame, text='Hide')
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
-                                       text_color="#59C9A0", font_size=14)
+                                       text_color=MAIN_GREEN_COLOR, font_size=14)
 
         self.asset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "UI", "assets")
 
@@ -230,11 +239,7 @@ class App:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.attributes("-fullscreen", True)
-        self.listen_notification_from_backend()
-        self.listen_feedback_from_backend()
-        self.listen_frame_from_backend()
-        self.listen_show_interest_icon_from_backend()
-        # self.start_emotion_analysis()
+        self.update_ui_based_on_timer()
 
     def on_close(self):
         self.root.destroy()
@@ -245,6 +250,59 @@ class App:
         voice_feedback_process = self.system_config.voice_feedback_process
         if voice_feedback_process is not None:
             voice_feedback_process.terminate()
+
+    def update_ui_based_on_timer(self):
+        # get ui update info from backend
+        self.listen_notification_from_backend()
+        self.listen_feedback_from_backend()
+        self.listen_frame_from_backend()
+        self.listen_show_interest_icon_from_backend()
+        self.listen_timer_from_backend()
+
+        # remove UI elements
+        now = time.time()
+
+        if self.interest_icon_placed_time is not None:
+            if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
+                self.remove_interest_icon()
+                self.interest_icon_placed_time = None
+
+        if self.frame_placed_time is not None:
+            if now - self.frame_placed_time > IMAGE_FRAME_SHOW_DURATION:
+                self.remove_frame()
+                self.frame_placed_time = None
+
+        # run this function again after 0.2 seconds
+        self.root.after(300, self.update_ui_based_on_timer)
+
+    def listen_timer_from_backend(self):
+        progress_bar_percentage = self.system_config.progress_bar_percentage
+        if progress_bar_percentage is not None:
+            if progress_bar_percentage > 0:
+                self.set_timer(progress_bar_percentage)
+            else:
+                self.remove_timer()
+
+        if progress_bar_percentage is None and self.progress_bar is not None:
+            self.remove_timer()
+
+    def set_timer(self, progress_bar_percentage):
+        if self.progress_bar is None:
+            self.hide_show_buttons()
+            self.progress_bar = CTkProgressBar(master=self.root,
+                                               orientation='horizontal',
+                                               mode='determinate',
+                                               progress_color=MAIN_GREEN_COLOR, height=15)
+
+            self.progress_bar.place(relx=0.8, rely=0.35, relwidth=0.3, anchor=tk.CENTER)
+            self.root.update_idletasks()
+
+        self.progress_bar.set(progress_bar_percentage)
+
+    def remove_timer(self):
+        if self.progress_bar is not None:
+            self.progress_bar.destroy()
+            self.progress_bar = None
 
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
@@ -257,7 +315,6 @@ class App:
             elif notification is None:
                 self.remove_notification()
             self.last_notification = notification
-        self.root.after(200, self.listen_notification_from_backend)
 
     def show_notification_widget(self):
         self.notification.configure(image=self.notification_box, compound="center")
@@ -265,20 +322,19 @@ class App:
 
     def remove_notification(self):
         self.notification.destroy()
-        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color="#59C9A0")
+        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Roboto', 20), text_color="#59C9A0")
 
     def listen_show_interest_icon_from_backend(self):
         if self.system_config.show_interest_icon:
             self.show_interest_icon()
             self.system_config.show_interest_icon = False
-        self.root.after(200, self.listen_show_interest_icon_from_backend)
 
     def show_interest_icon(self):
         self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
                                                     size=(20, 20))
         self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
         self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
-        self.root.after(10000, self.remove_interest_icon)
+        self.interest_icon_placed_time = time.time()
 
     def remove_interest_icon(self):
         self.interest_icon_label.destroy()
@@ -295,9 +351,6 @@ class App:
             self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_finished_playing = False
             self.system_config.audio_feedback_to_show = None
-            print("start to play the feedback...")
-
-        self.root.after(200, self.listen_feedback_from_backend)
 
     def hide_show_buttons(self):
         if self.shown_button:
@@ -308,11 +361,13 @@ class App:
         self.manipulation_frame.update_idletasks()
         self.manipulation_frame.update()
         self.root.update_idletasks()
-        self.root.update()
+        # self.root.update()
 
     def hide_button(self):
         for direction, button in self.buttons.items():
             button.place_forget()
+            self.root.update_idletasks()
+            # self.root.update()
 
     def show_button(self):
         for direction, button in self.buttons.items():
@@ -327,14 +382,14 @@ class App:
             self.show_text()
             self.show_button()
         self.root.update_idletasks()
-        self.root.update()
+        # self.root.update()
         self.shown_button = not self.shown_button
 
     def destroy_picture_window(self):
         # Check if the picture window is open and close it if necessary
         if self.picture_label:
             self.picture_label.destroy()
-            print("destroy picture window")
+            # print("destroy picture window")
             self.picture_label = None
             self.system_config.picture_window_status = False
             # self.update_vision_analysis()
@@ -355,7 +410,7 @@ class App:
     def show_text(self):
         if self.stored_text_widget_content is not None:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
-            self.text_widget.place_configure(relwidth=0.65, relheight=0.55)
+            self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.is_hidden_text = False
 
     def hide_show_picture_window(self):
@@ -372,10 +427,10 @@ class App:
 
     def listen_frame_from_backend(self):
         frame = self.system_config.frame_shown_in_picture_window
-        if frame is not None:
+        if frame is not None and self.picture_label is None:
             self.render_picture(frame)
-        else:
-            self.root.after(200, self.listen_frame_from_backend)
+        # else:
+        #     self.root.after(200, self.listen_frame_from_backend)
 
     def render_picture(self, frame):
         if self.picture_label:
@@ -386,13 +441,24 @@ class App:
         img = Image.fromarray(img)
 
         # Resize the image to 1/4 of its original size
-        img = img.resize((int(img.width / 2), int(img.height / 2)))
+        img = img.resize((int(img.width / 4), int(img.height / 4)))
+
+        # Create a round-rectangle mask for the image
+        mask = Image.new("L", img.size, 0)
+        draw = ImageDraw.Draw(mask)
+        radius = min(img.width, img.height) // 10  # Adjust the radius as desired
+        draw.rounded_rectangle((0, 0, img.width, img.height), radius, fill=200, width=3)
+
+        # Apply the mask to the image
+        img.putalpha(mask)
 
         img_tk = ImageTk.PhotoImage(img)
 
         # Create a label widget to display the image
-        self.picture_label = tk.Label(self.root)
-        self.picture_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.picture_label = tk.Label(self.root, bg="black")
+
+        # Set the picture label to the top-right of the window
+        self.picture_label.place(relx=0.8, rely=0.2, anchor=tk.CENTER)
 
         # Set the image on the label widget
         self.picture_label.configure(image=img_tk)
@@ -401,17 +467,16 @@ class App:
         self.system_config.picture_window_status = True
 
         # Check Users' surrounding environment
-        print(f"Person count: {self.person_count}")
+        # print(f"Person count: {self.person_count}")
         if self.person_count > 3:
             self.notification.configure(text="Too many people nearby. You may hide the pic and comment it later.")
 
         self.system_config.frame_shown_in_picture_window = None
+        self.frame_placed_time = time.time()
 
-        self.root.after(10000, self.clear_frame)
-
-    def clear_frame(self):
+    def remove_frame(self):
         self.destroy_picture_window()
-        self.root.after(200, self.listen_frame_from_backend)
+        # self.root.after(200, self.listen_frame_from_backend)
 
     def render_text_response(self, text_response):
         if text_response == "":
@@ -423,15 +488,13 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.stored_text_widget_content = text_response
-            # self.scrollbar.place()
             self.root.update_idletasks()
             self.text_widget.update()
 
     def render_audio_response(self, audio_response):
-        # self.determinate_voice_feedback_process()
-        voice_feedback_process = threading.Thread(target=self.play_audio_response, args=(audio_response,))
-        # self.system_config.set_voice_feedback_process(voice_feedback_process)
-        voice_feedback_process.start()
+        # voice_feedback_process = threading.Thread(target=self.play_audio_response, args=(audio_response,))
+        # voice_feedback_process.start()
+        self.play_audio_response(audio_response)
 
     def play_audio_response(self, response):
         process = subprocess.Popen(['say', '-v', 'Daniel', '-r', '180', response])
@@ -439,8 +502,8 @@ class App:
 
     def check_subprocess(self, process):
         if process.poll() is None:  # Subprocess is still running
-            self.root.after(500, lambda: self.check_subprocess(process))
-        else:  # Subprocess has finished
+            self.root.after(400, lambda: self.check_subprocess(process))
+        else:
             # Perform actions when subprocess finishes
             self.system_config.audio_feedback_to_show = None
             self.system_config.audio_feedback_finished_playing = True
@@ -461,16 +524,6 @@ class App:
     #     if not voice_transcriber.stop_event.is_set():
     #         self.root.after(100, self.update_transcription)
     #
-    # def start_bg_audio_analysis(self):
-    #     self.update_bg_audio_analysis()
-    #
-    # def start_vision_analysis(self):
-    #     self.update_vision_analysis()
-    #
-    # def start_emotion_analysis(self):
-    #     emotion_classifier = self.system_config.emotion_classifier
-    #     if emotion_classifier is not None:
-    #         emotion_classifier.start()
 
 
 if __name__ == '__main__':

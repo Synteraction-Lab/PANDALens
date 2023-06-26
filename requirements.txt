@@ -64,7 +64,7 @@ multidict==6.0.4
 networkx==3.1
 numba==0.57.0
 oauthlib==3.2.2
-openai==0.27.6
+openai==0.27.8
 openai-whisper @ git+https://github.com/openai/whisper.git@248b6cb124225dd263bb9bd32d060b6517e067f8
 opencv-contrib-python==4.7.0.72
 opencv-python==4.7.0.72

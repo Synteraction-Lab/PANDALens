@@ -12,9 +12,19 @@ class GetImageInfoCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
-        photo_label = get_image_labels(self.system_config.latest_photo_file_path)
-        photo_ocr = get_image_texts(self.system_config.latest_photo_file_path)
-        photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
+        try:
+            photo_label = get_image_labels(self.system_config.latest_photo_file_path)
+            photo_ocr = get_image_texts(self.system_config.latest_photo_file_path)
+        except:
+            print("Error in getting image info using Google Vision API.")
+            photo_label = None
+            photo_ocr = None
+        try:
+            photo_caption = get_image_caption(self.system_config.latest_photo_file_path)
+        except:
+            print("Error in getting image info using Huggingface API.")
+            photo_caption = None
+
         image_info = {}
 
         moment_idx = self.system_config.get_moment_idx()

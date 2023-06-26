@@ -40,6 +40,7 @@ class TranscribeVoiceCommand(Command):
                 self.silence_start_time = None
             time.sleep(0.5)
 
+        time.sleep(2)
         full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
         self.system_config.notification = f"Processing your command..."

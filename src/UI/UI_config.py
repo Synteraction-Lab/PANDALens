@@ -87,3 +87,4 @@ COLOR_THEME = {'blue': '#4581ec',
                 'aquamarine': '#17a3b8',
                 'darkpurple': '#534050',
                 'brown': '#954535'}
+MAIN_GREEN_COLOR = "#59C9A0"

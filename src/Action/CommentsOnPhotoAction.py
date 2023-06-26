@@ -24,15 +24,18 @@ class CommentsOnPhotoAction(Action):
 
         # get image info
         get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
-        if get_image_info_command is not None:
-            image_info = get_image_info_command.execute()
-            user_request["image_info"] = image_info
+        try:
+            if get_image_info_command is not None:
+                image_info = get_image_info_command.execute()
+                user_request["image_info"] = image_info
+        except Exception as e:
+            print("Error: cannot get image info", e)
 
         # get location & time
         try:
             user_request["location"] = get_current_location()
         except Exception as e:
-            print("Error: cannot get location")
+            print("Error: cannot get location", e)
 
         user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
 

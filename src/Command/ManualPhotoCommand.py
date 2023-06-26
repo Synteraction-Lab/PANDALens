@@ -37,10 +37,10 @@ class ManualPhotoCommand(Command):
         self.system_config.set_latest_photo_file_path(photo_file_path)
 
         self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
-
+        return frame
         notification = f"You seem to interested in your front scene. Any comments?"
         self.system_config.notification = notification
         self.system_config.audio_feedback_to_show = notification
 
-        return frame
+        # return frame
 

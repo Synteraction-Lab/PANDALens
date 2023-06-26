@@ -61,8 +61,9 @@ interesting_audioset_categories = [
 ]
 
 
-class SystemConfig:
+class SystemConfig(object):
     def __init__(self):
+        self.progress_bar_percentage = None
         self.vision_detector = None
         self.audio_classifier_runner = None
         self.audio_classifier_results = None

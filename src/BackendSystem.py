@@ -72,6 +72,7 @@ class BackendSystem:
                 if emotion_classifier is not None:
                     if emotion_classifier.stop_event.is_set():
                         emotion_classifier.start()
+                        emotion_classifier.stop_transcription_and_start_emotion_classification()
                 if self.detect_gaze_and_zoom_in():
                     self.system_config.show_interest_icon = True
                     self.system_status.trigger('gaze')
@@ -111,11 +112,13 @@ class BackendSystem:
                         if not success:
                             self.system_status.set_state("init")
                         self.system_config.notification = None
+                        self.silence_start_time = None
 
                     elif self.detect_user_ignore():
                         self.system_status.trigger('ignore')
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
+                        self.silence_start_time = None
             elif current_state == 'comments_on_photo' or current_state == 'comments_to_gpt' \
                     or current_state == 'full_writing_pending' or current_state == 'comments_on_audio':
                 if self.detect_gpt_response():
@@ -204,13 +207,12 @@ class BackendSystem:
                 return True
         return False
 
-    def detect_user_speak(self):
+    def detect_user_speak(self) -> bool:
         voice_transcribe = self.system_config.get_transcriber()
         if voice_transcribe.stop_event.is_set():
             voice_transcribe.start()
-        else:
-            voice_transcribe.stop_emotion_classification_and_start_transcription()
-            # print("start to transcribe")
+
+        voice_transcribe.stop_emotion_classification_and_start_transcription()
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is None:
             return False
@@ -218,6 +220,7 @@ class BackendSystem:
         # if category is speech, then return True
         if category == 'Speech' and score > 0.7:
             self.silence_start_time = None
+            self.system_config.progress_bar_percentage = None
             return True
         time.sleep(0.2)
         return False
@@ -267,15 +270,16 @@ class BackendSystem:
         else:
             time_diff = time.time() - self.silence_start_time
             print(f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it.")
-            self.system_config.notification = f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it."
+            # self.system_config.notification = f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it."
+            self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
             if time_diff > SILENCE_THRESHOLD:
                 self.silence_start_time = None
+                self.system_config.progress_bar_percentage = None
                 voice_transcribe = self.system_config.get_transcriber()
                 if not voice_transcribe.stop_event.is_set():
                     voice_transcribe.stop_transcription_and_start_emotion_classification()
                 return True
-
-        time.sleep(1)
+        time.sleep(0.5)
         return False
 
     def detect_gpt_response(self):

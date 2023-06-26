@@ -59,13 +59,17 @@ class LiveTranscriber:
         self.silence_start = None
         self.silence_end = None
 
-        mic_name = sd.query_devices(self.device_index)['name']
-        for index, name in enumerate(sr.Microphone.list_microphone_names()):
-            if mic_name in name:
-                self.source = sr.Microphone(sample_rate=16000, device_index=index)
+        device_index = None
+
+        for index, info in enumerate(sd.query_devices()):
+            if info['name'] == self.device_index and info['max_input_channels'] > 0:
+                device_index = index
                 break
+
+        if device_index is not None:
+            self.source = sr.Microphone(sample_rate=16000, device_index=device_index)
         else:
-            raise ValueError(f"No microphone named \"{mic_name}\" found")
+            raise ValueError(f"No input microphone named \"{self.device_index}\" found")
 
         # self.recorder.adjust_for_ambient_noise(self.source)
         self.audio_model = whisper.load_model(self.model)
@@ -141,6 +145,8 @@ class LiveTranscriber:
                         self.transcription.append(text)
                         if text != "":
                             self.analyze_emotion(text)
+                        else:
+                            self.scores = None
                     else:
                         self.transcription[-1] = text
 
