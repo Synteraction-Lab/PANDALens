@@ -429,8 +429,6 @@ class App:
         frame = self.system_config.frame_shown_in_picture_window
         if frame is not None and self.picture_label is None:
             self.render_picture(frame)
-        # else:
-        #     self.root.after(200, self.listen_frame_from_backend)
 
     def render_picture(self, frame):
         if self.picture_label:
@@ -476,7 +474,6 @@ class App:
 
     def remove_frame(self):
         self.destroy_picture_window()
-        # self.root.after(200, self.listen_frame_from_backend)
 
     def render_text_response(self, text_response):
         if text_response == "":
@@ -492,8 +489,6 @@ class App:
             self.text_widget.update()
 
     def render_audio_response(self, audio_response):
-        # voice_feedback_process = threading.Thread(target=self.play_audio_response, args=(audio_response,))
-        # voice_feedback_process.start()
         self.play_audio_response(audio_response)
 
     def play_audio_response(self, response):
