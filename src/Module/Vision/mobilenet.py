@@ -1,7 +1,6 @@
+import cv2
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
-import cv2
-import numpy as np
 
 # load the MobileNet model and preprocessor
 preprocessor = AutoImageProcessor.from_pretrained("google/mobilenet_v2_1.0_224")

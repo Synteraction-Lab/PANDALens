@@ -1,7 +1,10 @@
+from datetime import datetime
+
+import cv2
+import numpy as np
 import zmq
 from msgpack import unpackb, packb
-import numpy as np
-import cv2
+from pyplr.pupil import PupilCore
 
 
 class PupilCamera:
@@ -11,6 +14,8 @@ class PupilCamera:
         self.req_port = "50020"  # same as in the pupil remote gui
         self.req = self.context.socket(zmq.REQ)
         self.req.connect("tcp://{}:{}".format(self.addr, self.req_port))
+        self.pupil_core = PupilCore()
+        self.pupil_core.annotation_capture_plugin(should='start')
 
         # ask for the sub port
         self.req.send_string("SUB_PORT")
@@ -33,6 +38,15 @@ class PupilCamera:
         self.recent_eye1 = None
 
         self.FRAME_FORMAT = frame_format
+
+        # get current time in format: MM-DD-HH-MM-SS
+        self.current_time = datetime.now().strftime("%m-%d-%H-%M-%S")
+        self.pupil_core.command("R {}".format(self.current_time))
+        annotation = self.pupil_core.new_annotation(
+            label=f'start time: {self.current_time}',
+            custom_fields={'whatever': 'info', 'you': 'want'})
+        self.pupil_core.send_annotation(annotation)
+
 
         # Set the frame format via the Network API plugin
         self.notify({"subject": "frame_publishing.set_format", "format": self.FRAME_FORMAT})

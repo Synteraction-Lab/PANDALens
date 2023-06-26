@@ -1,0 +1,4 @@
+Reminder:
+1) For authoring mode, Return the response **ONLY** in JSON format, with the following structure: ```json{"mode": "authoring", "response":{"summary of new content": "[snippet of the travel blog content preview in first person narration]", "question to users": "[Question to help them provide deeper and more interesting content *if necessary*, return 'None' when no question you want to ask. (Put all questions here.)]" } }```
+2) For writing & revise full blog mode, Return the response **ONLY** in JSON format, with the following structure: ```json{"mode": "full", "response": {"full writing": "[full travel blog content in first person narration]", "revised parts": "[the newly added or revised content, return 'None' when no revision.]"}}```
+

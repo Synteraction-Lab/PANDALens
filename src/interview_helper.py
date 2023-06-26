@@ -1,11 +1,12 @@
+import os
+import ssl
 from datetime import datetime
 
+import openai
 import pyttsx3
 import whisper
-import ssl
-import openai
+
 from src.Storage.writer import append_json_data
-import os
 
 LOW_INTELLIGENCE = "low"
 HIGH_INTELLIGENCE = "high"

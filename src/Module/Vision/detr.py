@@ -1,10 +1,11 @@
-from transformers import DetrImageProcessor, DetrForObjectDetection
-import torch
+import asyncio
+import ssl
+
 import cv2
 import numpy as np
-import ssl
+import torch
 from PIL import Image
-import asyncio
+from transformers import DetrImageProcessor, DetrForObjectDetection
 
 ssl._create_default_https_context = ssl._create_unverified_context
 

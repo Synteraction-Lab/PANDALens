@@ -21,8 +21,8 @@ import argparse
 import time
 
 from mediapipe.tasks import python
-from mediapipe.tasks.python.components import containers
 from mediapipe.tasks.python import audio
+from mediapipe.tasks.python.components import containers
 
 from src.Module.Audio.audio_record import AudioRecord
 

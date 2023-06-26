@@ -9,14 +9,18 @@ import tiktoken
 
 from src.Storage.reader import load_task_description
 from src.Storage.writer import append_json_data
-from src.Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, CONCISE_THRESHOLD, ROLE_HUMAN, ROLE_AI
+from src.Utilities.constant import ALL_HISTORY, ROLE_SYSTEM, ROLE_HUMAN, ROLE_AI
 from src.Utilities.json import detect_json
 
-MAX_TOKENS = 2000
-MODEL_UPPER_TOKEN_LIMITATION = 4096
+MAX_TOKENS = 4000
+CONCISE_THRESHOLD = 10000
+MODEL_UPPER_TOKEN_LIMITATION = 16000
 TEMPERATURE = 0.3
 
 API_KEYS = [os.environ["OPENAI_API_KEY_U1"], os.environ["OPENAI_API_KEY_U2"]]
+
+# LOAD TASK DESCRIPTION OF SYSTEM REMINDER
+SYSTEM_REMINDER = load_task_description("system_reminder")
 
 
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
@@ -55,11 +59,14 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
 def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPERATURE, api_key_idx=0, retry_count=3):
     try:
         openai.api_key = API_KEYS[api_key_idx]
-        model_engine = "gpt-3.5-turbo"
-        print(f"\nSent Prompt:\n{sent_prompt}\n")
-        print(f"total token count: {num_tokens_from_messages(sent_prompt)}\n")
+        model_engine = "gpt-3.5-turbo-16k-0613"
+        # print(f"\nSent Prompt:\n{sent_prompt}\n")
+        system_reminder = {"role": ROLE_SYSTEM, "content": SYSTEM_REMINDER}
+        sent_prompt.append(system_reminder)
+        token_num = num_tokens_from_messages(sent_prompt)
+        print(f"total token count: {token_num}\n")
 
-        max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - num_tokens_from_messages(sent_prompt))
+        max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - token_num)
 
         for _ in range(retry_count):
             try:
@@ -319,5 +326,3 @@ if __name__ == "__main__":
                 print(response)
         except Exception as e:
             pass
-
-

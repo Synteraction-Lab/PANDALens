@@ -1,27 +1,23 @@
+import os
 import threading
 import time
 import tkinter as tk
 from multiprocessing import Process
+from time import sleep
 
 import pandas
 import pyperclip
-
-from src.Module.LLM.GPT import GPT
-
-from src.UI.device_panel import DevicePanel
-from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
-from src.UI.widget_generator import get_button
-
-from time import sleep
+import pyttsx3
 import whisper
-
-from src.Module.Audio.AudioCapture import AudioCapture
-from src.Utilities.clipboard import copy_content, get_clipboard_content
-
-import os
 from pynput.keyboard import Key, Controller, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
-import pyttsx3
+
+from src.Module.Audio.AudioCapture import AudioCapture
+from src.Module.LLM.GPT import GPT
+from src.UI.device_panel import DevicePanel
+from src.UI.widget_generator import get_button
+from src.Utilities.clipboard import copy_content, get_clipboard_content
+from src.Utilities.constant import VISUAL_OUTPUT, AUDIO_OUTPUT, audio_file, chat_file, slim_history_file, config_path
 
 
 def play_audio_response(response):

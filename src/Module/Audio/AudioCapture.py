@@ -1,6 +1,6 @@
+import os
 import subprocess
 from time import sleep
-import os
 
 from src.Utilities.file import remove_file, get_system_name
 

@@ -1,7 +1,8 @@
 import json
+import os
+
 import requests
 from transformers import pipeline
-import os
 
 API_TOKEN = os.environ["HUGGINGFACE_API_KEY"]
 headers = {"Authorization": f"Bearer {API_TOKEN}"}

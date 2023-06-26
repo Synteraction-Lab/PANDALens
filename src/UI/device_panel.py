@@ -1,15 +1,14 @@
 import os
-import subprocess
-
-import pandas
 import tkinter as tk
 
+import pandas
+
 from src.Module.Audio.live_transcriber import get_recording_devices
+from src.Storage.writer import record_device_config
 from src.UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label
 from src.Utilities.constant import CONFIG_FILE_NAME, VISUAL_OUTPUT, AUDIO_OUTPUT
-from src.Utilities.file import get_system_name, get_second_monitor_original_pos, \
+from src.Utilities.file import get_second_monitor_original_pos, \
     get_possible_tasks
-from src.Storage.writer import record_device_config
 
 
 def save_device_config(path, item, data):
@@ -180,7 +179,7 @@ class DevicePanel:
 
         self.close_frame = tk.Frame(self.frame)
         self.close_frame.pack(pady=10)
-        self.close_btn = get_button(self.close_frame, text="Save", command=self.on_close_window, pattern=0)
+        self.close_btn = get_button(self.close_frame, text="Save", command=self.on_close_window)
         self.close_btn.pack()
 
 

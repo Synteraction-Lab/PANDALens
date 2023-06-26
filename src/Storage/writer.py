@@ -47,3 +47,4 @@ def log_manipulation(file_name, item):
         append_csv_data(file_name, f'{ITEM},{TIME}\n')
 
     append_csv_data(file_name, f'{item},{datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")}\n')
+    print(f'Logged: {item}')

@@ -1,5 +1,5 @@
-# Note: Command is the atomic unit of execution
-class Command:
+# Note: Action execution several commands for each system state
+class Action:
     def __init__(self):
         pass
 

@@ -81,7 +81,7 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 4. Follow the same approach above, add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
 5. Set up your Google Cloud Vision follow these guides: [Google Cloud Vision Setup](https://cloud.google.com/vision/docs/setup)
 and [Use Client Libraries](https://cloud.google.com/vision/docs/detect-labels-image-client-libraries)
-5. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
+6. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
 You can also modify the prompt in this folder to improve the experience.
 
 ## Windows specific issues
@@ -101,6 +101,9 @@ You can also modify the prompt in this folder to improve the experience.
 - pyttsx3 issue
   - If you meet the issue with `AttributeError: 'super' object has no attribute 'init'` when using the pyttsx3 on macOS
     - Please follow the [instruction](https://github.com/RapidWareTech/pyttsx/pull/35/files) to add `from objc import super` at the top of the `/path_to_your_venv/pyttsx3/drivers/nsss.py` file.
+
+## Issue with some Python packages
+1. [Fix the code of the image quality analysis](https://github.com/ocampor/image-quality/pull/51).
 
 ## Manipulation For Travel Blog
 

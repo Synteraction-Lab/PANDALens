@@ -6,7 +6,6 @@ AUDIO_OUTPUT = "visual+audio"
 ROLE_AI = "assistant"
 ROLE_SYSTEM = "system"
 ROLE_HUMAN = "user"
-CONCISE_THRESHOLD = 2000
 JOURNAL = "journal"
 PAPER = "paper_writing"
 SELF_REFLECTION = "reflection"
