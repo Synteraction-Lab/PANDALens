@@ -12,9 +12,10 @@ class TranscribeVoiceCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
-        notification = f"Transcribing voice..."
-        print(notification)
-        self.system_config.notification = notification
+        notification = f"I'm listening..."
+        self.system_config.notification = {'type': 'text',
+                                           'content': notification,
+                                           'position': 'top-center'}
         voice_transcriber = self.system_config.get_transcriber()
         if voice_transcriber is not None:
             if voice_transcriber.stop_event.is_set():
@@ -24,6 +25,7 @@ class TranscribeVoiceCommand(Command):
         while True:
             if self.system_config.stop_recording_command:
                 self.system_config.stop_recording_command = False
+                self.system_config.progress_bar_percentage = None
                 time.sleep(1)
                 break
             if not self.detect_user_speak():
@@ -31,19 +33,26 @@ class TranscribeVoiceCommand(Command):
                     self.silence_start_time = time.time()
                 else:
                     time_diff = time.time() - self.silence_start_time
-                    self.system_config.notification = f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s"
-                    print(f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s")
+                    self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
+                    # self.system_config.notification = {'type': 'text',
+                    #                                    'content': f"Stop Recording in {int(SILENCE_THRESHOLD - time_diff)}s",
+                    #                                    'position': 'top-center'}
+                    # print(f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s")
                     if time_diff > SILENCE_THRESHOLD:
                         self.silence_start_time = None
+                        self.system_config.progress_bar_percentage = None
                         break
             else:
                 self.silence_start_time = None
             time.sleep(0.5)
 
         time.sleep(2)
+        self.system_config.progress_bar_percentage = None
         full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
-        self.system_config.notification = f"Processing your command..."
+        self.system_config.notification = {'type': 'text',
+                                           'content': f"Processing your command...",
+                                           'position': 'top-center'}
         return full_transcription
 
     def detect_user_speak(self):

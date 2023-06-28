@@ -2,7 +2,6 @@ import os
 import warnings
 from datetime import datetime
 
-
 import cv2
 
 import numpy as np
@@ -38,9 +37,10 @@ class ManualPhotoCommand(Command):
 
         self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
         return frame
-        notification = f"You seem to interested in your front scene. Any comments?"
-        self.system_config.notification = notification
-        self.system_config.audio_feedback_to_show = notification
+        # notification = f"You seem to interested in your front scene. Any comments?"
+        # self.system_config.notification = {'type': 'text',
+        #                                    'content': notification,
+        #                                    'position': 'top-center'}
+        # self.system_config.audio_feedback_to_show = notification
 
         # return frame
-
