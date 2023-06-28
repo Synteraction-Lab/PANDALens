@@ -31,6 +31,7 @@ IMAGE_FRAME_SHOW_DURATION = 10
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
         self.progress_bar = None
+        self.notification_widget = None
         self.frame_placed_time = None
         self.interest_icon_placed_time = None
         self.last_text_feedback_to_show = None
@@ -198,7 +199,7 @@ class App:
 
         self.last_y = None
 
-        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color=MAIN_GREEN_COLOR)
+        # self.notification_widget = customtkinter.CTkLabel(self.root, text="", font=('Arial', 20), text_color=MAIN_GREEN_COLOR)
 
         self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color='black', border_width=3,
                                     text_color=MAIN_GREEN_COLOR, font_size=10)
@@ -226,7 +227,7 @@ class App:
         self.notification_box = customtkinter.CTkImage(
             Image.open(os.path.join(self.asset_path, "notification_box.png")),
             size=(630, 90))
-        self.notification.configure(image=self.notification_box, compound="center")
+        # self.notification_widget.configure(image=self.notification_box, compound="center")
 
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
                         'right': self.button_right}
@@ -293,8 +294,13 @@ class App:
                                                orientation='horizontal',
                                                mode='determinate',
                                                progress_color=MAIN_GREEN_COLOR, height=15)
+            if self.notification_widget is not None:
+                relx = float(self.notification_widget.place_info()['relx'])
+                rely = float(self.notification_widget.place_info()['rely'])
 
-            self.progress_bar.place(relx=0.8, rely=0.35, relwidth=0.3, anchor=tk.CENTER)
+                self.progress_bar.place(relx=relx, rely=rely + 0.1, relwidth=0.3, anchor=tk.CENTER)
+            else:
+                self.progress_bar.place(relx=0.8, rely=0.35, relwidth=0.3, anchor=tk.CENTER)
             self.root.update_idletasks()
 
         self.progress_bar.set(progress_bar_percentage)
@@ -307,22 +313,41 @@ class App:
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
         if notification != self.last_notification:
+            if self.last_notification is not None:
+                if notification is None or notification["type"] != self.last_notification["type"]:
+                    self.remove_notification()
+
             if notification is not None:
                 if self.last_notification is None:
-                    self.hide_show_buttons()
-                    self.show_notification_widget()
-                self.notification.configure(text=notification)
-            elif notification is None:
-                self.remove_notification()
+                    self.hide_button()
+                if self.notification_widget is None:
+                    self.show_notification_widget(notification)
+                if notification["type"] == "text":
+                    self.notification_widget.configure(text=notification["content"])
+
             self.last_notification = notification
 
-    def show_notification_widget(self):
-        self.notification.configure(image=self.notification_box, compound="center")
-        self.notification.place(relx=0.5, rely=0.16, anchor='center')
+    def show_notification_widget(self, notification):
+        if notification["type"] == "text":
+            self.notification_widget = customtkinter.CTkLabel(self.root, text="", font=('Roboto', 20), text_color="#59C9A0")
+            self.notification_widget.configure(image=self.notification_box, compound="center")
+        elif notification["type"] == "like_icon":
+            self.like_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
+                                                    size=(30, 30))
+            self.notification_widget = customtkinter.CTkLabel(self.root, text="", image=self.like_icon)
+            print("like icon")
+
+        if notification["position"] == "top-center":
+            self.notification_widget.place(relx=0.5, rely=0.16, anchor='center')
+        elif notification["position"] == "top_right":
+            self.notification_widget.place(relx=0.8, rely=0.05, anchor='center')
+            print("top_right")
+        else:
+            self.notification_widget.place(relx=0.5, rely=0.84, anchor='center')
 
     def remove_notification(self):
-        self.notification.destroy()
-        self.notification = customtkinter.CTkLabel(self.root, text="", font=('Roboto', 20), text_color="#59C9A0")
+        self.notification_widget.destroy()
+        self.notification_widget = None
 
     def listen_show_interest_icon_from_backend(self):
         if self.system_config.show_interest_icon:
@@ -467,7 +492,7 @@ class App:
         # Check Users' surrounding environment
         # print(f"Person count: {self.person_count}")
         if self.person_count > 3:
-            self.notification.configure(text="Too many people nearby. You may hide the pic and comment it later.")
+            self.notification_widget.configure(text="Too many people nearby. You may hide the pic and comment it later.")
 
         self.system_config.frame_shown_in_picture_window = None
         self.frame_placed_time = time.time()

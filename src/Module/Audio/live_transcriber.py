@@ -100,7 +100,7 @@ class LiveTranscriber:
         phrase_time = None
 
         self.stop_listening = self.recorder.listen_in_background(self.source, self.record_callback,
-                                                                 phrase_time_limit=self.record_timeout)
+                                                                     phrase_time_limit=self.record_timeout)
 
         while not self.stop_event.is_set():
             now = datetime.utcnow()
@@ -114,6 +114,7 @@ class LiveTranscriber:
                 while not self.data_queue.empty():
                     data = self.data_queue.get()
                     last_sample += data
+
 
                 audio_data = sr.AudioData(last_sample, self.source.SAMPLE_RATE, self.source.SAMPLE_WIDTH)
                 wav_data = io.BytesIO(audio_data.get_wav_data())
@@ -185,6 +186,7 @@ class LiveTranscriber:
             final_result = " ".join(self.transcription)
         self.full_text = ""
         self.transcription = ['']
+        self.model = "base.en"
         self.mode = "emotion_classification"
         return final_result.strip()
 
@@ -192,6 +194,7 @@ class LiveTranscriber:
         with self.lock:
             self.full_text = ""
             self.transcription = ['']
+        self.model = "small.en"
         self.mode = "voice_transcription"
 
     def stop(self):

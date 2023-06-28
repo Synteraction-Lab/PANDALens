@@ -8,8 +8,7 @@ class AudioCommentsPendingAction(Action):
         self.system_config = sys_config
 
     def execute(self):
-        self.system_config.notification = "Detected your interested audio, any comments?"
+        self.system_config.notification = {'type': 'text',
+                                           'content': "Detected your interested audio, any comments?",
+                                           'position': 'top-center'}
         # self.system_config.audio_feedback_to_show = self.system_config.notification
-
-
-            

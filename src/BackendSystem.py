@@ -82,7 +82,8 @@ class BackendSystem:
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-                    self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    self.system_config.notification = {'type': 'like_icon', 'position': 'top_right'}
                 elif self.detect_interested_audio():
                     self.system_status.set_state('audio_comments_pending')
                     action = self.system_status.get_current_state()
@@ -185,18 +186,14 @@ class BackendSystem:
 
     def detect_user_move_to_another_place(self):
         current_frame = self.system_config.vision_detector.original_frame
-        fixation_detected = self.system_config.vision_detector.fixation_detected
-        # norm_pos = self.system_config.vision_detector.norm_gaze_position
+
         difference = cv2.subtract(current_frame, self.previous_vision_frame)
         result = not np.any(difference)
         if result:
             return False
         else:
             cv2.imwrite("diff.jpg", difference)
-        # if self.previous_norm_pos == norm_pos:
-        #     return False
-        # self.previous_norm_pos = norm_pos
-        # print(f"Fixation detected: {fixation_detected}, {self.system_config.potential_interested_frame is not None}")
+
         if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
             previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
@@ -238,7 +235,7 @@ class BackendSystem:
         if scores['joy'] + scores['surprise'] > 0.7 and scores != self.previous_sentiment_scores:
             self.previous_sentiment_scores = scores
             print("Positive tone detected")
-            emotion_classifier.stop()
+            emotion_classifier.stop_emotion_classification_and_start_transcription()
             return True
 
     def detect_interested_audio(self):
