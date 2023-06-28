@@ -1,5 +1,5 @@
 # UbiWriter
-A software that enables you to write ubiquitously with the assistant of GPT.
+A software that enables you to write ubiquitously with the assistance of GPT.
 
 ## Publications
 - [publication_name](publication_link), VENUE'XX
@@ -39,12 +39,14 @@ A software that enables you to write ubiquitously with the assistant of GPT.
          Run the following in the cmd prompt, replacing `<yourkey>` with your API key:
       
          ```setx OPENAI_API_KEY_U1 "<yourkey1>"```
+        
      
          ```setx OPENAI_API_KEY_U2 "<yourkey2>"```
 
-         This will apply to future cmd prompt windows, so you will need to open a new one to use that variable with Python. You can validate that this variable has been set by opening a new cmd prompt window and typing in 
+         This will apply to future cmd prompt windows, so you will need to open a new one to use that variable with Python. You can validate that this variable has been set by opening a new cmd prompt window and typing in. 
 
          ```echo %OPENAI_API_KEY_U1%```
+        
      
          ```echo %OPENAI_API_KEY_U2%```
 
@@ -52,7 +54,7 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 
          1. Open System properties and select Advanced system settings.
          2. Select Environment Variables.
-         3. Select New from the User variables section (top). Add your name/key value pair, replacing `<yourkey>` with your API key.
+         3. Select New from the User variables section (top). Add your name/key-value pair, replacing `<yourkey>` with your API key.
 
             Variable name: `OPENAI_API_KEY_U1`, Variable value: `<yourkey1>`
 
@@ -78,24 +80,24 @@ A software that enables you to write ubiquitously with the assistant of GPT.
 
         - Option 2: Set your ‘OPENAI_API_KEY’ Environment Variable using bash:
           Follow the directions in Option 1, replacing `.zshrc` with `.bash_profile`.
-4. Follow the same approach above, add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
-5. Set up your Google Cloud Vision follow these guides: [Google Cloud Vision Setup](https://cloud.google.com/vision/docs/setup)
+4. Follow the same approach above; add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
+5. Set up your Google Cloud Vision following these guides: [Google Cloud Vision Setup](https://cloud.google.com/vision/docs/setup)
 and [Use Client Libraries](https://cloud.google.com/vision/docs/detect-labels-image-client-libraries)
-6. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
+6. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first, then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
 You can also modify the prompt in this folder to improve the experience.
 
 ## Windows specific issues
 - Windows defender issue
-  - Windows defender will treat the keyboardListener in App.py as a threat and automatically delete the file 
+  - Windows Defender will treat the keyboardListener in App.py as a threat and automatically delete the file 
     - To overcome this problem, follow these steps
       1. Press Windows + I keys and open Settings
       2. Click on Update & Security
       3. Go to Windows Security
       4. Click on Virus & Threat protection
       5. Select Manage Settings
-      6. Under Exclusions, click on Add or remove exclusion
+      6. Under Exclusions, click on Add or Remove exclusion
       7. Click on the + sign which says Add an exclusion
-      8. Select File, Folder, File Type or Process
+      8. Select File, Folder, File Type, or Process
 
 ## MacOS specific issues
 - pyttsx3 issue
@@ -115,12 +117,12 @@ You can also modify the prompt in this folder to improve the experience.
 - Click "Save" to save the configuration.
 
 ### Step 3
-- You can use our ring mouse to manipulate the menu. You can use your mouse and keyboard if you use it for desktop setting.
-  - To start a new recording, press ``arrow_right`` key on your keyboard or click the right button in the GUI. 
-  - To get a summarization or generate full writing, press ``arrow_up`` key on your keyboard or click the top button in the GUI. 
-  - To take a picture, please press ``arrow_down`` key on your keyboard or click the bottom button in the GUI. If you want to make any comments on the picture, after the picture windows shows up, you can start a new recording and say your comments following the above instructions.
-  - To hide/show the picture window or text, please press ``arrow_left`` key on your keyboard or click the left button in the GUI.
-  - You can scroll your mouse wheel to scroll up and down the generated writing.
+- You can use our ring mouse to manipulate the menu. You can use your mouse and keyboard if you use it for desktop settings.
+  - To start a new recording, press the ``arrow_right`` key on your keyboard or click the right button in the GUI. 
+  - To get a summarization or generate full writing, press the ``arrow_up`` key on your keyboard or click the top button in the GUI. 
+  - To take a picture, please press the ``arrow_down`` key on your keyboard or click the bottom button in the GUI. If you want to make any comments on the picture, after the picture windows show up, you can start a new recording and say your comments following the above instructions.
+  - To hide/show the GUI, please click the mouse's left button.
+  - You can scroll your mouse wheel up and down the generated writing.
 
 ### Step 4
 If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.json`` folder.
