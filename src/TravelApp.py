@@ -258,7 +258,7 @@ class App:
         self.listen_feedback_from_backend()
         self.listen_frame_from_backend()
         self.listen_show_interest_icon_from_backend()
-        self.listen_timer_from_backend()
+        self.listen_progress_bar_from_backend()
 
         # remove UI elements
         now = time.time()
@@ -273,32 +273,32 @@ class App:
                 self.remove_frame()
                 self.frame_placed_time = None
 
-        # run this function again after 0.2 seconds
+        # run this function again after 0.3 seconds
         self.root.after(300, self.update_ui_based_on_timer)
 
-    def listen_timer_from_backend(self):
+    def listen_progress_bar_from_backend(self):
         progress_bar_percentage = self.system_config.progress_bar_percentage
         if progress_bar_percentage is not None:
             if progress_bar_percentage > 0:
-                self.set_timer(progress_bar_percentage)
+                self.set_progress_bar(progress_bar_percentage)
             else:
                 self.remove_timer()
 
         if progress_bar_percentage is None and self.progress_bar is not None:
             self.remove_timer()
 
-    def set_timer(self, progress_bar_percentage):
+    def set_progress_bar(self, progress_bar_percentage):
         if self.progress_bar is None:
             self.hide_show_buttons()
             self.progress_bar = CTkProgressBar(master=self.root,
                                                orientation='horizontal',
                                                mode='determinate',
-                                               progress_color=MAIN_GREEN_COLOR, height=15)
+                                               progress_color=MAIN_GREEN_COLOR, height=10)
             if self.notification_widget is not None:
                 relx = float(self.notification_widget.place_info()['relx'])
                 rely = float(self.notification_widget.place_info()['rely'])
 
-                self.progress_bar.place(relx=relx, rely=rely + 0.1, relwidth=0.3, anchor=tk.CENTER)
+                self.progress_bar.place(relx=relx, rely=rely + 0.05, relwidth=0.2, anchor=tk.CENTER)
             else:
                 self.progress_bar.place(relx=0.8, rely=0.35, relwidth=0.3, anchor=tk.CENTER)
             self.root.update_idletasks()
@@ -312,8 +312,10 @@ class App:
 
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
+        # Update the notification if not the same as the previous one
         if notification != self.last_notification:
             if self.last_notification is not None:
+                # Remove previous notification if it's not the same as the current one or the current one is set to None
                 if notification is None or notification["type"] != self.last_notification["type"]:
                     self.remove_notification()
 
@@ -335,7 +337,10 @@ class App:
             self.like_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
                                                     size=(30, 30))
             self.notification_widget = customtkinter.CTkLabel(self.root, text="", image=self.like_icon)
-            print("like icon")
+        elif notification["type"] == "listening_icon":
+            self.listening_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "listening_icon.png")),
+                                                         size=(220, 50))
+            self.notification_widget = customtkinter.CTkLabel(self.root, text="", image=self.listening_icon)
 
         if notification["position"] == "top-center":
             self.notification_widget.place(relx=0.5, rely=0.16, anchor='center')
