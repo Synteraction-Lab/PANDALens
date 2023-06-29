@@ -13,9 +13,8 @@ class TranscribeVoiceCommand(Command):
 
     def execute(self):
         notification = f"I'm listening..."
-        self.system_config.notification = {'type': 'text',
-                                           'content': notification,
-                                           'position': 'top-center'}
+        self.system_config.notification = {'type': 'listening_icon',
+                                           'position': 'top-right'}
         voice_transcriber = self.system_config.get_transcriber()
         if voice_transcriber is not None:
             if voice_transcriber.stop_event.is_set():
