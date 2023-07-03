@@ -18,7 +18,7 @@ def get_image_labels(path):
     image = vision.Image(content=content)
 
     # Performs label detection on the image file
-    response = client.label_detection(image=image, retry=1, timeout=5)
+    response = client.label_detection(image=image, timeout=5)
     labels = response.label_annotations
 
     label_str = ""
@@ -40,7 +40,7 @@ def get_image_texts(path):
 
     image = vision.Image(content=content)
 
-    response = client.text_detection(image=image, retry=1, timeout=5)
+    response = client.text_detection(image=image, timeout=5)
 
     largest_text = None
     largest_area = 0
