@@ -3,12 +3,13 @@ from transitions import Machine
 # Define the system states
 states = ['init', 'show_gpt_response', 'comments_to_gpt',
           'photo_pending', 'photo_comments_pending', 'comments_on_photo',
-          'full_writing_pending', 'manual_photo_comments_pending', 'audio_comments_pending', 'comments_on_audio']
+          'full_writing_pending', 'manual_photo_comments_pending', 'audio_comments_pending', 'comments_on_audio', 
+          "select_moments"]
 
 actions = {'gaze', 'zoom_in', 'move_to_another_place',
            'speak', 'ignore',
            'gpt_generate_response',
-           'full_writing_command'}
+           'full_writing_command', "show_summaries"}
 
 # Define the transitions
 transitions = [
@@ -29,6 +30,8 @@ transitions = [
     {'trigger': 'gpt_generate_response', 'source': 'comments_to_gpt', 'dest': 'show_gpt_response'},
     {'trigger': 'full_writing_command', 'source': 'init', 'dest': 'full_writing_pending'},
     {'trigger': 'gpt_generate_response', 'source': 'full_writing_pending', 'dest': 'show_gpt_response'},
+    {'trigger': 'show_summaries', 'source': 'init', 'dest': 'select_moments'},
+    {'trigger': 'gpt_generate_response', 'source': 'select_moments', 'dest': 'show_gpt_response'},
 ]
 
 
@@ -79,6 +82,12 @@ if __name__ == '__main__':
     system_status.trigger('ignore')
     print("Current state:", system_status.get_current_state())
 
+    system_status.trigger('show_summaries')
+    print("Current state:", system_status.get_current_state())
+
+    system_status.trigger('gpt_generate_response')
+    print("Current state:", system_status.get_current_state())
+
     system_status.trigger('full_writing_command')
     print("Current state:", system_status.get_current_state())
 
@@ -87,3 +96,6 @@ if __name__ == '__main__':
 
     system_status.set_state("comments_to_gpt")
     print("Current state:", system_status.get_current_state())
+
+   
+
