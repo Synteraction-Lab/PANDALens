@@ -137,8 +137,8 @@ class App:
                 func = "Summary"
             elif key == keyboard.Key.down and self.shown_button:
                 func = "Photo"
-            elif key == keyboard.Key.left:
-                func = "Hide"
+            elif key == keyboard.Key.left and self.shown_button:
+                func = "Select"
             elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
         except Exception as e:
@@ -163,6 +163,8 @@ class App:
             self.destroy_picture_window()
         elif func == "Stop Recording":
             self.backend_system.set_user_explicit_input('stop_recording')
+        elif func == "Select":
+            self.backend_system.set_user_explicit_input('select')
 
     def on_release(self, key):
         if not self.config_updated:
@@ -206,7 +208,11 @@ class App:
                                     text_color=MAIN_GREEN_COLOR, font_size=10)
         self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
                                       text_color=MAIN_GREEN_COLOR, font_size=14)
-        self.button_left = get_button(self.manipulation_frame, text='Hide')
+        # self.button_left = get_button(self.manipulation_frame, text='Hide')
+
+        self.button_left = get_button(self.manipulation_frame, text='Select', fg_color='black', border_width=3,
+                                    text_color=MAIN_GREEN_COLOR, font_size=14)
+
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
                                        text_color=MAIN_GREEN_COLOR, font_size=14)
 
@@ -219,6 +225,7 @@ class App:
         self.summary_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "summary_icon.png")),
                                                          size=(30, 30))
         self.button_up.configure(image=self.summary_icon_image, compound="top")
+        self.button_left.configure(image=self.summary_icon_image, compound="top")
 
         self.photo_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "photo_icon.png")),
                                                        size=(30, 30))
@@ -236,7 +243,7 @@ class App:
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
                         'right': self.button_right}
         self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.1, 'anchor': 'center'},
-                               'left': {'relx': -0.1, 'rely': 0.5, 'anchor': 'center'},
+                               'left': {'relx': 0.1, 'rely': 0.5, 'anchor': 'center'},
                                'down': {'relx': 0.5, 'rely': 0.9, 'anchor': 'center'},
                                'right': {'relx': 0.9, 'rely': 0.5, 'anchor': 'center'}}
 
@@ -380,10 +387,12 @@ class App:
         self.notification_window.geometry(f"{widget_width}x{widget_height}+{pos_x}+{pos_y}")
 
     def remove_notification(self):
-        self.notification_widget.destroy()
-        self.notification_widget = None
-        self.notification_window.destroy()
-        self.notification_window = None
+        if self.notification_widget is not None:
+            self.notification_widget.destroy()
+            self.notification_widget = None
+        if self.notification_window is not None:
+            self.notification_window.destroy()
+            self.notification_window = None
 
     def listen_show_interest_icon_from_backend(self):
         if self.system_config.show_interest_icon:

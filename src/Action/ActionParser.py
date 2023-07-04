@@ -7,6 +7,7 @@ from src.Action.ManualPhotoCommentsPendingAction import ManualPhotoCommentsPendi
 from src.Action.PhotoCommentsPendingAction import PhotoCommentsPendingAction
 from src.Action.PhotoPendingAction import PhotoPendingAction
 from src.Action.ShowGPTResponseAction import ShowGPTResponseAction
+from src.Action.ShowSummaries import ShowSummariesAction
 
 
 # parser the input and return a action
@@ -35,5 +36,7 @@ def parse(command_string, sys_config):
         return AudioCommentsPendingAction(sys_config)
     elif command_string == "comments_on_audio":
         return CommentsOnAudioAction(sys_config)
+    elif command_string == "select_moments":
+        return ShowSummariesAction(sys_config)
     else:
         return None
