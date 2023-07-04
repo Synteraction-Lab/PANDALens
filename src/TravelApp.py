@@ -387,10 +387,12 @@ class App:
         self.notification_window.geometry(f"{widget_width}x{widget_height}+{pos_x}+{pos_y}")
 
     def remove_notification(self):
-        self.notification_widget.destroy()
-        self.notification_widget = None
-        self.notification_window.destroy()
-        self.notification_window = None
+        if self.notification_widget is not None:
+            self.notification_widget.destroy()
+            self.notification_widget = None
+        if self.notification_window is not None:
+            self.notification_window.destroy()
+            self.notification_window = None
 
     def listen_show_interest_icon_from_backend(self):
         if self.system_config.show_interest_icon:
