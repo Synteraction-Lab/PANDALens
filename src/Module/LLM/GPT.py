@@ -302,7 +302,10 @@ if __name__ == "__main__":
             "user behaviors": "the user is using a fork to cut a piece of food and placing it in their mouth"
         },
         {
-            "User Command": "Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
+            "User Command": "List all the moments' summary."
+        },
+        {
+            "User Command": "I want to select moment 1, 2, 4. Write a full blog. Note: Return the response **ONLY** in JSON format, with the following structure: {\"mode\": \"full\", \"response\": \{ \"full writing\": \"[full travel blog content in first person narration]\"\, \"revised parts\": \"[the newly added or revised content, return \"None\" when no revision.]\" } }",
         },
         {
             "user comments/commands": "Make it appealing.",
