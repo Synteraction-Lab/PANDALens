@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 
 class BackendSystem:
-    def __init__(self, system_config, ui=None):
+    def __init__(self, system_config):
         self.previous_sentiment_scores = None
         self.user_explicit_input = None
         self.silence_start_time = None
@@ -34,7 +34,6 @@ class BackendSystem:
         self.system_status = SystemStatus()
         self.log_path = os.path.join(self.system_config.folder_path + "log.csv")
         self.current_state = None
-        self.ui = ui
 
     def run(self):
         while True:
@@ -87,7 +86,7 @@ class BackendSystem:
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                     # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                    self.system_config.notification = {'type': 'like_icon', 'position': 'top_right'}
+                    self.system_config.notification = {'notif_type': 'like_icon', 'position': 'top_right'}
                 elif self.detect_interested_audio():
                     self.system_status.set_state('audio_comments_pending')
                     action = self.system_status.get_current_state()
@@ -127,10 +126,10 @@ class BackendSystem:
             elif current_state == 'comments_on_photo' or current_state == 'comments_to_gpt' \
                     or current_state == 'full_writing_pending' or current_state == 'comments_on_audio' or current_state == 'select_moments':
                 if self.detect_gpt_response():
-                    self.system_config.notification = None
+                    # self.system_config.notification = None
                     self.system_status.trigger('gpt_generate_response')
                     action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute(self.ui)
+                    ActionParser.parse(action, self.system_config).execute()
 
     def take_user_explict_input(self, user_input):
         self.system_status.trigger(user_input)

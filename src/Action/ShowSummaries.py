@@ -8,14 +8,12 @@ class ShowSummariesAction(Action):
         self.system_config = sys_config
 
     def execute(self):
-        user_request = {"user comments/commands": "List all the moments' summary. ' \
-                       'Remember: Return the response **ONLY** in following JSON format: ' \
-                       '{\"mode\": \"full\",' \
-                       ' \"response\": ' \
-                       '\{\"full writing\": ' \
-                       '\"[full travel blog content in first person narration]\"\, ' \
-                       '\"revised parts\": \"[the newly added or revised content, ' \
-                       'return \"None\" when no revision.]\"}}"}
+        user_request = {"user comments/commands": "List all the moments' summary. "
+                                                  "Return the response **ONLY** in JSON format, "
+                                                  "with the following structure: "
+                                                  "```json{\"mode\": \"selecting,\" "
+                                                  "\"response\": "
+                                                  "\"List:\n no.1, [One sentence summary for moment 1] \n\" }```"}
 
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)

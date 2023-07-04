@@ -6,6 +6,6 @@ class ShowAudioFeedbackCommand(Command):
         super().__init__()
         self.system_config = sys_config
 
-    def execute(self, ui):
+    def execute(self):
         print(f"\nAudio Feedback:\n{self.system_config.audio_feedback_to_show}")
         # self.system_config.audio_feedback_to_show = None

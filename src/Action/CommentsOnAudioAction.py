@@ -24,10 +24,10 @@ class CommentsOnAudioAction(Action):
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)
 
         if send_gpt_request_command is not None:
-            text_feedback, audio_feedback = send_gpt_request_command.execute(user_request)
+            send_gpt_request_command.execute(user_request)
 
-            self.system_config.text_feedback_to_show = text_feedback
-            self.system_config.audio_feedback_to_show = audio_feedback
+            # self.system_config.text_feedback_to_show = text_feedback
+            # self.system_config.audio_feedback_to_show = audio_feedback
             print(f"The text feedback is: {self.system_config.text_feedback_to_show}, "
                   f"and the audio feedback is: {self.system_config.audio_feedback_to_show}")
 

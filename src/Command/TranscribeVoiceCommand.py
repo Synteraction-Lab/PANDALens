@@ -13,7 +13,7 @@ class TranscribeVoiceCommand(Command):
 
     def execute(self):
         notification = f"I'm listening..."
-        self.system_config.notification = {'type': 'listening_icon',
+        self.system_config.notification = {'notif_type': 'listening_icon',
                                            'position': 'middle-right'}
         voice_transcriber = self.system_config.get_transcriber()
         if voice_transcriber is not None:
@@ -33,7 +33,7 @@ class TranscribeVoiceCommand(Command):
                 else:
                     time_diff = time.time() - self.silence_start_time
                     self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
-                    # self.system_config.notification = {'type': 'text',
+                    # self.system_config.notification = {'notif_type': 'text',
                     #                                    'content': f"Stop Recording in {int(SILENCE_THRESHOLD - time_diff)}s",
                     #                                    'position': 'top-center'}
                     # print(f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s")
@@ -49,9 +49,8 @@ class TranscribeVoiceCommand(Command):
         self.system_config.progress_bar_percentage = None
         full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
-        self.system_config.notification = {'type': 'text',
-                                           'content': f"Processing your command...",
-                                           'position': 'top-center'}
+        self.system_config.notification = {'notif_type': 'processing_icon',
+                                           'position': 'middle-right'}
         return full_transcription
 
     def detect_user_speak(self):
