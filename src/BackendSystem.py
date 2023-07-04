@@ -63,6 +63,10 @@ class BackendSystem:
                     self.system_status.set_state('full_writing_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
+                elif self.user_explicit_input == 'select':
+                    self.system_status.set_state('select_moments')
+                    action = self.system_status.get_current_state()
+                    ActionParser.parse(action, self.system_config).execute()
 
                 self.user_explicit_input = None
                 continue
@@ -121,7 +125,7 @@ class BackendSystem:
                         self.system_config.text_feedback_to_show = ""
                         self.silence_start_time = None
             elif current_state == 'comments_on_photo' or current_state == 'comments_to_gpt' \
-                    or current_state == 'full_writing_pending' or current_state == 'comments_on_audio':
+                    or current_state == 'full_writing_pending' or current_state == 'comments_on_audio' or current_state == 'select_moments':
                 if self.detect_gpt_response():
                     self.system_config.notification = None
                     self.system_status.trigger('gpt_generate_response')
