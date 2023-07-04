@@ -228,7 +228,7 @@ class App:
 
         self.notification_box = customtkinter.CTkImage(
             Image.open(os.path.join(self.asset_path, "notification_box.png")),
-            size=(630, 90))
+            size=(312, 90))
         # self.notification_widget.configure(image=self.notification_box, compound="center")
 
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
@@ -284,7 +284,9 @@ class App:
             if progress_bar_percentage > 0:
                 # self.set_progress_bar(progress_bar_percentage)
                 # set the transparency of the notification widget
-                self.notification_window.attributes("-alpha", progress_bar_percentage)
+
+                if self.notification_window is not None:
+                    self.notification_window.attributes("-alpha", progress_bar_percentage)
             else:
                 # self.remove_progress_bar()
                 self.remove_notification()
@@ -347,8 +349,8 @@ class App:
                 widget.destroy()
 
         if notification["type"] == "text":
-            self.notification_widget = customtkinter.CTkLabel(self.notification_window, text="", font=('Roboto', 20),
-                                                              text_color="#59C9A0")
+            self.notification_widget = customtkinter.CTkLabel(self.notification_window, text="", font=('Roboto', 14),
+                                                              text_color="white", wraplength=260)
             self.notification_widget.configure(image=self.notification_box, compound="center")
         elif notification["type"] == "like_icon":
             self.like_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
