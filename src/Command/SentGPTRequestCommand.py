@@ -23,14 +23,24 @@ class SendGPTRequestCommand(Command):
                     text_response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
                                     f"Revision:\n{json_response['response']['revised parts']}\n"
                     audio_response = f"Here is your full writing: {json_response['response']['full writing']}"
+
+                    self.system_config.text_feedback_to_show = text_response
+                    self.system_config.audio_feedback_to_show = audio_response
+
                 elif json_response['mode'] == "authoring":
                     # text_response = f"Questions:\n{json_response['response']['question to users']}\n"
-                                     # f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
+                    # f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
 
-                    audio_response = f"May I ask: {json_response['response']['question to users']}"
-                    if audio_response.strip() == "May I ask: None":
+                    audio_response = f"May I ask:\n {json_response['response']['question to users']}"
+                    if audio_response.strip() == "May I ask:\n None":
                         audio_response = "I have no question for you. Anything you want to add?"
                     text_response = audio_response
+
+                    self.system_config.audio_feedback_to_show = audio_response
+                    self.system_config.notification = {'notif_type': 'text',
+                                                       'content': f"{text_response}",
+                                                       'position': 'middle-right'}
+
         except Exception as e:
             print(e)
 
