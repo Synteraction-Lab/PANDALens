@@ -11,7 +11,6 @@ class CommentsOnPhotoAction(Action):
         self.system_config = sys_config
 
     def execute(self):
-        print("CommentsOnPhotoAction Processing...")
         user_request = {}
 
         # transcribe voice

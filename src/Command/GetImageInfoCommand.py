@@ -15,8 +15,8 @@ class GetImageInfoCommand(Command):
         try:
             photo_label = get_image_labels(self.system_config.latest_photo_file_path)
             photo_ocr = get_image_texts(self.system_config.latest_photo_file_path)
-        except:
-            print("Error in getting image info using Google Vision API.")
+        except Exception as e:
+            print("Error in getting image info using Google Vision API: ", e)
             photo_label = None
             photo_ocr = None
         try:
