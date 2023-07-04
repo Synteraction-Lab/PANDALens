@@ -1,4 +1,5 @@
-from PIL import Image
+import cv2
+from PIL import Image, ImageTk
 from customtkinter import CTkLabel, CTkImage, CTkFrame
 import tkinter as tk
 import os
@@ -25,13 +26,22 @@ class NotificationWidget:
                                         size=(250, 72))
 
         if self.notif_type == "text":
-            self.notification_widget_text = CTkLabel(self.parent, text="self.text", font=('Roboto', 20),
+            self.notification_widget_text = CTkLabel(self.parent, text="self.text", font=('Roboto', 16),
                                                      text_color="white", wraplength=250, bg_color="#314A35")
             self.notification_widget_box = CTkLabel(self.parent, text="")
             self.notification_widget_box.configure(image=self.notification_box_img, compound="center")
             self.notification_widget_box.place(relwidth=1, relheight=1)
-            self.notification_widget_text.place(relx=0.6, rely=0.55, anchor=tk.CENTER)
+            self.notification_widget_text.place(relx=0.62, rely=0.55, anchor=tk.CENTER)
             self.notification_widget_text.lift()
+        elif self.notif_type == "picture":
+            self.listening_photo_comments_icon = CTkImage(
+                Image.open(os.path.join(self.asset_path, "image_suggestion_box.png")),
+                size=(375, 300))
+            self.picture_notification_box = CTkLabel(self.parent, text="",
+                                                     image=self.listening_photo_comments_icon)
+
+            self.picture_notification_box.place(relwidth=1, relheight=1)
+
         elif self.notif_type == "like_icon":
             self.icon = CTkLabel(self.parent, text="", image=self.like_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
@@ -48,6 +58,27 @@ class NotificationWidget:
             self.notification_widget_text.configure(text=self.text)
         if "notif_type" in kwargs:
             self.notif_type = kwargs["notif_type"]
+        if "image" in kwargs:
+            frame = kwargs["image"]
+            # convert the image from opencv to PIL format
+            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(img)
+
+            # Resize the image to 1/6 of its original size
+            img = img.resize((int(img.width / 6), int(img.height / 6)))
+
+            img_tk = ImageTk.PhotoImage(img)
+
+            # Create a label widget to display the image
+            self.picture_label = tk.Label(self.parent, bg="black")
+
+            # Set the picture label to the top-right of the window
+            self.picture_label.place(relx=0.62, rely=0.6, anchor=tk.CENTER, relwidth=0.5, relheight=0.45)
+            # self.picture_label.pack()
+
+            # Set the image on the label widget
+            self.picture_label.configure(image=img_tk)
+            self.picture_label.image = img_tk
 
     def destroy(self):
         if self.notif_type == "text":

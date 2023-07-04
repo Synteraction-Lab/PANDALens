@@ -19,22 +19,27 @@ class SendGPTRequestCommand(Command):
         try:
             if json_response is not None:
                 print(f"mode: {json_response['mode']}")
+                print(f"response: {response}\n\n")
                 if "full" in json_response['mode']:
-                    text_response = f"Full Writing:\n{json_response['response']['full writing']}\n\n" \
-                                    f"Revision:\n{json_response['response']['revised parts']}\n"
-                    audio_response = f"Here is your full writing: {json_response['response']['full writing']}"
+                    full_writing = json_response['response'].get('full writing', '')
+                    revised_parts = json_response['response'].get('revised parts', '')
+                    text_response = f"Full Writing:\n{full_writing}\n\nRevision:\n{revised_parts}\n"
+                    audio_response = f"Here is your full writing: {full_writing}"
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
 
                 elif json_response['mode'] == "authoring":
-                    # text_response = f"Questions:\n{json_response['response']['question to users']}\n"
-                    # f"New Note:\n{json_response['response']['summary of newly added content']}\n\n" \
-
-                    audio_response = f"May I ask:\n {json_response['response']['question to users']}"
-                    if audio_response.strip() == "May I ask:\n None":
-                        audio_response = "I have no question for you. Anything you want to add?"
-                    text_response = audio_response
+                    question_to_users = json_response['response'].get('question to users')
+                    summary_of_new_content = json_response['response'].get('summary of new content')
+                    if question_to_users is not None:
+                        audio_response = f"May I ask:\n{question_to_users}"
+                        if audio_response.strip() == "May I ask:\nNone":
+                            audio_response = "I have no question for you. Anything you want to add?"
+                        text_response = audio_response
+                    elif summary_of_new_content is not None:
+                        text_response = f"{summary_of_new_content}"
+                        audio_response = text_response
 
                     self.system_config.audio_feedback_to_show = audio_response
                     self.system_config.notification = {'notif_type': 'text',
