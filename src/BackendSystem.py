@@ -80,7 +80,7 @@ class BackendSystem:
                         emotion_classifier.start()
                         emotion_classifier.stop_transcription_and_start_emotion_classification()
                 if self.detect_gaze_and_zoom_in():
-                    self.system_config.show_interest_icon = True
+                    # self.system_config.show_interest_icon = True
                     self.system_status.trigger('gaze')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()

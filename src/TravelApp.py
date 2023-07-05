@@ -7,6 +7,7 @@ import tkinter as tk
 import customtkinter
 import pandas
 from PIL import Image
+from customtkinter import CTkFrame
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
@@ -196,9 +197,11 @@ class App:
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
 
         # maek the text border black
-        self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50, bg_color="#000000",
+        self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50,
                                                     text_color=MAIN_GREEN_COLOR, font=('Arial', 36),
-                                                    spacing1=10, spacing2=50, wrap="word")
+                                                    bg_color='systemTransparent',
+                                                    spacing1=10, spacing2=50, wrap="word",
+                                                    border_color="#42AF74", border_width=1)
 
         self.last_y = None
 
@@ -209,7 +212,7 @@ class App:
         # self.button_left = get_button(self.manipulation_frame, text='Hide')
 
         self.button_left = get_button(self.manipulation_frame, text='Select', fg_color='black', border_width=3,
-                                    text_color=MAIN_GREEN_COLOR, font_size=14)
+                                      text_color=MAIN_GREEN_COLOR, font_size=14)
 
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
                                        text_color=MAIN_GREEN_COLOR, font_size=14)
@@ -256,16 +259,16 @@ class App:
         # get UI update info from backend
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
-        self.listen_show_interest_icon_from_backend()
+        # self.listen_show_interest_icon_from_backend()
         self.listen_progress_bar_from_backend()
 
         # remove UI elements
         now = time.time()
 
-        if self.interest_icon_placed_time is not None:
-            if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
-                self.remove_interest_icon()
-                self.interest_icon_placed_time = None
+        # if self.interest_icon_placed_time is not None:
+        #     if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
+        #         self.remove_interest_icon()
+        #         self.interest_icon_placed_time = None
 
         # run this function again after 0.3 seconds
         self.root.after(300, self.update_ui_based_on_timer)
@@ -280,8 +283,6 @@ class App:
             else:
                 self.remove_notification()
 
-
-
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
         # Update the notification if not the same as the previous one
@@ -292,7 +293,7 @@ class App:
                     self.remove_notification()
 
             if notification is not None:
-                print("Notification Type: ", notification["notif_type"])
+                print("Notification Type: ", notification["notif_type"], self.notification_widget)
                 if self.last_notification is None:
                     self.hide_button()
                 if self.notification_widget is None:
@@ -316,7 +317,11 @@ class App:
         self.notification_window.overrideredirect(True)
         self.notification_window.overrideredirect(False)
         self.notification_window.attributes("-topmost", True)
-        self.notification_window.configure(background="black")
+        # self.notification_window.configure(background="black")
+
+        self.notification_window.wm_attributes("-transparent", True)
+        # Set the root window background color to a transparent color
+        self.notification_window.config(bg='systemTransparent')
 
         # Set location for the notification window
         if notification["position"] == "top-center":
@@ -325,16 +330,15 @@ class App:
             relx, rely = 0.8, 0.1
         elif notification["position"] == "middle-right":
             relx, rely = 0.8, 0.5
+        elif notification["position"] == "in-box-bottom-right":
+            relx, rely = 0.6, 0.6
         else:
             relx, rely = 0.5, 0.85
 
         # Pack the notification widget based on the notif_type of the notification
         self.notification_widget = NotificationWidget(self.notification_window, notification["notif_type"])
 
-        # widget_width, widget_height = self.notification_widget.get_desired_size()
-
         # Set the size and location of the notification window
-
         widget_width = 400
         widget_height = 300
 
@@ -355,20 +359,20 @@ class App:
             self.notification_window.destroy()
             self.notification_window = None
 
-    def listen_show_interest_icon_from_backend(self):
-        if self.system_config.show_interest_icon:
-            self.show_interest_icon()
-            self.system_config.show_interest_icon = False
+    # def listen_show_interest_icon_from_backend(self):
+    #     if self.system_config.show_interest_icon:
+    #         self.show_interest_icon()
+    #         self.system_config.show_interest_icon = False
 
-    def show_interest_icon(self):
-        self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
-                                                    size=(20, 20))
-        self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
-        self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
-        self.interest_icon_placed_time = time.time()
+    # def show_interest_icon(self):
+    #     self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
+    #                                                 size=(20, 20))
+    #     self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
+    #     self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
+    #     self.interest_icon_placed_time = time.time()
 
-    def remove_interest_icon(self):
-        self.interest_icon_label.destroy()
+    # def remove_interest_icon(self):
+    #     self.interest_icon_label.destroy()
 
     def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
@@ -379,8 +383,8 @@ class App:
             # self.system_config.text_feedback_to_show = None
         if audio_feedback_to_show is not None:
             # print("audio text to show: ", self.system_config.text_feedback_to_show)
-            self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_finished_playing = False
+            self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_to_show = None
 
     def hide_show_buttons(self):
@@ -446,7 +450,6 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.stored_text_widget_content = text_response
-            self.remove_notification()
             self.root.update_idletasks()
             self.text_widget.update()
 

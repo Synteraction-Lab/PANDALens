@@ -1,5 +1,18 @@
 from src.Command.Command import Command
 from src.Utilities.json import detect_json
+import re
+
+
+def extract_question_sentences(text):
+    # Define a regular expression pattern to match question sentences
+    pattern = r"(?:^|(?<=[.!?]))\s*([A-Z][^.!?]*\?\s*)"
+
+    # Use the findall() function from the re module to find all matches
+    question_sentences = re.findall(pattern, text)
+
+    question_string = ' '.join(question_sentences)
+
+    return question_string
 
 
 class SendGPTRequestCommand(Command):
@@ -28,6 +41,12 @@ class SendGPTRequestCommand(Command):
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
+                    self.system_config.notification = {'notif_type': 'mic_icon',
+                                                       'position': 'middle-right'}
+
+                elif "selecting" in json_response['mode']:
+                    self.system_config.notification = {'notif_type': 'mic_icon',
+                                                       'position': 'middle-right'}
 
                 elif json_response['mode'] == "authoring":
                     question_to_users = json_response['response'].get('question to users')
@@ -38,7 +57,10 @@ class SendGPTRequestCommand(Command):
                             audio_response = "I have no question for you. Anything you want to add?"
                         text_response = audio_response
                     elif summary_of_new_content is not None:
-                        text_response = f"{summary_of_new_content}"
+                        question_to_users = extract_question_sentences(summary_of_new_content).strip()
+                        if question_to_users == "":
+                            question_to_users = "I have no question for you. Anything you want to add?"
+                        text_response = f"{question_to_users}"
                         audio_response = text_response
 
                     self.system_config.audio_feedback_to_show = audio_response
