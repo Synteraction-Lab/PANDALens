@@ -16,17 +16,10 @@ class NotificationWidget:
 
         self.asset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
-        self.notification_box_img = CTkImage(Image.open(os.path.join(self.asset_path, "notification_box.png")),
-                                             size=(375, 300))
-        self.listening_icon = CTkImage(Image.open(os.path.join(self.asset_path, "listening_icon.png")),
-                                       size=(250, 72))
-        self.like_icon = CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
-                                  size=(30, 30))
-        self.processing_icon = CTkImage(Image.open(os.path.join(self.asset_path, "processing_icon.png")),
-                                        size=(250, 72))
-
         if self.notif_type == "text":
-            self.notification_widget_text = CTkLabel(self.parent, text="self.text", font=('Roboto', 16),
+            self.notification_box_img = CTkImage(Image.open(os.path.join(self.asset_path, "notification_box.png")),
+                                                 size=(375, 300))
+            self.notification_widget_text = CTkLabel(self.parent, text="", font=('Roboto', 16),
                                                      text_color="white", wraplength=250, bg_color="#314A35")
             self.notification_widget_box = CTkLabel(self.parent, text="")
             self.notification_widget_box.configure(image=self.notification_box_img, compound="center")
@@ -43,14 +36,33 @@ class NotificationWidget:
             self.picture_notification_box.place(relwidth=1, relheight=1)
 
         elif self.notif_type == "like_icon":
+            self.like_icon = CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
+                                      size=(30, 30))
             self.icon = CTkLabel(self.parent, text="", image=self.like_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "listening_icon":
+            self.listening_icon = CTkImage(Image.open(os.path.join(self.asset_path, "listening_icon.png")),
+                                           size=(250, 72))
             self.icon = CTkLabel(self.parent, text="", image=self.listening_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        elif self.notif_type == "audio_icon":
+            self.audio_icon = CTkImage(Image.open(os.path.join(self.asset_path, "audio_icon.png")),
+                                       size=(29, 26))
+            self.icon = CTkLabel(self.parent, text="", image=self.audio_icon)
+            self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "processing_icon":
+            self.processing_icon = CTkImage(Image.open(os.path.join(self.asset_path, "processing_icon.png")),
+                                            size=(250, 72))
             self.icon = CTkLabel(self.parent, text="", image=self.processing_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        elif self.notif_type == "mic_icon":
+            self.mic_icon = CTkImage(Image.open(os.path.join(self.asset_path, "mic_icon.png")),
+                                     size=(30, 40))
+            self.icon = CTkLabel(self.parent, text="", image=self.mic_icon)
+            self.icon.configure(bg_color="systemTransparent")
+            self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+            self.icon.lift()
+            print("mic icon created")
 
     def configure(self, **kwargs):
         if "text" in kwargs:
@@ -84,9 +96,7 @@ class NotificationWidget:
         if self.notif_type == "text":
             self.notification_widget_text.destroy()
             self.notification_widget_box.destroy()
-        elif self.notif_type == "like_icon":
-            self.icon.destroy()
-        elif self.notif_type == "listening_icon":
+        elif self.icon.winfo_exists():
             self.icon.destroy()
 
     def get_desired_size(self):
