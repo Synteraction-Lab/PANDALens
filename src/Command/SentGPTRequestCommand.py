@@ -26,7 +26,6 @@ class SendGPTRequestCommand(Command):
         response = gpt.process_prompt_and_get_gpt_response(command=str(user_request))
 
         json_response = detect_json(response)
-        json_dict = json.loads(response)
         text_response = response
         audio_response = response
 
@@ -48,18 +47,24 @@ class SendGPTRequestCommand(Command):
                 elif "selecting" in json_response['mode']:
                     self.system_config.notification = {'notif_type': 'mic_icon',
                                                        'position': 'middle-right'}
-                    text_response = f"Moments:\n {json_response['response']}"
+                    text_response = "Moments:\n"
+                        
+                    for key, val in json_response["response"].items():
+                        text_response += f"{int(key)}. {val}\n"
+
+                    audio_response = "Here are the summaries of your moments."
+
+                    self.system_config.text_feedback_to_show = text_response
+                    self.system_config.audio_feedback_to_show = audio_response
+
+
                     # self.system_config.notification = {'notif_type': 'text',
                     #                                    'content': f"{text_response}\n",
                     #                                    'position': 'middle-right'}
                     
                     # for i in range(len(json_response['response'])):
                     #     text_response += f"{i+1}: {json_response['response'][str(i)]}\n"
-                        
-               
-                    audio_response = "Here are the summaries of your moments."
-                    # self.system_config.text_feedback_to_show = text_response
-                    # self.system_config.audio_feedback_to_show = audio_response
+                    
 
 
 
