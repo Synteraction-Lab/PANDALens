@@ -5,10 +5,9 @@ import time
 import tkinter as tk
 
 import customtkinter
-import cv2
 import pandas
-from PIL import Image, ImageTk, ImageDraw
-from customtkinter import CTkProgressBar
+from PIL import Image
+from customtkinter import CTkFrame
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
 from pynput.mouse import Listener as MouseListener
@@ -159,8 +158,8 @@ class App:
             self.backend_system.set_user_explicit_input('take_photo')
         elif func == "Summary":
             self.backend_system.set_user_explicit_input('full_writing')
-        elif func == "Discard":
-            self.destroy_picture_window()
+        # elif func == "Discard":
+        #     self.destroy_picture_window()
         elif func == "Stop Recording":
             self.backend_system.set_user_explicit_input('stop_recording')
         elif func == "Select":
@@ -198,9 +197,11 @@ class App:
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
 
         # maek the text border black
-        self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50, bg_color="#000000",
+        self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50,
                                                     text_color=MAIN_GREEN_COLOR, font=('Arial', 36),
-                                                    spacing1=10, spacing2=50, wrap="word")
+                                                    bg_color='systemTransparent',
+                                                    spacing1=10, spacing2=50, wrap="word",
+                                                    border_color="#42AF74", border_width=1)
 
         self.last_y = None
 
@@ -211,7 +212,7 @@ class App:
         # self.button_left = get_button(self.manipulation_frame, text='Hide')
 
         self.button_left = get_button(self.manipulation_frame, text='Select', fg_color='black', border_width=3,
-                                    text_color=MAIN_GREEN_COLOR, font_size=14)
+                                      text_color=MAIN_GREEN_COLOR, font_size=14)
 
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
                                        text_color=MAIN_GREEN_COLOR, font_size=14)
@@ -230,15 +231,6 @@ class App:
         self.photo_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "photo_icon.png")),
                                                        size=(30, 30))
         self.button_down.configure(image=self.photo_icon_image, compound="top")
-
-        # self.notification_box = customtkinter.CTkImage(
-        #     Image.open(os.path.join(self.asset_path, "notification_box.png")),
-        #     size=(312, 90))
-        # self.listening_icon = customtkinter.CTkImage(
-        #     Image.open(os.path.join(self.asset_path, "listening_icon.png")),
-        #     size=(220, 50))
-        # self.like_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
-        #                                         size=(30, 30))
 
         self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
                         'right': self.button_right}
@@ -264,25 +256,19 @@ class App:
             voice_feedback_process.terminate()
 
     def update_ui_based_on_timer(self):
-        # get ui update info from backend
+        # get UI update info from backend
         self.listen_notification_from_backend()
-        self.listen_feedback_from_backend()
-        self.listen_frame_from_backend()
-        self.listen_show_interest_icon_from_backend()
+        self.listen_gpt_feedback_from_backend()
+        # self.listen_show_interest_icon_from_backend()
         self.listen_progress_bar_from_backend()
 
         # remove UI elements
         now = time.time()
 
-        if self.interest_icon_placed_time is not None:
-            if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
-                self.remove_interest_icon()
-                self.interest_icon_placed_time = None
-
-        if self.frame_placed_time is not None:
-            if now - self.frame_placed_time > IMAGE_FRAME_SHOW_DURATION:
-                self.remove_frame()
-                self.frame_placed_time = None
+        # if self.interest_icon_placed_time is not None:
+        #     if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
+        #         self.remove_interest_icon()
+        #         self.interest_icon_placed_time = None
 
         # run this function again after 0.3 seconds
         self.root.after(300, self.update_ui_based_on_timer)
@@ -291,39 +277,11 @@ class App:
         progress_bar_percentage = self.system_config.progress_bar_percentage
         if progress_bar_percentage is not None:
             if progress_bar_percentage > 0:
-                # self.set_progress_bar(progress_bar_percentage)
                 # set the transparency of the notification widget
                 if self.notification_window is not None:
                     self.notification_window.attributes("-alpha", progress_bar_percentage)
             else:
-                # self.remove_progress_bar()
                 self.remove_notification()
-
-        # if progress_bar_percentage is None and self.progress_bar is not None:
-        #     self.remove_progress_bar()
-
-    # def set_progress_bar(self, progress_bar_percentage):
-    #     if self.progress_bar is None:
-    #         self.hide_show_buttons()
-    #         self.progress_bar = CTkProgressBar(master=self.root,
-    #                                            orientation='horizontal',
-    #                                            mode='determinate',
-    #                                            progress_color=MAIN_GREEN_COLOR, height=10)
-    #         if self.notification_widget is not None:
-    #             relx = float(self.notification_widget.place_info()['relx'])
-    #             rely = float(self.notification_widget.place_info()['rely'])
-    #
-    #             self.progress_bar.place(relx=relx, rely=rely + 0.05, relwidth=0.2, anchor=tk.CENTER)
-    #         else:
-    #             self.progress_bar.place(relx=0.8, rely=0.35, relwidth=0.3, anchor=tk.CENTER)
-    #         self.root.update_idletasks()
-    #
-    #     self.progress_bar.set(progress_bar_percentage)
-    #
-    # def remove_progress_bar(self):
-    #     if self.progress_bar is not None:
-    #         self.progress_bar.destroy()
-    #         self.progress_bar = None
 
     def listen_notification_from_backend(self):
         notification = self.system_config.notification
@@ -335,13 +293,17 @@ class App:
                     self.remove_notification()
 
             if notification is not None:
+                print("Notification Type: ", notification["notif_type"], self.notification_widget)
                 if self.last_notification is None:
                     self.hide_button()
                 if self.notification_widget is None:
                     self.show_notification_widget(notification)
+
                 if notification["notif_type"] == "text":
-                    print("Notification: ", notification["content"])
+                    # print("Notification: ", notification["content"])
                     self.notification_widget.configure(text=notification["content"])
+                elif notification["notif_type"] == "picture":
+                    self.notification_widget.configure(image=notification["content"])
 
             self.last_notification = notification
 
@@ -355,7 +317,11 @@ class App:
         self.notification_window.overrideredirect(True)
         self.notification_window.overrideredirect(False)
         self.notification_window.attributes("-topmost", True)
-        self.notification_window.configure(background="black")
+        # self.notification_window.configure(background="black")
+
+        self.notification_window.wm_attributes("-transparent", True)
+        # Set the root window background color to a transparent color
+        self.notification_window.config(bg='systemTransparent')
 
         # Set location for the notification window
         if notification["position"] == "top-center":
@@ -364,16 +330,15 @@ class App:
             relx, rely = 0.8, 0.1
         elif notification["position"] == "middle-right":
             relx, rely = 0.8, 0.5
+        elif notification["position"] == "in-box-bottom-right":
+            relx, rely = 0.6, 0.6
         else:
             relx, rely = 0.5, 0.85
 
         # Pack the notification widget based on the notif_type of the notification
         self.notification_widget = NotificationWidget(self.notification_window, notification["notif_type"])
 
-        # widget_width, widget_height = self.notification_widget.get_desired_size()
-
         # Set the size and location of the notification window
-
         widget_width = 400
         widget_height = 300
 
@@ -394,22 +359,22 @@ class App:
             self.notification_window.destroy()
             self.notification_window = None
 
-    def listen_show_interest_icon_from_backend(self):
-        if self.system_config.show_interest_icon:
-            self.show_interest_icon()
-            self.system_config.show_interest_icon = False
+    # def listen_show_interest_icon_from_backend(self):
+    #     if self.system_config.show_interest_icon:
+    #         self.show_interest_icon()
+    #         self.system_config.show_interest_icon = False
 
-    def show_interest_icon(self):
-        self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
-                                                    size=(20, 20))
-        self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
-        self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
-        self.interest_icon_placed_time = time.time()
+    # def show_interest_icon(self):
+    #     self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
+    #                                                 size=(20, 20))
+    #     self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
+    #     self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
+    #     self.interest_icon_placed_time = time.time()
 
-    def remove_interest_icon(self):
-        self.interest_icon_label.destroy()
+    # def remove_interest_icon(self):
+    #     self.interest_icon_label.destroy()
 
-    def listen_feedback_from_backend(self):
+    def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
         audio_feedback_to_show = self.system_config.audio_feedback_to_show
         if text_feedback_to_show is not None and text_feedback_to_show != self.last_text_feedback_to_show:
@@ -418,8 +383,8 @@ class App:
             # self.system_config.text_feedback_to_show = None
         if audio_feedback_to_show is not None:
             # print("audio text to show: ", self.system_config.text_feedback_to_show)
-            self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_finished_playing = False
+            self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_to_show = None
 
     def hide_show_buttons(self):
@@ -446,7 +411,6 @@ class App:
         self.shown_button = True
 
     def hide_show_content(self):
-        # self.hide_show_picture_window()
         if self.shown_button:
             self.hide_text()
             self.hide_button()
@@ -454,20 +418,6 @@ class App:
             self.show_text()
             self.show_button()
         self.root.update_idletasks()
-        # self.root.update()
-        # self.shown_button = not self.shown_button
-
-    def destroy_picture_window(self):
-        # Check if the picture window is open and close it if necessary
-        if self.notification_widget:
-            self.remove_notification()
-        if self.picture_label:
-            self.picture_label.destroy()
-            # print("destroy picture window")
-            self.picture_label = None
-            self.system_config.picture_window_status = False
-            # self.update_vision_analysis()
-            return
 
     def hide_show_text(self):
         if not self.is_hidden_text:
@@ -489,99 +439,6 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.is_hidden_text = False
-
-    def hide_show_picture_window(self):
-        if self.picture_label and not self.picture_window_hidden:
-            self.picture_label.place_forget()
-            self.system_config.picture_window_status = False
-            # self.update_vision_analysis()
-            self.picture_window_hidden = True
-        elif self.picture_label and self.picture_window_hidden:
-            self.picture_label.place()
-            self.system_config.picture_window_status = True
-            # self.update_vision_analysis()
-            self.picture_window_hidden = False
-
-    def listen_frame_from_backend(self):
-        frame = self.system_config.frame_shown_in_picture_window
-        if frame is not None and self.picture_label is None:
-            self.render_picture(frame)
-            self.hide_button()
-
-    def render_picture(self, frame):
-        if self.picture_label:
-            self.destroy_picture_window()
-
-        if self.notification_window is None:
-            self.notification_window = tk.Toplevel(self.root)
-            self.notification_window.overrideredirect(True)
-            self.notification_window.overrideredirect(False)
-            self.notification_window.attributes("-topmost", True)
-            self.notification_window.configure(bg='black')
-
-            relx, rely = 0.8, 0.5
-            widget_width = 400
-            widget_height = 300
-
-            root_width = self.root.winfo_width()
-            root_height = self.root.winfo_height()
-
-            pos_x = int(root_width * relx - widget_width / 2)
-            pos_y = int(root_height * rely - widget_height / 2)
-
-            # Set the size and location of the notification window
-            self.notification_window.geometry(f"{widget_width}x{widget_height}+{pos_x}+{pos_y}")
-
-        self.listening_photo_comments_icon = customtkinter.CTkImage(
-            Image.open(os.path.join(self.asset_path, "image_suggestion_box.png")),
-            size=(375, 300))
-        self.notification_widget = customtkinter.CTkLabel(self.notification_window, text="",
-                                                          image=self.listening_photo_comments_icon)
-
-        self.notification_widget.place(relwidth=1, relheight=1)
-
-        # convert the image from opencv to PIL format
-        img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(img)
-
-        # Resize the image to 1/6 of its original size
-        img = img.resize((int(img.width / 6), int(img.height / 6)))
-
-        # # Create a round-rectangle mask for the image
-        # mask = Image.new("L", img.size, 0)
-        # draw = ImageDraw.Draw(mask)
-        # radius = min(img.width, img.height) // 10  # Adjust the radius as desired
-        # draw.rounded_rectangle((0, 0, img.width, img.height), radius, fill=200, width=3)
-        #
-        # # Apply the mask to the image
-        # img.putalpha(mask)
-
-        img_tk = ImageTk.PhotoImage(img)
-
-        # Create a label widget to display the image
-        self.picture_label = tk.Label(self.notification_window, bg="black")
-
-        # Set the picture label to the top-right of the window
-        self.picture_label.place(relx=0.6, rely=0.6, anchor=tk.CENTER, relwidth=0.5, relheight=0.45)
-        # self.picture_label.pack()
-
-        # Set the image on the label widget
-        self.picture_label.configure(image=img_tk)
-        self.picture_label.image = img_tk
-
-        self.system_config.picture_window_status = True
-
-        # Check Users' surrounding environment
-        # print(f"Person count: {self.person_count}")
-        if self.person_count > 3:
-            self.notification_widget.configure(
-                text="Too many people nearby. You may hide the pic and comment it later.")
-
-        self.system_config.frame_shown_in_picture_window = None
-        self.frame_placed_time = time.time()
-
-    def remove_frame(self):
-        self.destroy_picture_window()
 
     def render_text_response(self, text_response):
         if text_response == "":

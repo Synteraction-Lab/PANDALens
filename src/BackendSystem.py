@@ -57,7 +57,10 @@ class BackendSystem:
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-                    self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    self.system_config.notification = {'notif_type': 'picture',
+                                                       'content': self.system_config.potential_interested_frame,
+                                                       'position': 'middle-right'}
                 elif self.user_explicit_input == 'full_writing':
                     self.system_status.set_state('full_writing_pending')
                     action = self.system_status.get_current_state()
@@ -77,7 +80,7 @@ class BackendSystem:
                         emotion_classifier.start()
                         emotion_classifier.stop_transcription_and_start_emotion_classification()
                 if self.detect_gaze_and_zoom_in():
-                    self.system_config.show_interest_icon = True
+                    # self.system_config.show_interest_icon = True
                     self.system_status.trigger('gaze')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
@@ -95,7 +98,10 @@ class BackendSystem:
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-                    self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                    self.system_config.notification = {'notif_type': 'picture',
+                                                       'content': self.system_config.potential_interested_frame,
+                                                       'position': 'middle-right'}
 
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
@@ -115,7 +121,7 @@ class BackendSystem:
                         success = ActionParser.parse(action, self.system_config).execute()
                         if not success:
                             self.system_status.set_state("init")
-                        self.system_config.notification = None
+                            self.system_config.notification = None
                         self.silence_start_time = None
 
                     elif self.detect_user_ignore():
@@ -156,12 +162,8 @@ class BackendSystem:
 
         self.previous_norm_pos = norm_pos
 
-
         if self.system_config.potential_interested_frame is not None:
-            last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame,
-                                                           current_frame)
-                # print(last_interested_frame_sim, previous_frame_sim)
-            # print(frame_sim)
+            last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
 
         not_similar_frame = last_interested_frame_sim < 0.6
 
@@ -203,7 +205,10 @@ class BackendSystem:
             print(potential_frame_sim, previous_frame_sim)
             self.previous_vision_frame = current_frame
             if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
-                self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                self.system_config.notification = {'notif_type': 'picture',
+                                                   'content': self.system_config.potential_interested_frame,
+                                                   'position': 'middle-right'}
                 return True
         return False
 
@@ -215,6 +220,7 @@ class BackendSystem:
         voice_transcribe.stop_emotion_classification_and_start_transcription()
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is None:
+            time.sleep(0.3)
             return False
         print(f"{category}: {score}")
         # if category is speech, then return True
@@ -222,7 +228,7 @@ class BackendSystem:
             self.silence_start_time = None
             self.system_config.progress_bar_percentage = None
             return True
-        time.sleep(0.2)
+        time.sleep(0.3)
         return False
 
     def detect_positive_tone(self):
@@ -267,6 +273,7 @@ class BackendSystem:
     def detect_user_ignore(self):
         if self.silence_start_time is None:
             self.silence_start_time = time.time()
+            print("Silence start time: ", self.silence_start_time)
         else:
             time_diff = time.time() - self.silence_start_time
             print(f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it.")
@@ -279,7 +286,7 @@ class BackendSystem:
                 if not voice_transcribe.stop_event.is_set():
                     voice_transcribe.stop_transcription_and_start_emotion_classification()
                 return True
-        time.sleep(0.5)
+        # time.sleep(0.3)
         return False
 
     def detect_gpt_response(self):
