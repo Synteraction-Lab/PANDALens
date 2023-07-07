@@ -1,8 +1,10 @@
 import cv2
 from PIL import Image, ImageTk
-from customtkinter import CTkLabel, CTkImage, CTkFrame
+from customtkinter import CTkLabel, CTkImage, CTkTextbox
 import tkinter as tk
 import os
+
+from src.UI.UI_config import MAIN_GREEN_COLOR
 
 
 class NotificationWidget:
@@ -10,6 +12,7 @@ class NotificationWidget:
         self.parent = parent
         self.notif_type = notif_type
         self.text = ""
+        self.icon = None
 
         if "text" in kwargs:
             self.text = kwargs["text"]
@@ -17,15 +20,18 @@ class NotificationWidget:
         self.asset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
         if self.notif_type == "text":
-            self.notification_box_img = CTkImage(Image.open(os.path.join(self.asset_path, "notification_box.png")),
-                                                 size=(375, 300))
-            self.notification_widget_text = CTkLabel(self.parent, text="", font=('Roboto', 16),
-                                                     text_color="white", wraplength=250, bg_color="#314A35")
-            self.notification_widget_box = CTkLabel(self.parent, text="")
-            self.notification_widget_box.configure(image=self.notification_box_img, compound="center")
-            self.notification_widget_box.place(relwidth=1, relheight=1)
-            self.notification_widget_text.place(relx=0.62, rely=0.55, anchor=tk.CENTER)
-            self.notification_widget_text.lift()
+            self.notification_robot_img = CTkImage(Image.open(os.path.join(self.asset_path, "robot_icon.png")),
+                                                   size=(40, 40))
+            self.notification_widget_text = CTkTextbox(self.parent, height=50, width=50,
+                                                       text_color=MAIN_GREEN_COLOR, font=('Arial', 20),
+                                                       # bg_color='systemTransparent',
+                                                       wrap="word", padx=5,
+                                                       border_color="#42AF74", border_width=2)
+            self.notification_robot_icon = CTkLabel(self.parent, text="")
+            self.notification_robot_icon.configure(image=self.notification_robot_img, compound="center")
+            self.notification_robot_icon.place(relx=0.1, rely=0.1, anchor=tk.CENTER)
+
+            self.parent.update_idletasks()
         elif self.notif_type == "picture":
             self.listening_photo_comments_icon = CTkImage(
                 Image.open(os.path.join(self.asset_path, "image_suggestion_box.png")),
@@ -37,7 +43,7 @@ class NotificationWidget:
 
         elif self.notif_type == "like_icon":
             self.like_icon = CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
-                                      size=(30, 30))
+                                      size=(42, 38))
             self.icon = CTkLabel(self.parent, text="", image=self.like_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "listening_icon":
@@ -47,7 +53,7 @@ class NotificationWidget:
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "audio_icon":
             self.audio_icon = CTkImage(Image.open(os.path.join(self.asset_path, "audio_icon.png")),
-                                       size=(29, 26))
+                                       size=(44, 40))
             self.icon = CTkLabel(self.parent, text="", image=self.audio_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "processing_icon":
@@ -57,7 +63,7 @@ class NotificationWidget:
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "mic_icon":
             self.mic_icon = CTkImage(Image.open(os.path.join(self.asset_path, "mic_icon.png")),
-                                     size=(30, 40))
+                                     size=(45, 60))
             self.icon = CTkLabel(self.parent, text="", image=self.mic_icon)
             self.icon.configure(bg_color="systemTransparent")
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
@@ -67,7 +73,11 @@ class NotificationWidget:
     def configure(self, **kwargs):
         if "text" in kwargs:
             self.text = kwargs["text"]
-            self.notification_widget_text.configure(text=self.text)
+            self.notification_widget_text.insert(tk.END, self.text)
+            self.notification_widget_text.place(relx=0.5, rely=0.5, relwidth=0.7, relheight=0.7, anchor=tk.CENTER)
+            self.notification_widget_text.lift()
+            self.parent.update_idletasks()
+            self.notification_widget_text.update()
         if "notif_type" in kwargs:
             self.notif_type = kwargs["notif_type"]
         if "image" in kwargs:
@@ -95,9 +105,10 @@ class NotificationWidget:
     def destroy(self):
         if self.notif_type == "text":
             self.notification_widget_text.destroy()
-            self.notification_widget_box.destroy()
-        elif self.icon.winfo_exists():
-            self.icon.destroy()
+            self.notification_robot_icon.destroy()
+        elif self.icon is not None:
+            if self.icon.winfo_exists():
+                self.icon.destroy()
 
     def get_desired_size(self):
         # Calculate the desired width and height based on the notif_type
