@@ -69,6 +69,10 @@ class BackendSystem:
                     self.system_status.set_state('select_moments')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
+                elif self.user_explicit_input == "terminate_waiting_for_user_response":
+                    self.system_status.set_state("init")
+                    self.system_config.notification = None
+                    self.silence_start_time = None
 
                 self.user_explicit_input = None
                 continue
@@ -89,7 +93,7 @@ class BackendSystem:
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                     # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                    self.system_config.notification = {'notif_type': 'like_icon', 'position': 'top_right'}
+                    self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
                 elif self.detect_interested_audio():
                     self.system_status.set_state('audio_comments_pending')
                     action = self.system_status.get_current_state()
@@ -108,12 +112,9 @@ class BackendSystem:
                     self.system_status.trigger('move_to_another_place')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-            elif current_state == 'photo_comments_pending' \
-                    or current_state == 'manual_photo_comments_pending' \
-                    or current_state == 'show_gpt_response' \
-                    or current_state == 'audio_comments_pending':
-                if self.system_config.audio_feedback_finished_playing \
-                        and self.system_config.audio_feedback_to_show is None:
+            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
+                                   'show_gpt_response', 'audio_comments_pending']:
+                if self.system_config.detect_audio_feedback_finished():
                     if self.detect_user_speak():
                         self.system_config.text_feedback_to_show = ""
                         self.system_status.trigger('speak')
@@ -129,8 +130,8 @@ class BackendSystem:
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
                         self.silence_start_time = None
-            elif current_state == 'comments_on_photo' or current_state == 'comments_to_gpt' \
-                    or current_state == 'full_writing_pending' or current_state == 'comments_on_audio' or current_state == 'select_moments':
+            elif current_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
+                                   'comments_on_audio', 'select_moments']:
                 if self.detect_gpt_response():
                     # self.system_config.notification = None
                     self.system_status.trigger('gpt_generate_response')
