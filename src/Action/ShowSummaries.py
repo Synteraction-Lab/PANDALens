@@ -15,8 +15,15 @@ class ShowSummariesAction(Action):
                                                 ' \"response\": ' \
                                                 '\{\"1\": ' \
                                                 '\"[One sentence summary for moment 1]\"\, ' \
-                                                '\"2\": \"[One sentence summary for moment 2]\"}}'
-                                                } 
+                                                '\"2\": \"[One sentence summary for moment 2]\"}}' \
+                        "Based on the user's selected moments and audio input, generate the full travel blog **ONLY** in following JSON format: " 
+                                                '{\"mode\": \"full\",' \
+                                                ' \"response\": ' \
+                                                '\{\"full writing\": ' \
+                                                '\"[full travel blog content in first person narration]\"\, ' \
+                                                '\"revised parts\": \"[the newly added or revised content, ' \
+                                                'return \"None\" when no revision.]\'}}' \
+                        } 
                                                   
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)
