@@ -1,7 +1,9 @@
 import json
 import os
+from io import BytesIO
 
 import requests
+from PIL import Image
 from transformers import pipeline
 
 API_TOKEN = os.environ["HUGGINGFACE_API_KEY"]
@@ -11,10 +13,18 @@ OBJECT_DETECTION_API_URL = "https://api-inference.huggingface.co/models/facebook
 IMAGE_CAPTION_API_URL = "https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning"
 
 
+def compress_image(image_path, max_size=720):
+    image = Image.open(image_path)
+    image.thumbnail((max_size, max_size))
+    compressed_image = BytesIO()
+    image.save(compressed_image, format='JPEG')
+    compressed_image.seek(0)
+    return compressed_image
+
+
 def query(filename, model_url, timeout=5):
     try:
-        with open(filename, "rb") as f:
-            sent_data = f.read()
+        sent_data = compress_image(filename)
         response = requests.post(model_url, headers=headers, data=sent_data, timeout=timeout)
         response.raise_for_status()
         content_type = response.headers.get("Content-Type")
@@ -37,18 +47,7 @@ def get_image_caption(image_path):
 
 
 if __name__ == '__main__':
-    image_path = "../../../data/test_data/cable.JPG"
+    image_path = "../../../data/test_data/panda.JPG"
     data = get_image_caption(image_path)
 
     print(data)
-
-# # Run Locally
-# from transformers import pipeline
-# from PIL import Image
-#
-# image_to_text = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning")
-#
-# image_path = 'party.jpg'
-# image = Image.open(image_path)
-#
-# print(image_to_text(image))
