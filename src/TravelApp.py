@@ -133,11 +133,9 @@ class App:
                                                                       "comments_to_gpt"]:
                 func = "Stop Recording"
             elif key == keyboard.Key.up and self.shown_button:
-                func = "Summary"
+                func = "Select"
             elif key == keyboard.Key.down and self.shown_button:
                 func = "Photo"
-            elif key == keyboard.Key.left and self.shown_button:
-                func = "Select"
             elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
         except Exception as e:
@@ -215,13 +213,9 @@ class App:
 
         self.last_y = None
 
-        self.button_up = get_button(self.manipulation_frame, text='Summary', fg_color='black', border_width=3,
+        self.button_up = get_button(self.manipulation_frame, text='Generate Writing', fg_color='black', border_width=3,
                                     text_color=MAIN_GREEN_COLOR, font_size=10)
         self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
-                                      text_color=MAIN_GREEN_COLOR, font_size=14)
-        # self.button_left = get_button(self.manipulation_frame, text='Hide')
-
-        self.button_left = get_button(self.manipulation_frame, text='Select', fg_color='black', border_width=3,
                                       text_color=MAIN_GREEN_COLOR, font_size=14)
 
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
@@ -236,16 +230,13 @@ class App:
         self.summary_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "summary_icon.png")),
                                                          size=(30, 30))
         self.button_up.configure(image=self.summary_icon_image, compound="top")
-        self.button_left.configure(image=self.summary_icon_image, compound="top")
 
         self.photo_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "photo_icon.png")),
                                                        size=(30, 30))
         self.button_down.configure(image=self.photo_icon_image, compound="top")
 
-        self.buttons = {'up': self.button_up, 'down': self.button_down, 'left': self.button_left,
-                        'right': self.button_right}
+        self.buttons = {'up': self.button_up, 'down': self.button_down, 'right': self.button_right}
         self.buttons_places = {'up': {'relx': 0.5, 'rely': 0.1, 'anchor': 'center'},
-                               'left': {'relx': 0.1, 'rely': 0.5, 'anchor': 'center'},
                                'down': {'relx': 0.5, 'rely': 0.9, 'anchor': 'center'},
                                'right': {'relx': 0.9, 'rely': 0.5, 'anchor': 'center'}}
 
