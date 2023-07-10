@@ -164,6 +164,10 @@ class App:
             self.backend_system.set_user_explicit_input('stop_recording')
         elif func == "Select":
             self.backend_system.set_user_explicit_input('select')
+        elif func == "Terminate Waiting for User Response":
+            self.backend_system.set_user_explicit_input('terminate_waiting_for_user_response')
+            self.hide_text()
+            self.hide_button()
 
     def on_release(self, key):
         if not self.config_updated:
@@ -180,7 +184,13 @@ class App:
             return
         if self.ring_mouse_mode:
             if pressed:
-                func = "Hide"
+                current_system_state = self.backend_system.system_status.get_current_state()
+                is_audio_finished = self.system_config.detect_audio_feedback_finished()
+                if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
+                                            'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
+                    func = "Terminate Waiting for User Response"
+                else:
+                    func = "Hide"
                 self.parse_button_press(func)
 
     def pack_layout(self):
@@ -201,7 +211,7 @@ class App:
                                                     text_color=MAIN_GREEN_COLOR, font=('Arial', 36),
                                                     bg_color='systemTransparent',
                                                     spacing1=10, spacing2=50, wrap="word",
-                                                    border_color="#42AF74", border_width=1)
+                                                    border_color="#42AF74", border_width=2)
 
         self.last_y = None
 
@@ -331,7 +341,7 @@ class App:
         elif notification["position"] == "middle-right":
             relx, rely = 0.8, 0.5
         elif notification["position"] == "in-box-bottom-right":
-            relx, rely = 0.6, 0.6
+            relx, rely = 0.8, 0.72
         else:
             relx, rely = 0.5, 0.85
 

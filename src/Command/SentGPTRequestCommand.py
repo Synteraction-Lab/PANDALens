@@ -42,13 +42,13 @@ class SendGPTRequestCommand(Command):
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
                     self.system_config.notification = {'notif_type': 'mic_icon',
-                                                       'position': 'middle-right'}
+                                                       'position': 'in-box-bottom-right'}
 
                 elif "selecting" in json_response['mode']:
                     self.system_config.notification = {'notif_type': 'mic_icon',
-                                                       'position': 'middle-right'}
+                                                       'position': 'in-box-bottom-right'}
                     text_response = "Moments:\n"
-                        
+
                     for key, val in json_response["response"].items():
                         text_response += f"{int(key)}. {val}\n"
 
@@ -56,17 +56,6 @@ class SendGPTRequestCommand(Command):
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
-
-
-                    # self.system_config.notification = {'notif_type': 'text',
-                    #                                    'content': f"{text_response}\n",
-                    #                                    'position': 'middle-right'}
-                    
-                    # for i in range(len(json_response['response'])):
-                    #     text_response += f"{i+1}: {json_response['response'][str(i)]}\n"
-                    
-
-
 
                 elif json_response['mode'] == "authoring":
                     question_to_users = json_response['response'].get('question to users')
@@ -87,7 +76,7 @@ class SendGPTRequestCommand(Command):
                     self.system_config.notification = {'notif_type': 'text',
                                                        'content': f"{text_response}",
                                                        'position': 'middle-right'}
-    
+
 
 
         except Exception as e:

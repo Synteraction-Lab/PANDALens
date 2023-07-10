@@ -181,7 +181,7 @@ class SystemConfig(object):
         self.latest_photo_file_path = image_path
 
     def set_bg_audio_analysis(self, device):
-        self.audio_classifier_results = multiprocessing.Queue()
+        self.audio_classifier_results = multiprocessing.Queue(maxsize=1)
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.audio_classifier_runner = AudioClassifierRunner(
             model=os.path.join(project_root, "src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
@@ -208,3 +208,6 @@ class SystemConfig(object):
     def set_emotion_classifier(self, emotion_classifier):
         self.emotion_classifier = emotion_classifier
 
+    def detect_audio_feedback_finished(self):
+        return self.audio_feedback_finished_playing \
+            and self.audio_feedback_to_show is None
