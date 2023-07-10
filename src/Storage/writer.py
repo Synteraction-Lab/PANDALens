@@ -48,3 +48,55 @@ def log_manipulation(file_name, item):
 
     append_csv_data(file_name, f'{item},{datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")}\n')
     print(f'Logged: {item}')
+
+
+def generate_output_file(chat_history_path, image_path, title='UbiWriter Output'):
+    full_writing = retrieve_full_writing_from_chat_history(chat_history_path)
+    images = retrieve_all_images(image_path)
+    # get current path's parent directory
+    data_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    data_path = os.path.join(data_path, "data")
+    output_filename = title + ".docx"
+    output_path = os.path.join(data_path, output_filename)
+    pack_doc(full_writing, images, output_path, title)
+
+
+def retrieve_full_writing_from_chat_history(chat_history_path):
+    import json
+    with open(chat_history_path, "r") as f:
+        data = json.load(f, strict=False)
+
+    # Get the last json item with "mode" == "full"
+    for item in reversed(data["recordings"]):
+        try:
+            record = json.loads(item["content"], strict=False)
+            if record["mode"] == "full":
+                return record["response"]["full writing"]
+        except:
+            pass
+
+
+def retrieve_all_images(image_path):
+    # return all images in the folder
+    import os
+    # return all the png and jpg files in the folder
+    return [os.path.join(image_path, f) for f in os.listdir(image_path) if
+            os.path.isfile(os.path.join(image_path, f)) and
+            (f.endswith(".png") or f.endswith(".jpg"))]
+
+
+def pack_doc(full_writing, images, output_path, title):
+    from docx import Document
+    from docx.shared import Inches
+    document = Document()
+    document.add_heading(title, 0)
+
+    paragraph = document.add_paragraph()
+    for image in images:
+        run = paragraph.add_run()
+        run.add_picture(image, width=Inches(1.25))
+
+    document.add_paragraph(f'{full_writing}\n')
+
+    document.save(output_path)
+    print("Doc is saved to:", output_path)
