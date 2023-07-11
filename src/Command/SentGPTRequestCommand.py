@@ -47,12 +47,15 @@ class SendGPTRequestCommand(Command):
                 elif "selecting" in json_response['mode']:
                     self.system_config.notification = {'notif_type': 'mic_icon',
                                                        'position': 'in-box-bottom-right'}
-                    text_response = "Moments:\n"
+                    
+                    moment_list = ""
 
                     for key, val in json_response["response"].items():
-                        text_response += f"{int(key)}. {val}\n"
+                        moment_list += f"{int(key)}. {val}\n"
 
-                    audio_response = "Here are the summaries of your moments."
+                    text_response = "Moments:\n" + moment_list
+                    audio_response = "Here are the summaries of your moments." + moment_list
+
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response

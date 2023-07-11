@@ -99,6 +99,7 @@ class SystemConfig(object):
         self.interesting_object = None
         self.stop_recording_command = False
         self.show_interest_icon = False
+        self.last_request_type = None
 
     def get_final_transcription(self):
         return self.final_transcription
