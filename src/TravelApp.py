@@ -220,7 +220,7 @@ class App:
 
         self.last_y = None
 
-        self.button_up = get_button(self.manipulation_frame, text='Generate Writing', fg_color='black', border_width=3,
+        self.button_up = get_button(self.manipulation_frame, text='Generate\nWriting', fg_color='black', border_width=3,
                                     text_color=MAIN_GREEN_COLOR, font_size=14)
         self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
                                       text_color=MAIN_GREEN_COLOR, font_size=14)
