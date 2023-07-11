@@ -8,23 +8,20 @@ class ShowSummariesAction(Action):
         self.system_config = sys_config
 
     def execute(self):
-        user_request = {"user comments/commands": "List all the moments' summary. "  \
-                        "Return the response **ONLY** in JSON format, "
-                                                "with the following structure: "
-                                                '{\"mode\": \"selecting\",' \
-                                                ' \"response\": ' \
-                                                '\{\"1\": ' \
-                                                '\"[One sentence summary for moment 1]\"\, ' \
-                                                '\"2\": \"[One sentence summary for moment 2]\"}}' \
-                        "Based on the user's selected moments and audio input, generate the full travel blog **ONLY** in following JSON format: " 
-                                                '{\"mode\": \"full\",' \
-                                                ' \"response\": ' \
-                                                '\{\"full writing\": ' \
-                                                '\"[full travel blog content in first person narration]\"\, ' \
-                                                '\"revised parts\": \"[the newly added or revised content, ' \
-                                                'return \"None\" when no revision.]\'}}' \
-                        } 
-                                                  
+        self.system_config.notification = {'notif_type': 'processing_icon',
+                                           'position': 'middle-right'}
+
+        user_request = {"user comments/commands": "List all the moments' summary. "
+                                                  "Return the response **ONLY** in JSON format, "
+                                                  "with the following structure: "
+                                                  '{\"mode\": \"selecting\",'
+                                                  ' \"response\": '
+                                                  '\{\"1\": '
+                                                  '\"[One sentence summary for moment 1]\"\, '
+                                                  '\"2\": \"[One sentence summary for moment 2]\"}}'}
+
+        self.system_config.last_request_type = "selecting"
+
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)
         if send_gpt_request_command is not None:

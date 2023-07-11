@@ -16,7 +16,7 @@ from src.BackendSystem import BackendSystem
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Audio.live_transcriber import LiveTranscriber, show_devices
 from src.Module.LLM.GPT import GPT
-from src.Storage.writer import log_manipulation
+from src.Storage.writer import log_manipulation, generate_output_file
 from src.UI.UI_config import MAIN_GREEN_COLOR
 from src.UI.device_panel import DevicePanel
 from src.UI.notification_widget import NotificationWidget
@@ -73,6 +73,8 @@ class App:
         # Pack and run the main UI
         self.pack_layout()
 
+        self.root.bind('<Button-1>', self.on_click)
+
         self.root.mainloop()
 
     def update_config(self):
@@ -102,9 +104,9 @@ class App:
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
 
-        chat_history_file_name = os.path.join(folder_path, chat_file)
+        self.chat_history_file_name = os.path.join(folder_path, chat_file)
         slim_history_file_name = os.path.join(folder_path, slim_history_file)
-        self.system_config.set_GPT(GPT(chat_history_file_name=chat_history_file_name,
+        self.system_config.set_GPT(GPT(chat_history_file_name=self.chat_history_file_name,
                                        slim_history_file_name=slim_history_file_name),
                                    task_name=task_name)
 
@@ -114,10 +116,10 @@ class App:
         threading.Thread(target=self.backend_system.run).start()
 
     def start_mouse_key_listener(self):
-        self.mouse_listener = MouseListener(on_click=self.on_click)
+        # self.mouse_listener = MouseListener(on_click=self.on_click)
         self.keyboard_listener = KeyboardListener(
             on_press=self.on_press, on_release=self.on_release)
-        self.mouse_listener.start()
+        # self.mouse_listener.start()
         time.sleep(0.1)
         self.keyboard_listener.start()
 
@@ -138,6 +140,9 @@ class App:
                 func = "Photo"
             elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
+            elif key == keyboard.Key.cmd_r:
+                func = "Store"
+
         except Exception as e:
             print(e)
 
@@ -166,6 +171,8 @@ class App:
             self.backend_system.set_user_explicit_input('terminate_waiting_for_user_response')
             self.hide_text()
             self.hide_button()
+        elif func == "Store":
+            self.create_output_file()
 
     def on_release(self, key):
         if not self.config_updated:
@@ -177,19 +184,19 @@ class App:
         except Exception as e:
             print(e)
 
-    def on_click(self, x, y, button, pressed):
+    def on_click(self, *args, **kwargs):
         if not self.config_updated:
             return
         if self.ring_mouse_mode:
-            if pressed:
-                current_system_state = self.backend_system.system_status.get_current_state()
-                is_audio_finished = self.system_config.detect_audio_feedback_finished()
-                if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                            'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
-                    func = "Terminate Waiting for User Response"
-                else:
-                    func = "Hide"
-                self.parse_button_press(func)
+            # if pressed:
+            current_system_state = self.backend_system.system_status.get_current_state()
+            is_audio_finished = self.system_config.detect_audio_feedback_finished()
+            if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
+                                        'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
+                func = "Terminate Waiting for User Response"
+            else:
+                func = "Hide"
+            self.parse_button_press(func)
 
     def pack_layout(self):
         # set the dimensions of the window to match the screen
@@ -213,7 +220,7 @@ class App:
 
         self.last_y = None
 
-        self.button_up = get_button(self.manipulation_frame, text='Generate Writing', fg_color='black', border_width=3,
+        self.button_up = get_button(self.manipulation_frame, text='Generate\nWriting', fg_color='black', border_width=3,
                                     text_color=MAIN_GREEN_COLOR, font_size=14)
         self.button_down = get_button(self.manipulation_frame, text='Photo', fg_color='black', border_width=3,
                                       text_color=MAIN_GREEN_COLOR, font_size=14)
@@ -469,6 +476,13 @@ class App:
             self.system_config.audio_feedback_to_show = None
             self.system_config.audio_feedback_finished_playing = True
             print("Audio feedback finished playing")
+
+    def create_output_file(self):
+        dialog = customtkinter.CTkInputDialog(text="Enter the title:", title="UbiWriter")
+        title=dialog.get_input()
+        generate_output_file(chat_history_path=self.chat_history_file_name,
+                             image_path=self.system_config.image_folder,
+                             title=title)
 
     # def update_transcription(self):
     #     voice_transcriber = self.system_config.get_transcriber()
