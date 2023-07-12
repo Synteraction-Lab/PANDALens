@@ -235,7 +235,7 @@ class GPT:
             new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
             # print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(new_message, max_tokens=1000, api_key_idx=1)
+            response = generate_gpt_response(new_message, max_tokens=3000, api_key_idx=1)
 
             with self.history_lock:
                 self.slim_history = response.lstrip()
