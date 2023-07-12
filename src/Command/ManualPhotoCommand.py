@@ -37,10 +37,3 @@ class ManualPhotoCommand(Command):
 
         self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
         return frame
-        # notification = f"You seem to interested in your front scene. Any comments?"
-        # self.system_config.notification = {'notif_type': 'text',
-        #                                    'content': notification,
-        #                                    'position': 'top-center'}
-        # self.system_config.audio_feedback_to_show = notification
-
-        # return frame

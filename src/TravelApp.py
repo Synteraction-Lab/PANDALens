@@ -83,7 +83,7 @@ class App:
             pid_num = os.path.join("p1", "01")
             task_name = "travel_blog"
             audio_device_idx = 0
-            naive = False
+            naive = "UbiWriter"
         else:
             try:
                 df = pandas.read_csv(config_path)
@@ -95,7 +95,7 @@ class App:
                 pid_num = os.path.join("p1", "01")
                 task_name = "travel_blog"
                 audio_device_idx = 0
-                naive = False
+                naive = "UbiWriter"
                 print("Config file has an error! travelapp")
 
         # Set up path

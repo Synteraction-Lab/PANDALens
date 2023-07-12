@@ -47,42 +47,17 @@ class DevicePanel:
         for device in input_devices:
             self.audio_device_list.append(device["name"])
 
-        # if get_system_name() == "Darwin":
-        #     command = 'ffmpeg -f avfoundation -list_devices true -i ""'
-        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        #     output = process.communicate()[1].decode("utf-8")
-        #     self.get_mac_device(output)
-        # elif get_system_name() == "Windows":
-        #     command = 'ffmpeg -list_devices true -f dshow -i dummy'
-        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        #     output = process.communicate()[1].decode("utf-8")
-        #     self.get_windows_device(output)
-
-    def get_mac_device(self, output):
-        is_audio_line = False
-        for line in output.split("\n"):
-            if line.__contains__("AVFoundation video devices:"):
-                continue
-            elif line.__contains__("AVFoundation audio devices:"):
-                is_audio_line = True
-                continue
-            if line.__contains__("[AVFoundation indev") and is_audio_line:
-                self.audio_device_list.append(line.split("] ")[-1])
-
-    def get_windows_device(self, output):
-        for line in output.split("\n"):
-            if line.__contains__("[dshow") and line.__contains__("(audio)"):
-                self.audio_device_list.append(line.split("\"")[1])
-
     def set_default_device_config(self, path):
         self.pid_num = os.path.join("p1", "01")
         self.task_name = "travel_blog"
         self.output_modality = AUDIO_OUTPUT
         self.audio_device_idx = 0
+        self.naive = "UbiWriter"
         save_device_config(path, "pid", self.pid_num)
         save_device_config(path, "task", self.task_name)
         save_device_config(path, "output", self.output_modality)
         save_device_config(path, "audio_device", self.audio_device_idx)
+        save_device_config(path, "naive", self.naive)
 
     def load_config(self):
         if not os.path.isfile(self.path):
@@ -96,6 +71,15 @@ class DevicePanel:
             self.naive = self.df[self.df['item'] == 'naive']['details'].item()
         except:
             print("Config file has an error! device_panel.py")
+            # delete previous file
+            os.remove(self.path)
+            self.set_default_device_config(self.path)
+            self.df = pandas.read_csv(self.path)
+            self.pid_num = self.df[self.df['item'] == 'pid']['details'].item()
+            self.task_name = self.df[self.df['item'] == 'task']['details'].item()
+            self.output_modality = self.df[self.df['item'] == 'output']['details'].item()
+            self.audio_device_idx = self.df[self.df['item'] == 'audio_device']['details'].item()
+            self.naive = self.df[self.df['item'] == 'naive']['details'].item()
 
     def update_pid(self):
         self.pid_num = self.pid_txt.get_text()
@@ -122,6 +106,7 @@ class DevicePanel:
         self.update_task()
         self.update_output()
         self.update_screen_recording_source()
+        self.update_naive()
         self.df.to_csv(self.path, index=False)
         if self.parent_object_save_command is not None:
             self.parent_object_save_command()
@@ -177,9 +162,9 @@ class DevicePanel:
         self.naive_label.pack(side="left", padx=5)
 
         self.naive_var = tk.StringVar()
-        self.naive_var.set("Ubiwriter")
+        self.naive_var.set(self.naive)
 
-        self.naive_list = ["Ubiwriter", "Naive LLM"]
+        self.naive_list = ["UbiWriter", "Naive LLM"]
         self.naive_options = get_dropdown_menu(self.task_frame, values=self.naive_list,
                                                 variable=self.naive_var)
 

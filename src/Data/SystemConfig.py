@@ -141,11 +141,10 @@ class SystemConfig(object):
         self.GPT.setup_chat_gpt(task_name)
 
     def set_naive(self, naive):
-        if naive == "Ubiwriter":
+        if naive == "UbiWriter":
             self.naive = False
         else:
             self.naive = True
-
 
     def get_is_recording(self):
         return self.is_recording

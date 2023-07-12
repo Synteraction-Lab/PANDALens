@@ -33,9 +33,6 @@ class TranscribeVoiceCommand(Command):
                 else:
                     time_diff = time.time() - self.silence_start_time
                     self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
-                    # self.system_config.notification = {'notif_type': 'text',
-                    #                                    'content': f"Stop Recording in {int(SILENCE_THRESHOLD - time_diff)}s",
-                    #                                    'position': 'top-center'}
                     # print(f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s")
                     if time_diff > SILENCE_THRESHOLD:
                         self.silence_start_time = None
