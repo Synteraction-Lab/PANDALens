@@ -30,6 +30,7 @@ IMAGE_FRAME_SHOW_DURATION = 10
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.audio_process = None
         self.notification_window = None
         self.progress_bar = None
         self.notification_widget = None
@@ -134,6 +135,10 @@ class App:
                                                                       "comments_on_photo",
                                                                       "comments_to_gpt"]:
                 func = "Stop Recording"
+            elif key == keyboard.Key.up and self.mute_button.winfo_ismapped():
+                func = "Mute"
+            elif key == keyboard.Key.down and self.text_visibility_button.winfo_ismapped():
+                func = "Hide/Show Text"
             elif key == keyboard.Key.up and self.shown_button:
                 func = "Select"
             elif key == keyboard.Key.down and self.shown_button:
@@ -173,6 +178,11 @@ class App:
             self.hide_button()
         elif func == "Store":
             self.create_output_file()
+        elif func == "Mute":
+            self.hide_mute_button()
+            self.mute_audio()
+        elif func == "Hide/Show Text":
+            self.switch_text_visibility_button()
 
     def on_release(self, key):
         if not self.config_updated:
@@ -189,12 +199,13 @@ class App:
             return
         if self.ring_mouse_mode:
             # if pressed:
+            func = None
             current_system_state = self.backend_system.system_status.get_current_state()
             is_audio_finished = self.system_config.detect_audio_feedback_finished()
             if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
                                         'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
                 func = "Terminate Waiting for User Response"
-            else:
+            elif self.notification_widget is None:
                 func = "Hide"
             self.parse_button_press(func)
 
@@ -228,6 +239,13 @@ class App:
         self.button_right = get_button(self.manipulation_frame, text='Voice', fg_color='black', border_width=3,
                                        text_color=MAIN_GREEN_COLOR, font_size=14)
 
+        self.mute_button = get_button(self.manipulation_frame, text="Mute", fg_color='black', border_width=3,
+                                      text_color=MAIN_GREEN_COLOR, font_size=14)
+
+        self.text_visibility_button = get_button(self.manipulation_frame, text="Hide\nText", fg_color='black',
+                                                 border_width=3,
+                                                 text_color=MAIN_GREEN_COLOR, font_size=14)
+
         self.asset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "UI", "assets")
 
         self.voice_icon_image = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "voice_icon.png")),
@@ -256,7 +274,7 @@ class App:
     def on_close(self):
         self.root.destroy()
         self.keyboard_listener.stop()
-        self.mouse_listener.stop()
+        # self.mouse_listener.stop()
 
     def determinate_voice_feedback_process(self):
         voice_feedback_process = self.system_config.voice_feedback_process
@@ -443,7 +461,7 @@ class App:
 
     def show_text(self):
         if self.stored_text_widget_content is not None:
-            print(self.stored_text_widget_content)
+            # print(self.stored_text_widget_content)
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.is_hidden_text = False
@@ -458,31 +476,67 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.stored_text_widget_content = text_response
+            self.show_text_visibility_button()
             self.root.update_idletasks()
             self.text_widget.update()
 
     def render_audio_response(self, audio_response):
+        self.show_mute_button()
         self.play_audio_response(audio_response)
 
     def play_audio_response(self, response):
-        process = subprocess.Popen(['say', '-v', 'Daniel', '-r', '180', response])
-        self.check_subprocess(process)
+        self.audio_process = subprocess.Popen(['say', '-v', 'Daniel', '-r', '180', response])
+        self.check_subprocess()
 
-    def check_subprocess(self, process):
-        if process.poll() is None:  # Subprocess is still running
-            self.root.after(400, lambda: self.check_subprocess(process))
+    def check_subprocess(self):
+        if self.audio_process.poll() is None:  # Subprocess is still running
+            self.root.after(400, self.check_subprocess)
         else:
             # Perform actions when subprocess finishes
             self.system_config.audio_feedback_to_show = None
             self.system_config.audio_feedback_finished_playing = True
+            self.hide_mute_button()
+            self.hide_text_visibility_button()
             print("Audio feedback finished playing")
 
     def create_output_file(self):
         dialog = customtkinter.CTkInputDialog(text="Enter the title:", title="UbiWriter")
-        title=dialog.get_input()
+        title = dialog.get_input()
         generate_output_file(chat_history_path=self.chat_history_file_name,
                              image_path=self.system_config.image_folder,
                              title=title)
+
+    def show_mute_button(self):
+        if self.mute_button is not None:
+            self.mute_button.place(relx=0.5, rely=0.1, anchor='center')
+            self.root.update_idletasks()
+
+    def hide_mute_button(self):
+        if self.mute_button is not None:
+            self.mute_button.place_forget()
+            self.root.update_idletasks()
+
+    def show_text_visibility_button(self):
+        if self.text_visibility_button is not None:
+            self.text_visibility_button.place(relx=0.5, rely=0.9, anchor='center')
+            self.root.update_idletasks()
+
+    def switch_text_visibility_button(self):
+        if not self.is_hidden_text:
+            self.text_visibility_button.configure(text="Show\nText")
+            self.hide_text()
+        elif self.is_hidden_text:
+            self.text_visibility_button.configure(text="Hide\nText")
+            self.show_text()
+
+    def hide_text_visibility_button(self):
+        if self.text_visibility_button is not None:
+            self.text_visibility_button.place_forget()
+            self.root.update_idletasks()
+
+    def mute_audio(self):
+        if self.audio_process is not None:
+            self.audio_process.terminate()
 
     # def update_transcription(self):
     #     voice_transcriber = self.system_config.get_transcriber()
