@@ -274,7 +274,6 @@ class App:
     def on_close(self):
         self.root.destroy()
         self.keyboard_listener.stop()
-        # self.mouse_listener.stop()
 
     def determinate_voice_feedback_process(self):
         voice_feedback_process = self.system_config.voice_feedback_process
@@ -285,18 +284,7 @@ class App:
         # get UI update info from backend
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
-        # self.listen_show_interest_icon_from_backend()
         self.listen_progress_bar_from_backend()
-
-        # remove UI elements
-        now = time.time()
-
-        # if self.interest_icon_placed_time is not None:
-        #     if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
-        #         self.remove_interest_icon()
-        #         self.interest_icon_placed_time = None
-
-        # run this function again after 0.3 seconds
         self.root.after(300, self.update_ui_based_on_timer)
 
     def listen_progress_bar_from_backend(self):
@@ -385,30 +373,13 @@ class App:
             self.notification_window.destroy()
             self.notification_window = None
 
-    # def listen_show_interest_icon_from_backend(self):
-    #     if self.system_config.show_interest_icon:
-    #         self.show_interest_icon()
-    #         self.system_config.show_interest_icon = False
-
-    # def show_interest_icon(self):
-    #     self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
-    #                                                 size=(20, 20))
-    #     self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
-    #     self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
-    #     self.interest_icon_placed_time = time.time()
-
-    # def remove_interest_icon(self):
-    #     self.interest_icon_label.destroy()
-
     def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
         audio_feedback_to_show = self.system_config.audio_feedback_to_show
         if text_feedback_to_show is not None and text_feedback_to_show != self.last_text_feedback_to_show:
             self.last_text_feedback_to_show = text_feedback_to_show
             self.render_text_response(text_feedback_to_show)
-            # self.system_config.text_feedback_to_show = None
         if audio_feedback_to_show is not None:
-            # print("audio text to show: ", self.system_config.text_feedback_to_show)
             self.system_config.audio_feedback_finished_playing = False
             self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_to_show = None
@@ -422,14 +393,12 @@ class App:
         self.manipulation_frame.update_idletasks()
         self.manipulation_frame.update()
         self.root.update_idletasks()
-        # self.root.update()
 
     def hide_button(self):
         for direction, button in self.buttons.items():
             button.place_forget()
             self.root.update_idletasks()
         self.shown_button = False
-        # self.root.update()
 
     def show_button(self):
         for direction, button in self.buttons.items():
@@ -461,7 +430,6 @@ class App:
 
     def show_text(self):
         if self.stored_text_widget_content is not None:
-            # print(self.stored_text_widget_content)
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.is_hidden_text = False
@@ -478,7 +446,14 @@ class App:
             self.stored_text_widget_content = text_response
             self.show_text_visibility_button()
             self.root.update_idletasks()
+            self.root.after(8500, self.auto_scroll_text)
             self.text_widget.update()
+
+    def auto_scroll_text(self):
+        if self.text_widget is not None:
+            if self.text_widget.winfo_ismapped():
+                self.text_widget.yview_scroll(1, "units")
+                self.root.after(6000, self.auto_scroll_text)
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
@@ -491,6 +466,7 @@ class App:
     def check_subprocess(self):
         if self.audio_process.poll() is None:  # Subprocess is still running
             self.root.after(400, self.check_subprocess)
+            self.root.update_idletasks()
         else:
             # Perform actions when subprocess finishes
             self.system_config.audio_feedback_to_show = None
