@@ -93,8 +93,9 @@ class DevicePanel:
             self.task_name = self.df[self.df['item'] == 'task']['details'].item()
             self.output_modality = self.df[self.df['item'] == 'output']['details'].item()
             self.audio_device_idx = self.df[self.df['item'] == 'audio_device']['details'].item()
+            self.naive = self.df[self.df['item'] == 'naive']['details'].item()
         except:
-            print("Config file has an error!")
+            print("Config file has an error! device_panel.py")
 
     def update_pid(self):
         self.pid_num = self.pid_txt.get_text()
@@ -103,6 +104,10 @@ class DevicePanel:
     def update_task(self):
         self.task_name = self.task_var.get()
         self.df.loc[self.df['item'] == "task", ['details']] = self.task_name
+
+    def update_naive(self):
+        self.naive = self.naive_var.get()
+        self.df.loc[self.df['item'] == "naive", ['details']] = self.naive
 
     def update_output(self):
         self.output_modality = self.output_var.get()
@@ -167,6 +172,20 @@ class DevicePanel:
 
         self.output_options.pack(side="left", padx=5)
 
+        #ubiwriter vs naive llm
+        self.naive_label = get_label(self.task_frame, text="System Type", pattern=0)
+        self.naive_label.pack(side="left", padx=5)
+
+        self.naive_var = tk.StringVar()
+        self.naive_var.set("Ubiwriter")
+
+        self.naive_list = ["Ubiwriter", "Naive LLM"]
+        self.naive_options = get_dropdown_menu(self.task_frame, values=self.naive_list,
+                                                variable=self.naive_var)
+
+        self.naive_options.pack(side="left", padx=5)
+
+        #audio device
         self.audio_device = tk.StringVar()
         self.audio_device.set(self.audio_device_idx)
 

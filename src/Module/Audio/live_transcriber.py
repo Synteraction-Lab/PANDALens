@@ -186,7 +186,7 @@ class LiveTranscriber:
             final_result = " ".join(self.transcription)
         self.full_text = ""
         self.transcription = ['']
-        self.model = "base.en"
+        self.model = "small.en"
         self.mode = "emotion_classification"
         return final_result.strip()
 

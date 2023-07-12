@@ -100,6 +100,7 @@ class SystemConfig(object):
         self.stop_recording_command = False
         self.show_interest_icon = False
         self.last_request_type = None
+        self.naive = False
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -138,6 +139,13 @@ class SystemConfig(object):
         self.GPT = gpt
         # Initiate the conversation
         self.GPT.setup_chat_gpt(task_name)
+
+    def set_naive(self, naive):
+        if naive == "Ubiwriter":
+            self.naive = False
+        else:
+            self.naive = True
+
 
     def get_is_recording(self):
         return self.is_recording

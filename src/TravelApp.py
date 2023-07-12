@@ -83,17 +83,20 @@ class App:
             pid_num = os.path.join("p1", "01")
             task_name = "travel_blog"
             audio_device_idx = 0
+            naive = False
         else:
             try:
                 df = pandas.read_csv(config_path)
                 pid_num = df[df['item'] == 'pid']['details'].item()
                 task_name = df[df['item'] == 'task']['details'].item()
                 audio_device_idx = df[df['item'] == 'audio_device']['details'].item()
+                naive = df[df['item'] == 'naive']['details'].item()
             except Exception as e:
                 pid_num = os.path.join("p1", "01")
                 task_name = "travel_blog"
                 audio_device_idx = 0
-                print("Config file has an error!")
+                naive = False
+                print("Config file has an error! travelapp")
 
         # Set up path
         folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
@@ -101,6 +104,9 @@ class App:
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
         # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
+        
+        self.system_config.set_naive(naive)
+        
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
@@ -222,7 +228,7 @@ class App:
         self.manipulation_frame.place(relx=0.5, rely=0.5, anchor='center')
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
 
-        # maek the text border black
+        # make the text border black
         self.text_widget = customtkinter.CTkTextbox(self.manipulation_frame, height=10, width=50,
                                                     text_color=MAIN_GREEN_COLOR, font=('Arial', 36),
                                                     bg_color='systemTransparent',

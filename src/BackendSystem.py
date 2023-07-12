@@ -78,34 +78,37 @@ class BackendSystem:
                 continue
 
             if current_state == 'init':
-                emotion_classifier = self.system_config.get_transcriber()
-                if emotion_classifier is not None:
-                    if emotion_classifier.stop_event.is_set():
-                        emotion_classifier.start()
-                        emotion_classifier.stop_transcription_and_start_emotion_classification()
-                if self.detect_gaze_and_zoom_in():
-                    # self.system_config.show_interest_icon = True
-                    self.system_status.trigger('gaze')
-                    action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute()
-                elif self.detect_positive_tone():
-                    self.system_status.set_state('manual_photo_comments_pending')
-                    action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute()
-                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                    self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
-                elif self.detect_interested_audio():
-                    self.system_status.set_state('audio_comments_pending')
-                    action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute()
-                elif self.detect_interested_object():
-                    self.system_status.set_state('manual_photo_comments_pending')
-                    action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute()
-                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                    self.system_config.notification = {'notif_type': 'picture',
-                                                       'content': self.system_config.potential_interested_frame,
-                                                       'position': 'middle-right'}
+                if not self.system_config.naive:
+                    emotion_classifier = self.system_config.get_transcriber()
+                    if emotion_classifier is not None:
+                        if emotion_classifier.stop_event.is_set():
+                            emotion_classifier.start()
+                            emotion_classifier.stop_transcription_and_start_emotion_classification()
+                    if self.detect_gaze_and_zoom_in():
+                        # self.system_config.show_interest_icon = True
+                        self.system_status.trigger('gaze')
+                        action = self.system_status.get_current_state()
+                        ActionParser.parse(action, self.system_config).execute()
+                    elif self.detect_positive_tone():
+                        self.system_status.set_state('manual_photo_comments_pending')
+                        action = self.system_status.get_current_state()
+                        ActionParser.parse(action, self.system_config).execute()
+                        # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                        self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                    elif self.detect_interested_audio():
+                        self.system_status.set_state('audio_comments_pending')
+                        action = self.system_status.get_current_state()
+                        ActionParser.parse(action, self.system_config).execute()
+                    elif self.detect_interested_object():
+                        self.system_status.set_state('manual_photo_comments_pending')
+                        action = self.system_status.get_current_state()
+                        ActionParser.parse(action, self.system_config).execute()
+                        # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+                        self.system_config.notification = {'notif_type': 'picture',
+                                                        'content': self.system_config.potential_interested_frame,
+                                                        'position': 'middle-right'}
+                # else:
+
 
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
