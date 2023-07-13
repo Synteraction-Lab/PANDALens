@@ -105,10 +105,9 @@ class BackendSystem:
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                         self.system_config.notification = {'notif_type': 'picture',
-                                                        'content': self.system_config.potential_interested_frame,
-                                                        'position': 'middle-right'}
+                                                           'content': self.system_config.potential_interested_frame,
+                                                           'position': 'middle-right'}
                 # else:
-
 
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
@@ -129,6 +128,9 @@ class BackendSystem:
                         self.silence_start_time = None
 
                     elif self.detect_user_ignore():
+                        transcriber = self.system_config.get_transcriber()
+                        if transcriber is not None:
+                            transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_status.trigger('ignore')
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
