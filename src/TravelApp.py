@@ -7,10 +7,8 @@ import tkinter as tk
 import customtkinter
 import pandas
 from PIL import Image
-from customtkinter import CTkFrame
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
-from pynput.mouse import Listener as MouseListener
 
 from src.BackendSystem import BackendSystem
 from src.Data.SystemConfig import SystemConfig
@@ -22,10 +20,6 @@ from src.UI.device_panel import DevicePanel
 from src.UI.notification_widget import NotificationWidget
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
-
-INTEREST_ICON_SHOW_DURATION = 5
-
-IMAGE_FRAME_SHOW_DURATION = 10
 
 
 class App:
@@ -104,9 +98,9 @@ class App:
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
         # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
-        
+
         self.system_config.set_naive(naive)
-        
+
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
@@ -452,14 +446,14 @@ class App:
             self.stored_text_widget_content = text_response
             self.show_text_visibility_button()
             self.root.update_idletasks()
-            self.root.after(8500, self.auto_scroll_text)
             self.text_widget.update()
+            self.root.after(6000, self.auto_scroll_text)
 
     def auto_scroll_text(self):
         if self.text_widget is not None:
             if self.text_widget.winfo_ismapped():
                 self.text_widget.yview_scroll(1, "units")
-                self.root.after(6000, self.auto_scroll_text)
+                self.root.after(3500, self.auto_scroll_text)
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
@@ -471,7 +465,7 @@ class App:
 
     def check_subprocess(self):
         if self.audio_process.poll() is None:  # Subprocess is still running
-            self.root.after(400, self.check_subprocess)
+            self.root.after(3500, self.check_subprocess)
             self.root.update_idletasks()
         else:
             # Perform actions when subprocess finishes
