@@ -39,6 +39,7 @@ class BackendSystem:
         while True:
             # Get the current state
             current_state = self.system_status.get_current_state()
+            self.system_config.gaze_pos = self.system_config.vision_detector.get_norm_gaze_position()
             if current_state != self.current_state:
                 self.current_state = current_state
                 print("Current state: " + current_state)
@@ -151,12 +152,13 @@ class BackendSystem:
     def detect_gaze_and_zoom_in(self):
         previous_frame_sim = 0
         last_interested_frame_sim = 0
-        zoom_in = self.system_config.vision_detector.zoom_in
-        closest_object = self.system_config.vision_detector.closest_object
-        person_count = self.system_config.vision_detector.person_count
-        fixation_detected = self.system_config.vision_detector.fixation_detected
-        current_frame = self.system_config.vision_detector.original_frame
-        norm_pos = self.system_config.vision_detector.norm_gaze_position
+        zoom_in = self.system_config.vision_detector.get_zoom_in()
+        closest_object = self.system_config.vision_detector.get_closest_object()
+        person_count = self.system_config.vision_detector.get_person_count()
+        fixation_detected = self.system_config.vision_detector.get_fixation_detected()
+        current_frame = self.system_config.vision_detector.get_original_frame()
+        norm_pos = self.system_config.vision_detector.get_norm_gaze_position()
+        self.system_config.gaze_pos = norm_pos
 
         if self.simulated_fixation:
             self.simulated_fixation = False
@@ -196,7 +198,7 @@ class BackendSystem:
         return False
 
     def detect_user_move_to_another_place(self):
-        current_frame = self.system_config.vision_detector.original_frame
+        current_frame = self.system_config.vision_detector.get_original_frame()
 
         difference = cv2.subtract(current_frame, self.previous_vision_frame)
         result = not np.any(difference)
@@ -266,8 +268,8 @@ class BackendSystem:
         return False
 
     def detect_interested_object(self):
-        if self.system_config.vision_detector.potential_interested_object is not None:
-            potential_interested_object = self.system_config.vision_detector.potential_interested_object
+        potential_interested_object = self.system_config.vision_detector.get_potential_interested_object()
+        if potential_interested_object is not None:
             last_time = self.system_config.previous_interesting_object_time.get(potential_interested_object, 0)
             if time.time() - last_time > 60:
                 self.system_config.interesting_object = potential_interested_object

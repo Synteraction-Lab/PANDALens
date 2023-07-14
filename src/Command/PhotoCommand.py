@@ -32,9 +32,9 @@ class PhotoCommand(Command):
             image_folder = self.system_config.get_image_folder()
             latest_photo_file_path = os.path.join(image_folder, f'{datetime.now().strftime("%H_%M_%S")}.png')
             self.system_config.set_latest_photo_file_path(latest_photo_file_path)
-
-            if self.system_config.vision_detector.original_frame is not None:
-                frame = self.system_config.vision_detector.original_frame.copy()
+            original_frame = self.system_config.vision_detector.get_original_frame()
+            if original_frame is not None:
+                frame = original_frame.copy()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture(latest_photo_file_path)

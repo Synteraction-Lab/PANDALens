@@ -46,8 +46,10 @@ class AutoPhotoCommand(Command):
         for i in range(AUTO_PHOTO_NUM):
             photo_file_path = os.path.join(image_folder, f'{now_time}_{i}.png')
 
-            if self.system_config.vision_detector.original_frame is not None:
-                frame = self.system_config.vision_detector.original_frame.copy()
+            original_frame = self.system_config.vision_detector.get_original_frame()
+
+            if original_frame is not None:
+                frame = original_frame.copy()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture(photo_file_path)

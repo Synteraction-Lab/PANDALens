@@ -1,8 +1,11 @@
 import multiprocessing
 import os
 import threading
+from multiprocessing import Queue
+from multiprocessing.managers import BaseManager
 
 from src.Module.Audio.audio_classifier import AudioClassifierRunner
+from src.Module.Gaze.gaze_data import GazeData
 from src.Module.Vision.Yolo.yolov8s import ObjectDetector
 
 interesting_audioset_categories = [
@@ -101,6 +104,7 @@ class SystemConfig(object):
         self.show_interest_icon = False
         self.last_request_type = None
         self.naive = False
+        self.gaze_pos = None
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -209,9 +213,14 @@ class SystemConfig(object):
     def get_bg_audio_interesting_categories(self):
         return interesting_audioset_categories
 
-    def set_vision_analysis(self):
-        self.vision_detector = ObjectDetector(simulate=False, cv_imshow=False)
-        self.thread_vision = threading.Thread(target=self.vision_detector.run).start()
+    def set_vision_analysis(self, record=False):
+        BaseManager.register('GazeData', GazeData)
+        manager = BaseManager()
+        manager.start()
+        self.vision_detector = manager.GazeData()
+        object_detector = ObjectDetector(simulate=False, cv_imshow=False, record=record)
+        self.thread_vision = multiprocessing.Process(target=object_detector.run, args=(self.vision_detector,))
+        self.thread_vision.start()
 
     def set_emotion_classifier(self, emotion_classifier):
         self.emotion_classifier = emotion_classifier

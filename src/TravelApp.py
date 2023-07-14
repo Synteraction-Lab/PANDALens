@@ -21,6 +21,7 @@ from src.UI.notification_widget import NotificationWidget
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
 
+SHOW_GAZE_MOVEMENT = False
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
@@ -63,8 +64,6 @@ class App:
         # Open Setup panel
         DevicePanel(self.root, parent_object_save_command=self.update_config)
 
-        self.system_config.set_vision_analysis()
-
         # Pack and run the main UI
         self.pack_layout()
 
@@ -78,6 +77,7 @@ class App:
             task_name = "travel_blog"
             audio_device_idx = 0
             naive = "UbiWriter"
+            gaze_record = False
         else:
             try:
                 df = pandas.read_csv(config_path)
@@ -85,21 +85,24 @@ class App:
                 task_name = df[df['item'] == 'task']['details'].item()
                 audio_device_idx = df[df['item'] == 'audio_device']['details'].item()
                 naive = df[df['item'] == 'naive']['details'].item()
+                gaze_record = df[df['item'] == 'gaze_recording']['details'].item() == "True"
             except Exception as e:
+                print("Config file has an error!", e)
                 pid_num = os.path.join("p1", "01")
                 task_name = "travel_blog"
                 audio_device_idx = 0
                 naive = "UbiWriter"
-                print("Config file has an error! travelapp")
+                gaze_record = False
 
         # Set up path
         folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
         self.system_config.set_folder_path(folder_path)
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
-        # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
 
         self.system_config.set_naive(naive)
+
+        self.system_config.set_vision_analysis(record=gaze_record)
 
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
@@ -267,6 +270,11 @@ class App:
 
         self.shown_button = False
 
+        if SHOW_GAZE_MOVEMENT:
+            self.canvas = tk.Canvas(self.root, width=10, height=10, bg='black', bd=0, highlightthickness=0)
+            self.circle = self.canvas.create_oval(0, 0, 10, 10, fill='yellow')
+            self.canvas.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.attributes("-fullscreen", True)
         self.update_ui_based_on_timer()
@@ -285,7 +293,18 @@ class App:
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
         self.listen_progress_bar_from_backend()
+        if SHOW_GAZE_MOVEMENT:
+            self.listen_gaze_pos_from_backend()
         self.root.after(300, self.update_ui_based_on_timer)
+
+    def listen_gaze_pos_from_backend(self):
+        gaze_pos = self.system_config.gaze_pos
+        if gaze_pos is None:
+            return
+        if gaze_pos is not None:
+            # Update canvas position
+            if 0 < gaze_pos[0] < 1 and 0 < gaze_pos[1] < 1:
+                self.canvas.place(relx=gaze_pos[0], rely=gaze_pos[1], anchor=tk.CENTER)
 
     def listen_progress_bar_from_backend(self):
         progress_bar_percentage = self.system_config.progress_bar_percentage

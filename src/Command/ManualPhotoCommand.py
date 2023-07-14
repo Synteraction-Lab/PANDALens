@@ -24,9 +24,13 @@ class ManualPhotoCommand(Command):
 
         photo_file_path = os.path.join(image_folder, f'{now_time}.png')
 
-        if self.system_config.vision_detector.original_frame is not None:
-            frame = self.system_config.vision_detector.original_frame.copy()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        original_frame = self.system_config.vision_detector.get_original_frame()
+
+        if original_frame is not None:
+            if original_frame != []:
+                frame = original_frame.copy()
+                print(original_frame)
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         else:
             frame = take_picture(photo_file_path)
 

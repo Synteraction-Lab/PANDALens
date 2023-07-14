@@ -17,7 +17,7 @@ def get_circular_button(root, text=None, command=None):
 
 
 def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_FG_COLOR, border_width=0,
-               text_color=src.UI.UI_config.BUTTON_TEXT_COLOR, font_size=src.UI.UI_config.BUTTON_SIZE_0_FONT_SIZE,):
+               text_color=src.UI.UI_config.BUTTON_TEXT_COLOR, font_size=src.UI.UI_config.BUTTON_SIZE_0_FONT_SIZE):
     """
     :param root: master window
     :param text: text in the button
@@ -44,8 +44,9 @@ def get_button(root, text=None, command=None, fg_color=src.UI.UI_config.BUTTON_F
 
 def get_checkbutton(root, text=None, variable=None, command=None, fg_color=src.UI.UI_config.CHECK_BUTTON_FG_COLOR,
                     hover_color=src.UI.UI_config.CHECK_BUTTON_HOVER_COLOR):
-    return CTkCheckBox(root, text=text, variable=variable, fg_color=fg_color, hover_color=hover_color,
-                       command=command, checkmark_color=src.UI.UI_config.CHECKMARK_COLOR, font=src.UI.UI_config.LABEL_0_FONT)
+    return CTkCheckBox(root, text=text, text_color="black", variable=variable, fg_color=fg_color, hover_color=hover_color,
+                       command=command, checkmark_color=src.UI.UI_config.CHECKMARK_COLOR,
+                       font=src.UI.UI_config.LABEL_0_FONT)
 
 
 def get_dropdown_menu(root, command=None, variable=None, values=None, fg_color=src.UI.UI_config.DROPDOWN_MENU_FG_COLOR,
@@ -97,7 +98,8 @@ def get_label(root, textvariable=None, text=None, pattern=0):
 
 def get_slider(root, command, variable, orient):
     return CTkSlider(master=root, command=command, variable=variable, orientation=orient, from_=0, to=100,
-                     button_color=src.UI.UI_config.MAIN_COLOR_LIGHT, height=src.UI.UI_config.ANALYZER_TIMELINE_THICKNESS)
+                     button_color=src.UI.UI_config.MAIN_COLOR_LIGHT,
+                     height=src.UI.UI_config.ANALYZER_TIMELINE_THICKNESS)
 
 
 def get_image(root, path, resize_width=24, resize_height=24):
