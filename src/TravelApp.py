@@ -107,6 +107,7 @@ class App:
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
+        self.system_config.set_log_path(self.log_path)
 
         self.chat_history_file_name = os.path.join(folder_path, chat_file)
         slim_history_file_name = os.path.join(folder_path, slim_history_file)

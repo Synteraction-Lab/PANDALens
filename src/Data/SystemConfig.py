@@ -105,6 +105,7 @@ class SystemConfig(object):
         self.last_request_type = None
         self.naive = False
         self.gaze_pos = None
+        self.log_path = None
 
     def get_final_transcription(self):
         return self.final_transcription
@@ -228,3 +229,6 @@ class SystemConfig(object):
     def detect_audio_feedback_finished(self):
         return self.audio_feedback_finished_playing \
             and self.audio_feedback_to_show is None
+
+    def set_log_path(self, log_path):
+        self.log_path = log_path

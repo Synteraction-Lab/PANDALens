@@ -32,7 +32,7 @@ class BackendSystem:
         self.previous_norm_pos = None
         self.system_config = system_config
         self.system_status = SystemStatus()
-        self.log_path = os.path.join(self.system_config.folder_path + "log.csv")
+        self.log_path = self.system_config.log_path
         self.current_state = None
 
     def run(self):
@@ -92,16 +92,19 @@ class BackendSystem:
                         ActionParser.parse(action, self.system_config).execute()
                     elif self.detect_positive_tone():
                         self.system_status.set_state('manual_photo_comments_pending')
+                        log_manipulation(self.log_path, "positive_tone")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                         self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
                     elif self.detect_interested_audio():
                         self.system_status.set_state('audio_comments_pending')
+                        log_manipulation(self.log_path, f"interested_audio: {self.system_config.interesting_audio}")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                     elif self.detect_interested_object():
                         self.system_status.set_state('manual_photo_comments_pending')
+                        log_manipulation(self.log_path, f"interested_object: {self.system_config.interesting_object}")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
@@ -113,6 +116,7 @@ class BackendSystem:
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
                     self.system_status.trigger('move_to_another_place')
+                    log_manipulation(self.log_path, "move_to_another_place")
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
             elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
@@ -133,6 +137,7 @@ class BackendSystem:
                         if transcriber is not None:
                             transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_status.trigger('ignore')
+                        log_manipulation(self.log_path, "ignore")
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
                         self.silence_start_time = None
@@ -183,6 +188,10 @@ class BackendSystem:
             # print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
             #       f"frame_sim: {last_interested_frame_sim, previous_frame_sim}")
 
+            if self.system_config.potential_interested_frame is not None:
+                cv2.imwrite("prev.jpg", self.system_config.potential_interested_frame)
+            cv2.imwrite("curr.jpg", current_frame)
+
             # Conditions to determine the user's behavior
             if zoom_in and fixation_detected:
                 self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
@@ -205,13 +214,21 @@ class BackendSystem:
         if result:
             return False
         else:
-            cv2.imwrite("diff.jpg", difference)
+            cv2.imwrite("diff1.jpg", difference)
 
         if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
             previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
             print(potential_frame_sim, previous_frame_sim)
             self.previous_vision_frame = current_frame
+
+            difference = cv2.subtract(current_frame, self.system_config.potential_interested_frame)
+            result = not np.any(difference)
+            if result:
+                return False
+            else:
+                cv2.imwrite("diff2.jpg", difference)
+
             if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
                 # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                 self.system_config.notification = {'notif_type': 'picture',
@@ -251,7 +268,6 @@ class BackendSystem:
 
         if scores['joy'] + scores['surprise'] > 0.7 and scores != self.previous_sentiment_scores:
             self.previous_sentiment_scores = scores
-            print("Positive tone detected")
             emotion_classifier.stop_emotion_classification_and_start_transcription()
             return True
 
