@@ -221,7 +221,7 @@ class App:
         self.root.geometry(f"{screen_width}x{screen_height}+0+0")
 
         self.root.configure(bg='black')
-        self.is_hidden_text = False
+        self.is_hidden_text = True
         self.manipulation_frame = tk.Frame(self.root, bg='black')
         self.manipulation_frame.place(relx=0.5, rely=0.5, anchor='center')
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
@@ -464,6 +464,7 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.stored_text_widget_content = text_response
+            self.is_hidden_text = False
             self.show_text_visibility_button()
             self.root.update_idletasks()
             self.text_widget.update()
