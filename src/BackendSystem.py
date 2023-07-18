@@ -23,6 +23,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 class BackendSystem:
     def __init__(self, system_config):
+        self.last_gaze_detection_time = 0
         self.previous_sentiment_scores = None
         self.user_explicit_input = None
         self.silence_start_time = None
@@ -53,6 +54,9 @@ class BackendSystem:
                     if not success:
                         self.system_status.set_state("init")
                         self.system_config.notification = None
+                        transcriber = self.system_config.get_transcriber()
+                        if transcriber is not None:
+                            transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
                     self.system_status.set_state('manual_photo_comments_pending')
@@ -74,6 +78,9 @@ class BackendSystem:
                     self.system_status.set_state("init")
                     self.system_config.notification = None
                     self.silence_start_time = None
+                    transcriber = self.system_config.get_transcriber()
+                    if transcriber is not None:
+                        transcriber.stop_transcription_and_start_emotion_classification()
 
                 self.user_explicit_input = None
                 continue
@@ -130,6 +137,9 @@ class BackendSystem:
                         if not success:
                             self.system_status.set_state("init")
                             self.system_config.notification = None
+                            transcriber = self.system_config.get_transcriber()
+                            if transcriber is not None:
+                                transcriber.stop_transcription_and_start_emotion_classification()
                         self.silence_start_time = None
 
                     elif self.detect_user_ignore():
@@ -177,6 +187,7 @@ class BackendSystem:
 
         if self.system_config.potential_interested_frame is not None:
             last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
+            # cv2.imwrite("curr.jpg", current_frame)
 
         not_similar_frame = last_interested_frame_sim < 0.6
 
@@ -185,36 +196,44 @@ class BackendSystem:
               f"not_similar_frame: {not_similar_frame}")
 
         if (zoom_in or fixation_detected) and not_similar_frame and norm_pos is not None:
-            # print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
-            #       f"frame_sim: {last_interested_frame_sim, previous_frame_sim}")
+            now = time.time()
+            dynamic_threshold = self.calculate_dynamic_threshold(last_interested_frame_sim)
+            if now - self.last_gaze_detection_time > dynamic_threshold:
+                # if self.system_config.potential_interested_frame is not None:
+                #     cv2.imwrite("prev.jpg", self.system_config.potential_interested_frame)
 
-            if self.system_config.potential_interested_frame is not None:
-                cv2.imwrite("prev.jpg", self.system_config.potential_interested_frame)
-            cv2.imwrite("curr.jpg", current_frame)
+                # Conditions to determine the user's behavior
+                if zoom_in and fixation_detected:
+                    self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
+                elif self.zoom_in:
+                    self.system_config.user_behavior = f"Moving close to: {closest_object}"
+                elif fixation_detected:
+                    self.system_config.user_behavior = f"Looking at: {closest_object}"
 
-            # Conditions to determine the user's behavior
-            if zoom_in and fixation_detected:
-                self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
-            elif self.zoom_in:
-                self.system_config.user_behavior = f"Moving close to: {closest_object}"
-            elif fixation_detected:
-                self.system_config.user_behavior = f"Looking at: {closest_object}"
-
-            log_manipulation(self.log_path, self.system_config.user_behavior)
-            self.previous_vision_frame = current_frame
-            return True
+                log_manipulation(self.log_path, self.system_config.user_behavior)
+                self.previous_vision_frame = current_frame
+                self.system_config.potential_interested_frame = current_frame
+                self.last_gaze_detection_time = now
+                return True
         self.previous_vision_frame = current_frame
         return False
+
+    def calculate_dynamic_threshold(self, last_interested_frame_sim):
+        BASE_THRESHOLD = 15  # set your base threshold value here
+        THRESHOLD_FACTOR = 200  # set your factor for adjusting threshold here
+
+        threshold = BASE_THRESHOLD + (last_interested_frame_sim * last_interested_frame_sim * THRESHOLD_FACTOR)
+        return threshold
 
     def detect_user_move_to_another_place(self):
         current_frame = self.system_config.vision_detector.get_original_frame()
 
-        difference = cv2.subtract(current_frame, self.previous_vision_frame)
-        result = not np.any(difference)
-        if result:
-            return False
-        else:
-            cv2.imwrite("diff1.jpg", difference)
+        # difference = cv2.subtract(current_frame, self.previous_vision_frame)
+        # result = not np.any(difference)
+        # if result:
+        #     return False
+        # else:
+        #     cv2.imwrite("diff1.jpg", difference)
 
         if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)

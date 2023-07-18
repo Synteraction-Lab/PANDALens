@@ -68,7 +68,7 @@ class AutoPhotoCommand(Command):
             frame = PIL.Image.open(os.path.join(image_folder, latest_photo_filename))
 
         self.system_config.set_latest_photo_file_path(os.path.join(image_folder, latest_photo_filename))
-        self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+        # self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
         return frame
 
 
