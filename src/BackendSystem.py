@@ -59,6 +59,9 @@ class BackendSystem:
                             transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
+                    self.system_config.notification = {'notif_type': 'processing_icon',
+                                                       'position': 'middle-right'}
+
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
@@ -66,15 +69,21 @@ class BackendSystem:
                     self.system_config.notification = {'notif_type': 'picture',
                                                        'content': self.system_config.potential_interested_frame,
                                                        'position': 'middle-right'}
+                    self.system_config.start_non_audio_feedback_display()
                 elif self.user_explicit_input == 'full_writing':
+                    self.system_config.notification = {'notif_type': 'processing_icon',
+                                                       'position': 'middle-right'}
                     self.system_status.set_state('full_writing_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                 elif self.user_explicit_input == 'select':
+                    self.system_config.notification = {'notif_type': 'processing_icon',
+                                                       'position': 'middle-right'}
                     self.system_status.set_state('select_moments')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                 elif self.user_explicit_input == "terminate_waiting_for_user_response":
+                    self.system_config.notification = None
                     self.system_status.set_state("init")
                     self.system_config.notification = None
                     self.silence_start_time = None
@@ -93,7 +102,10 @@ class BackendSystem:
                             emotion_classifier.start()
                             emotion_classifier.stop_transcription_and_start_emotion_classification()
                     if self.detect_gaze_and_zoom_in():
-                        # self.system_config.show_interest_icon = True
+                        self.system_config.notification = {
+                            'notif_type': 'fpv_photo_icon',
+                            'position': 'top-right'
+                        }
                         self.system_status.trigger('gaze')
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
@@ -104,6 +116,7 @@ class BackendSystem:
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                         self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
                     elif self.detect_interested_audio():
                         self.system_status.set_state('audio_comments_pending')
                         log_manipulation(self.log_path, f"interested_audio: {self.system_config.interesting_audio}")
@@ -118,6 +131,7 @@ class BackendSystem:
                         self.system_config.notification = {'notif_type': 'picture',
                                                            'content': self.system_config.potential_interested_frame,
                                                            'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
                 # else:
 
             elif current_state == 'photo_pending':
@@ -129,7 +143,7 @@ class BackendSystem:
             elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
                                    'show_gpt_response', 'audio_comments_pending']:
                 if self.system_config.detect_audio_feedback_finished():
-                    if self.detect_user_speak():
+                    if self.detect_user_speak() and self.system_config.non_audio_feedback_display_ended():
                         self.system_config.text_feedback_to_show = ""
                         self.system_status.trigger('speak')
                         action = self.system_status.get_current_state()
@@ -151,6 +165,8 @@ class BackendSystem:
                         self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
                         self.silence_start_time = None
+                else:
+                    self.silence_start_time = None
             elif current_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
                                    'comments_on_audio', 'select_moments']:
                 if self.detect_gpt_response():
@@ -199,9 +215,6 @@ class BackendSystem:
             now = time.time()
             dynamic_threshold = self.calculate_dynamic_threshold(last_interested_frame_sim)
             if now - self.last_gaze_detection_time > dynamic_threshold:
-                # if self.system_config.potential_interested_frame is not None:
-                #     cv2.imwrite("prev.jpg", self.system_config.potential_interested_frame)
-
                 # Conditions to determine the user's behavior
                 if zoom_in and fixation_detected:
                     self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
@@ -253,6 +266,7 @@ class BackendSystem:
                 self.system_config.notification = {'notif_type': 'picture',
                                                    'content': self.system_config.potential_interested_frame,
                                                    'position': 'middle-right'}
+                self.system_config.start_non_audio_feedback_display()
                 return True
         return False
 
@@ -260,18 +274,19 @@ class BackendSystem:
         voice_transcribe = self.system_config.get_transcriber()
         if voice_transcribe.stop_event.is_set():
             voice_transcribe.start()
-
-        voice_transcribe.stop_emotion_classification_and_start_transcription()
+        if voice_transcribe.mode != "voice_transcription":
+            voice_transcribe.stop_emotion_classification_and_start_transcription()
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is None:
             time.sleep(0.3)
             return False
         print(f"{category}: {score}")
         # if category is speech, then return True
-        if category == 'Speech' and score > 0.7:
-            self.silence_start_time = None
-            self.system_config.progress_bar_percentage = None
-            return True
+        if category is not None and score is not None:
+            if category == 'Speech' and score > 0.7:
+                self.silence_start_time = None
+                self.system_config.progress_bar_percentage = None
+                return True
         time.sleep(0.3)
         return False
 

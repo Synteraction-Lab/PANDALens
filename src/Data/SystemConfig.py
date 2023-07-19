@@ -1,12 +1,13 @@
 import multiprocessing
 import os
-import threading
-from multiprocessing import Queue
+import time
 from multiprocessing.managers import BaseManager
 
 from src.Module.Audio.audio_classifier import AudioClassifierRunner
 from src.Module.Gaze.gaze_data import GazeData
 from src.Module.Vision.Yolo.yolov8s import ObjectDetector
+
+NON_AUDIO_FEEDBACK_DISPLAY_TIME = 1.8
 
 interesting_audioset_categories = [
     'Music',
@@ -66,6 +67,7 @@ interesting_audioset_categories = [
 
 class SystemConfig(object):
     def __init__(self):
+        self.non_audio_feedback_display_start_time = None
         self.progress_bar_percentage = None
         self.vision_detector = None
         self.audio_classifier_runner = None
@@ -194,7 +196,8 @@ class SystemConfig(object):
         self.latest_photo_file_path = image_path
 
     def set_bg_audio_analysis(self, device):
-        self.audio_classifier_results = multiprocessing.Queue(maxsize=1)
+        manager = multiprocessing.Manager()
+        self.audio_classifier_results = manager.list([None, None])
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.audio_classifier_runner = AudioClassifierRunner(
             model=os.path.join(project_root, "src", "Module", "Audio", "lite-model_yamnet_classification.tflite"),
@@ -207,8 +210,8 @@ class SystemConfig(object):
 
     def get_bg_audio_analysis_result(self):
         score, category_name = None, None
-        while not self.audio_classifier_results.empty():
-            score, category_name = self.audio_classifier_results.get()
+        # while not self.audio_classifier_results.empty():
+        score, category_name = self.audio_classifier_results[0], self.audio_classifier_results[1]
         return score, category_name
 
     def get_bg_audio_interesting_categories(self):
@@ -229,6 +232,18 @@ class SystemConfig(object):
     def detect_audio_feedback_finished(self):
         return self.audio_feedback_finished_playing \
             and self.audio_feedback_to_show is None
+
+    def non_audio_feedback_display_ended(self):
+        if self.non_audio_feedback_display_start_time is None:
+            return True
+        if time.time() - self.non_audio_feedback_display_start_time > NON_AUDIO_FEEDBACK_DISPLAY_TIME:
+            self.non_audio_feedback_display_start_time = None
+            return True
+        else:
+            return False
+
+    def start_non_audio_feedback_display(self):
+        self.non_audio_feedback_display_start_time = time.time()
 
     def set_log_path(self, log_path):
         self.log_path = log_path

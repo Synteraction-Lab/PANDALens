@@ -1,3 +1,6 @@
+from src.Utilities.image_processor import undistort_img
+
+
 class GazeData:
     def __init__(self):
         self.potential_interested_object = None
@@ -19,6 +22,9 @@ class GazeData:
 
     def get_original_frame(self):
         return self.original_frame
+        # if self.original_frame is None:
+        #     return None
+        # return undistort_img(self.original_frame)
 
     def put_norm_gaze_position(self, pos):
         self.norm_gaze_position = pos

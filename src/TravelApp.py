@@ -23,11 +23,12 @@ from src.Utilities.constant import audio_file, chat_file, slim_history_file, con
 
 SHOW_GAZE_MOVEMENT = False
 
+
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.temporal_audio_response = None
         self.audio_process = None
         self.notification_window = None
-        self.progress_bar = None
         self.notification_widget = None
         self.frame_placed_time = None
         self.interest_icon_placed_time = None
@@ -58,6 +59,7 @@ class App:
         self.root.title("UbiWriter")
         # self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
+        self.is_muted = False
 
         show_devices()
 
@@ -140,7 +142,7 @@ class App:
                                                                       "comments_to_gpt"]:
                 func = "Stop Recording"
             elif key == keyboard.Key.up and self.mute_button.winfo_ismapped():
-                func = "Mute"
+                func = "Mute/Unmute"
             elif key == keyboard.Key.down and self.text_visibility_button.winfo_ismapped():
                 func = "Hide/Show Text"
             elif key == keyboard.Key.up and self.shown_button:
@@ -166,8 +168,10 @@ class App:
             self.hide_show_content()
         if func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
+            self.hide_text()
         elif func == "Photo" or func == "Retake":
             self.backend_system.set_user_explicit_input('take_photo')
+            self.hide_text()
         elif func == "Summary":
             self.backend_system.set_user_explicit_input('full_writing')
         # elif func == "Discard":
@@ -176,15 +180,21 @@ class App:
             self.backend_system.set_user_explicit_input('stop_recording')
         elif func == "Select":
             self.backend_system.set_user_explicit_input('select')
+            self.hide_text()
         elif func == "Terminate Waiting for User Response":
             self.backend_system.set_user_explicit_input('terminate_waiting_for_user_response')
             self.hide_text()
             self.hide_button()
         elif func == "Store":
             self.create_output_file()
-        elif func == "Mute":
-            self.hide_mute_button()
-            self.mute_audio()
+        elif func == "Mute/Unmute":
+            if self.is_muted:
+                self.system_config.audio_feedback_finished_playing = False
+                self.play_audio_response(self.temporal_audio_response)
+                self.temporal_audio_response = None
+            else:
+                self.mute_audio()
+            self.switch_mute_button()
         elif func == "Hide/Show Text":
             self.switch_text_visibility_button()
 
@@ -207,8 +217,10 @@ class App:
             current_system_state = self.backend_system.system_status.get_current_state()
             is_audio_finished = self.system_config.detect_audio_feedback_finished()
             if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                        'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
+                                        'show_gpt_response', 'audio_comments_pending']:
                 func = "Terminate Waiting for User Response"
+                if not is_audio_finished:
+                    self.mute_audio()
             elif self.notification_widget is None:
                 func = "Hide"
             self.parse_button_press(func)
@@ -323,8 +335,17 @@ class App:
         if notification != self.last_notification:
             if self.last_notification is not None:
                 # Remove previous notification if it's not the same as the current one or the current one is set to None
-                if notification is None or notification["notif_type"] != self.last_notification["notif_type"]:
+                if notification is None:
                     self.remove_notification()
+                elif notification["notif_type"] != self.last_notification["notif_type"]:
+                    self.remove_notification()
+                    if notification["notif_type"] == "listening_icon" and \
+                            self.last_notification["notif_type"] == "picture":
+                        self.system_config.notification = notification = {
+                            "notif_type": "listening_picture_comments",
+                            "content": self.last_notification["content"],
+                            "position": self.last_notification["position"]
+                        }
 
             if notification is not None:
                 print("Notification Type: ", notification["notif_type"], self.notification_widget)
@@ -336,7 +357,9 @@ class App:
                 if notification["notif_type"] == "text":
                     # print("Notification: ", notification["content"])
                     self.notification_widget.configure(text=notification["content"])
-                elif notification["notif_type"] == "picture":
+                elif (notification["notif_type"] == "picture"
+                      or notification["notif_type"] == "listening_picture_comments") \
+                        and notification["content"] is not None:
                     self.notification_widget.configure(image=notification["content"])
 
             self.last_notification = notification
@@ -360,7 +383,7 @@ class App:
         # Set location for the notification window
         if notification["position"] == "top-center":
             relx, rely = 0.5, 0.1
-        elif notification["position"] == "top_right":
+        elif notification["position"] == "top-right":
             relx, rely = 0.8, 0.1
         elif notification["position"] == "middle-right":
             relx, rely = 0.8, 0.5
@@ -392,6 +415,9 @@ class App:
         if self.notification_window is not None:
             self.notification_window.destroy()
             self.notification_window = None
+
+        self.hide_mute_button()
+        self.hide_text_visibility_button()
 
     def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
@@ -478,9 +504,15 @@ class App:
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
-        self.play_audio_response(audio_response)
+        if self.is_muted:
+            self.temporal_audio_response = audio_response
+            self.system_config.audio_feedback_finished_playing = True
+        else:
+            self.play_audio_response(audio_response)
 
     def play_audio_response(self, response):
+        if response is None:
+            return
         self.audio_process = subprocess.Popen(['say', '-v', 'Daniel', '-r', '180', response])
         self.check_subprocess()
 
@@ -505,8 +537,21 @@ class App:
 
     def show_mute_button(self):
         if self.mute_button is not None:
+            if self.is_muted:
+                self.mute_button.configure(text="Unmute")
+            else:
+                self.mute_button.configure(text="Mute")
             self.mute_button.place(relx=0.5, rely=0.1, anchor='center')
             self.root.update_idletasks()
+
+    def switch_mute_button(self):
+        if self.mute_button is not None:
+            if self.is_muted:
+                self.mute_button.configure(text="Mute")
+                self.is_muted = False
+            else:
+                self.mute_button.configure(text="Unmute")
+                self.is_muted = True
 
     def hide_mute_button(self):
         if self.mute_button is not None:

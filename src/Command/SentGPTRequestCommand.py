@@ -36,7 +36,7 @@ class SendGPTRequestCommand(Command):
                 if "full" in json_response['mode']:
                     full_writing = json_response['response'].get('full writing', '')
                     revised_parts = json_response['response'].get('revised parts', '')
-                    text_response = f"Full Writing:\n{full_writing}\n\nRevision:\n{revised_parts}\n"
+                    text_response = f"Full Writing:\n{full_writing}"
                     audio_response = f"Here is your full writing: {full_writing}"
 
                     self.system_config.text_feedback_to_show = text_response
@@ -64,8 +64,8 @@ class SendGPTRequestCommand(Command):
                     question_to_users = json_response['response'].get('question to users')
                     summary_of_new_content = json_response['response'].get('summary of new content')
                     if question_to_users is not None:
-                        audio_response = f"May I ask:\n{question_to_users}"
-                        if audio_response.strip() == "May I ask:\nNone":
+                        audio_response = f"{question_to_users}"
+                        if audio_response.strip() == "None":
                             audio_response = "I have no question for you. Anything you want to add?"
                         text_response = audio_response
                     elif summary_of_new_content is not None:
@@ -80,9 +80,16 @@ class SendGPTRequestCommand(Command):
                                                        'content': f"{text_response}",
                                                        'position': 'middle-right'}
 
-
-
+            else:
+                self.system_config.audio_feedback_to_show = audio_response
+                self.system_config.notification = {'notif_type': 'text',
+                                                   'content': f"{text_response}",
+                                                   'position': 'middle-right'}
         except Exception as e:
-            print(e)
+            print(f"GPT Response Parse Error: {e}")
+            self.system_config.audio_feedback_to_show = audio_response
+            self.system_config.notification = {'notif_type': 'text',
+                                               'content': f"{text_response}",
+                                               'position': 'middle-right'}
 
         return text_response, audio_response
