@@ -10,6 +10,7 @@ import numpy as np
 from src.Command.Command import Command
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Vision.utilities import take_picture
+from src.Utilities.image_processor import store_img
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -54,8 +55,9 @@ class AutoPhotoCommand(Command):
             else:
                 frame = take_picture(photo_file_path)
 
-            os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
-            cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            # os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
+            # cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            store_img(photo_file_path, frame)
         if AUTO_PHOTO_NUM > 1:
             latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
             # remove all the photos other than the best one

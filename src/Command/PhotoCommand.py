@@ -6,6 +6,7 @@ import cv2
 
 from src.Command.Command import Command
 from src.Module.Vision.utilities import take_picture
+from src.Utilities.image_processor import store_img
 
 
 class PhotoCommand(Command):
@@ -39,8 +40,9 @@ class PhotoCommand(Command):
             else:
                 frame = take_picture(latest_photo_file_path)
 
-            os.makedirs(os.path.dirname(latest_photo_file_path), exist_ok=True)
-            cv2.imwrite(latest_photo_file_path, frame)
+            # os.makedirs(os.path.dirname(latest_photo_file_path), exist_ok=True)
+            # cv2.imwrite(latest_photo_file_path, frame)
+            store_img(latest_photo_file_path, frame)
 
         return frame
 
