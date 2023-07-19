@@ -11,14 +11,17 @@ class ShowSummariesAction(Action):
         self.system_config.notification = {'notif_type': 'processing_icon',
                                            'position': 'middle-right'}
 
-        user_request = {"user comments/commands": "List all the moments' summary. "
-                                                  "Return the response **ONLY** in JSON format, "
-                                                  "with the following structure: "
-                                                  '{\"mode\": \"selecting\",'
-                                                  ' \"response\": '
-                                                  '\{\"1\": '
-                                                  '\"[One sentence summary for moment 1]\"\, '
-                                                  '\"2\": \"[One sentence summary for moment 2]\"}}'}
+        user_request = {"System": "List all the moments' summary. To do so, "
+                                  "combine the points that belong to the same moment. "
+                                  "Note: each summary item should be very concise "
+                                  "and written within few words.\n"
+                                  "Return the response **ONLY** in JSON format, "
+                                  "with the following structure: "
+                                  '{\"mode\": \"selecting\",'
+                                  ' \"response\": '
+                                  '\{\"1\": '
+                                  '\"[One sentence summary for moment 1]\"\, '
+                                  '\"2\": \"[One sentence summary for moment 2]\"}}'}
 
         self.system_config.last_request_type = "selecting"
 
