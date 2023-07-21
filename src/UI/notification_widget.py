@@ -64,7 +64,7 @@ class NotificationWidget:
                                        size=(44, 40))
             self.icon = CTkLabel(self.parent, text="", image=self.audio_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        elif self.notif_type == "processing_icon":
+        elif self.notif_type == "processing_icon" or self.notif_type == "picture_thumbnail":
             self.processing_icon = CTkImage(Image.open(os.path.join(self.asset_path, "processing_icon.png")),
                                             size=(61, 71))
             self.icon = CTkLabel(self.parent, text="", image=self.processing_icon)
@@ -78,7 +78,7 @@ class NotificationWidget:
             self.icon.lift()
         elif self.notif_type == "fpv_photo_icon":
             self.fpv_photo_icon = CTkImage(Image.open(os.path.join(self.asset_path, "fpv_photo_icon.png")),
-                                             size=(60, 57))
+                                           size=(60, 57))
             self.icon = CTkLabel(self.parent, text="", image=self.fpv_photo_icon)
             self.icon.configure(bg_color="systemTransparent")
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
@@ -109,7 +109,11 @@ class NotificationWidget:
             self.picture_label = tk.Label(self.parent, bg="black")
 
             # Set the picture label to the top-right of the window
-            self.picture_label.place(relx=0.62, rely=0.6, anchor=tk.CENTER, relwidth=0.6, relheight=0.34)
+            if self.notif_type == "picture_thumbnail":
+                self.picture_label.place(relx=0.5, rely=0.25, anchor=tk.CENTER, relwidth=0.45, relheight=0.25)
+            else:
+                self.picture_label.place(relx=0.62, rely=0.6, anchor=tk.CENTER, relwidth=0.6, relheight=0.34)
+
             # self.picture_label.pack()
 
             # Set the image on the label widget

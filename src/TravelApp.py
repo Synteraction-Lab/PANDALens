@@ -5,6 +5,7 @@ import time
 import tkinter as tk
 
 import customtkinter
+import numpy as np
 import pandas
 from PIL import Image
 from pynput import keyboard
@@ -166,10 +167,17 @@ class App:
         log_manipulation(self.log_path, func)
         if func == "Hide" or func == "Show":
             self.hide_show_content()
+        if func == "Show Photo Button":
+            self.show_photo_button()
         if func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
             self.hide_text()
         elif func == "Photo" or func == "Retake":
+            if self.notification_widget is not None:
+                if self.notification_widget.notif_type == "processing_icon":
+                    self.backend_system.add_photo_to_pending_task_list()
+                    self.hide_button()
+                return
             self.backend_system.set_user_explicit_input('take_photo')
             self.hide_text()
         elif func == "Summary":
@@ -213,6 +221,8 @@ class App:
             return
         if self.ring_mouse_mode:
             # if pressed:
+            if self.last_notification is not None:
+                print(self.last_notification["notif_type"])
             func = None
             current_system_state = self.backend_system.system_status.get_current_state()
             is_audio_finished = self.system_config.detect_audio_feedback_finished()
@@ -223,6 +233,8 @@ class App:
                     self.mute_audio()
             elif self.notification_widget is None:
                 func = "Hide"
+            elif self.last_notification["notif_type"] == "processing_icon":
+                func = "Show Photo Button"
             self.parse_button_press(func)
 
     def pack_layout(self):
@@ -329,10 +341,37 @@ class App:
             else:
                 self.remove_notification()
 
+    def are_equal(self, n1, n2):
+        # If both are None
+        if n1 is None and n2 is None:
+            return True
+        # If only one is None
+        if n1 is None or n2 is None:
+            return False
+        # Now we know they're both not None, so we can safely access their keys
+        # If the keys do not match
+        if set(n1.keys()) != set(n2.keys()):
+            return False
+        # Compare values for each key
+        for key in n1:
+            v1 = n1[key]
+            v2 = n2[key]
+            # If they're both arrays
+            if isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray):
+                # If their shapes are not equal or any pair of elements are not equal
+                if v1.shape != v2.shape or not np.all(v1 == v2):
+                    return False
+            # If they're not both arrays but they're not equal
+            elif v1 != v2:
+                return False
+        # If no mismatches were found, they're equal
+        return True
+
     def listen_notification_from_backend(self):
-        notification = self.system_config.notification
-        # Update the notification if not the same as the previous one
-        if notification != self.last_notification:
+        with self.system_config.notification_lock:
+            notification = self.system_config.notification
+            # Update the notification if not the same as the previous one
+        if not self.are_equal(notification, self.last_notification):
             if self.last_notification is not None:
                 # Remove previous notification if it's not the same as the current one or the current one is set to None
                 if notification is None:
@@ -341,7 +380,13 @@ class App:
                     self.remove_notification()
                     if notification["notif_type"] == "listening_icon" and \
                             self.last_notification["notif_type"] == "picture":
-                        self.system_config.notification = notification = {
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {
+                                "notif_type": "listening_picture_comments",
+                                "content": self.last_notification["content"],
+                                "position": self.last_notification["position"]
+                            }
+                        notification = {
                             "notif_type": "listening_picture_comments",
                             "content": self.last_notification["content"],
                             "position": self.last_notification["position"]
@@ -358,7 +403,8 @@ class App:
                     # print("Notification: ", notification["content"])
                     self.notification_widget.configure(text=notification["content"])
                 elif (notification["notif_type"] == "picture"
-                      or notification["notif_type"] == "listening_picture_comments") \
+                      or notification["notif_type"] == "listening_picture_comments"
+                      or notification["notif_type"] == "picture_thumbnail") \
                         and notification["content"] is not None:
                     self.notification_widget.configure(image=notification["content"])
 
@@ -449,6 +495,10 @@ class App:
     def show_button(self):
         for direction, button in self.buttons.items():
             button.place(**self.buttons_places[direction])  # Place the button
+        self.shown_button = True
+
+    def show_photo_button(self):
+        self.buttons["down"].place(**self.buttons_places["down"])
         self.shown_button = True
 
     def hide_show_content(self):
