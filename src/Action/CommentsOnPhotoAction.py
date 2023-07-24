@@ -21,14 +21,15 @@ class CommentsOnPhotoAction(Action):
                 return False
             user_request["user_voice_transcription"] = voice_transcription
 
-        # get image info
-        get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
-        try:
-            if get_image_info_command is not None:
-                image_info = get_image_info_command.execute()
-                user_request["image_info"] = image_info
-        except Exception as e:
-            print("Error: cannot get image info", e)
+        if not self.system_config.naive:
+            # get image info
+            get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
+            try:
+                if get_image_info_command is not None:
+                    image_info = get_image_info_command.execute()
+                    user_request["image_info"] = image_info
+            except Exception as e:
+                print("Error: cannot get image info", e)
 
         # get location & time
         try:

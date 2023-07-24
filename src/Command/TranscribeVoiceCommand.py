@@ -24,6 +24,14 @@ class TranscribeVoiceCommand(Command):
         while True:
             if self.system_config.stop_recording_command:
                 self.system_config.stop_recording_command = False
+                # User can manually cancel the recording if it's mistakenly triggered
+                if self.system_config.cancel_recording_command:
+                    self.system_config.notification = {'notif_type': 'cancel_recording_icon',
+                                                       'position': 'middle-right',
+                                                       'duration': 1.5}
+                    voice_transcriber.stop_transcription_and_start_emotion_classification()
+                    return ""
+
                 self.system_config.progress_bar_percentage = None
                 time.sleep(1)
                 break
@@ -43,7 +51,7 @@ class TranscribeVoiceCommand(Command):
                         break
             else:
                 self.silence_start_time = None
-            time.sleep(0.5)
+            # time.sleep(0.5)
 
         time.sleep(2)
         self.system_config.progress_bar_percentage = None

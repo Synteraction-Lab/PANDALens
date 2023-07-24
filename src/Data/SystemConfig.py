@@ -101,6 +101,11 @@ class SystemConfig(object):
         self.show_interest_icon = False
         self.last_request_type = None
         self.naive = False
+        self.gaze_pos = None
+        self.log_path = None
+        self.pending_task_list = []
+        self.notification_lock = threading.Lock()
+        self.cancel_recording_command = False
 
     def get_final_transcription(self):
         return self.final_transcription

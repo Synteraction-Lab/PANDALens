@@ -21,21 +21,30 @@ class NotificationWidget:
 
         if self.notif_type == "text":
             self.notification_robot_img = CTkImage(Image.open(os.path.join(self.asset_path, "robot_icon.png")),
-                                                   size=(40, 40))
-            self.notification_widget_text = CTkTextbox(self.parent, height=50, width=50,
-                                                       text_color=MAIN_GREEN_COLOR, font=('Arial', 20),
+                                                   size=(60, 60))
+            self.notification_widget_text = CTkTextbox(self.parent, height=55, width=55,
+                                                       text_color=MAIN_GREEN_COLOR, font=('Robot Bold', 20),
                                                        # bg_color='systemTransparent',
                                                        wrap="word", padx=5,
-                                                       border_color="#42AF74", border_width=2)
+                                                       border_color="#42AF74", border_width=3)
             self.notification_robot_icon = CTkLabel(self.parent, text="")
             self.notification_robot_icon.configure(image=self.notification_robot_img, compound="center")
-            self.notification_robot_icon.place(relx=0.1, rely=0.1, anchor=tk.CENTER)
+            self.notification_robot_icon.place(relx=0.5, rely=0.1, anchor=tk.CENTER)
 
             self.parent.update_idletasks()
         elif self.notif_type == "picture":
             self.listening_photo_comments_icon = CTkImage(
                 Image.open(os.path.join(self.asset_path, "image_suggestion_box.png")),
-                size=(375, 300))
+                size=(230, 311))
+            self.picture_notification_box = CTkLabel(self.parent, text="",
+                                                     image=self.listening_photo_comments_icon)
+
+            self.picture_notification_box.place(relwidth=1, relheight=1)
+
+        elif self.notif_type == "listening_picture_comments":
+            self.listening_photo_comments_icon = CTkImage(
+                Image.open(os.path.join(self.asset_path, "listening_img_comments_box.png")),
+                size=(230, 311))
             self.picture_notification_box = CTkLabel(self.parent, text="",
                                                      image=self.listening_photo_comments_icon)
 
@@ -48,8 +57,14 @@ class NotificationWidget:
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "listening_icon":
             self.listening_icon = CTkImage(Image.open(os.path.join(self.asset_path, "listening_icon.png")),
-                                           size=(250, 72))
+                                           size=(61, 61))
             self.icon = CTkLabel(self.parent, text="", image=self.listening_icon)
+            self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        elif self.notif_type == "cancel_recording_icon":
+            self.cancel_listening_icon = CTkImage(
+                Image.open(os.path.join(self.asset_path, "cancel_recording_icon.png")),
+                size=(61, 61))
+            self.icon = CTkLabel(self.parent, text="", image=self.cancel_listening_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "audio_icon":
             self.audio_icon = CTkImage(Image.open(os.path.join(self.asset_path, "audio_icon.png")),
@@ -61,6 +76,12 @@ class NotificationWidget:
                                             size=(250, 72))
             self.icon = CTkLabel(self.parent, text="", image=self.processing_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        elif self.notif_type == "picture_thumbnail":
+            self.pending_photo_icon = CTkImage(Image.open(os.path.join(self.asset_path, "pending_photo_icon.png")),
+                                               size=(200, 247))
+            self.icon = CTkLabel(self.parent, text="", image=self.pending_photo_icon)
+            self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
         elif self.notif_type == "mic_icon":
             self.mic_icon = CTkImage(Image.open(os.path.join(self.asset_path, "mic_icon.png")),
                                      size=(45, 60))
@@ -74,7 +95,7 @@ class NotificationWidget:
         if "text" in kwargs:
             self.text = kwargs["text"]
             self.notification_widget_text.insert(tk.END, self.text)
-            self.notification_widget_text.place(relx=0.5, rely=0.5, relwidth=0.7, relheight=0.7, anchor=tk.CENTER)
+            self.notification_widget_text.place(relx=0.5, rely=0.6, relwidth=0.7, relheight=0.7, anchor=tk.CENTER)
             self.notification_widget_text.lift()
             self.parent.update_idletasks()
             self.notification_widget_text.update()
@@ -86,8 +107,8 @@ class NotificationWidget:
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(img)
 
-            # Resize the image to 1/6 of its original size
-            img = img.resize((int(img.width / 6), int(img.height / 6)))
+            # Resize the image to 1/7 of its original size
+            img = img.resize((int(img.width / 7), int(img.height / 7)))
 
             img_tk = ImageTk.PhotoImage(img)
 
@@ -95,7 +116,11 @@ class NotificationWidget:
             self.picture_label = tk.Label(self.parent, bg="black")
 
             # Set the picture label to the top-right of the window
-            self.picture_label.place(relx=0.62, rely=0.6, anchor=tk.CENTER, relwidth=0.5, relheight=0.45)
+            if self.notif_type == "picture_thumbnail":
+                self.picture_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER, relwidth=0.45, relheight=0.25)
+            else:
+                self.picture_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER, relwidth=0.6, relheight=0.34)
+
             # self.picture_label.pack()
 
             # Set the image on the label widget

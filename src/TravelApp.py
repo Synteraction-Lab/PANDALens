@@ -22,6 +22,7 @@ from src.UI.device_panel import DevicePanel
 from src.UI.notification_widget import NotificationWidget
 from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
+import numpy as np
 
 INTEREST_ICON_SHOW_DURATION = 5
 
@@ -104,9 +105,9 @@ class App:
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
         # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
-        
+
         self.system_config.set_naive(naive)
-        
+
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
@@ -136,7 +137,6 @@ class App:
         func = None
         try:
             current_system_state = self.backend_system.system_status.get_current_state()
-            print(current_system_state)
             if key == keyboard.Key.right and current_system_state in ["comments_on_audio",
                                                                       "comments_on_photo",
                                                                       "comments_to_gpt"]:
@@ -166,8 +166,18 @@ class App:
         log_manipulation(self.log_path, func)
         if func == "Hide" or func == "Show":
             self.hide_show_content()
+        # <<<<<<< Updated upstream
         if func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
+        # =======
+        elif func == "Show Photo Button":
+            self.show_photo_button()
+        elif func == "Voice" or func == "Stop":
+            self.backend_system.set_user_explicit_input('voice_comment')
+            self.hide_text()
+        elif func == "Cancel Recording":
+            self.backend_system.set_user_explicit_input('cancel_recording')
+        # >>>>>>> Stashed changes
         elif func == "Photo" or func == "Retake":
             self.backend_system.set_user_explicit_input('take_photo')
         elif func == "Summary":
@@ -213,6 +223,10 @@ class App:
                 func = "Terminate Waiting for User Response"
             elif self.notification_widget is None:
                 func = "Hide"
+            elif self.last_notification["notif_type"] == "processing_icon":
+                func = "Show Photo Button"
+            elif current_system_state in ["comments_on_audio", "comments_on_photo", "comments_to_gpt"]:
+                func = "Cancel Recording"
             self.parse_button_press(func)
 
     def pack_layout(self):
@@ -315,17 +329,44 @@ class App:
             else:
                 self.remove_notification()
 
+    def are_equal(self, n1, n2):
+        # If both are None
+        if n1 is None and n2 is None:
+            return True
+        # If only one is None
+        if n1 is None or n2 is None:
+            return False
+        # Now we know they're both not None, so we can safely access their keys
+        # If the keys do not match
+        if set(n1.keys()) != set(n2.keys()):
+            return False
+        # Compare values for each key
+        for key in n1:
+            v1 = n1[key]
+            v2 = n2[key]
+            # If they're both arrays
+            if isinstance(v1, np.ndarray) and isinstance(v2, np.ndarray):
+                # If their shapes are not equal or any pair of elements are not equal
+                if v1.shape != v2.shape or not np.all(v1 == v2):
+                    return False
+            # If they're not both arrays but they're not equal
+            elif v1 != v2:
+                return False
+        # If no mismatches were found, they're equal
+        return True
+
     def listen_notification_from_backend(self):
-        notification = self.system_config.notification
-        # Update the notification if not the same as the previous one
-        if notification != self.last_notification:
+        with self.system_config.notification_lock:
+            notification = self.system_config.notification
+            # Update the notification if not the same as the previous one
+        if not self.are_equal(notification, self.last_notification):
+            print("New notification: ", notification)
             if self.last_notification is not None:
                 # Remove previous notification if it's not the same as the current one or the current one is set to None
                 if notification is None or notification["notif_type"] != self.last_notification["notif_type"]:
                     self.remove_notification()
 
             if notification is not None:
-                print("Notification Type: ", notification["notif_type"], self.notification_widget)
                 if self.last_notification is None:
                     self.hide_button()
                 if self.notification_widget is None:
@@ -344,6 +385,8 @@ class App:
         # we create a new window to show the notification widget
         if self.notification_window:
             self.notification_window.destroy()
+
+        self.system_config.progress_bar_percentage = 1
 
         self.notification_window = tk.Toplevel(self.root)
         self.notification_window.overrideredirect(True)
@@ -369,10 +412,12 @@ class App:
 
         # Pack the notification widget based on the notif_type of the notification
         self.notification_widget = NotificationWidget(self.notification_window, notification["notif_type"])
+        if "duration" in notification.keys():
+            self.root.after(int(notification["duration"] * 1000), self.remove_notification_with_delay)
 
         # Set the size and location of the notification window
-        widget_width = 400
-        widget_height = 300
+        widget_width = 350
+        widget_height = 350
 
         root_width = self.root.winfo_width()
         root_height = self.root.winfo_height()
@@ -405,6 +450,10 @@ class App:
 
     # def remove_interest_icon(self):
     #     self.interest_icon_label.destroy()
+
+    def remove_notification_with_delay(self):
+        self.system_config.notification = None
+        self.remove_notification()
 
     def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show

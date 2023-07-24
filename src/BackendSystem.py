@@ -51,7 +51,18 @@ class BackendSystem:
                     success = ActionParser.parse(action, self.system_config).execute()
                     if not success:
                         self.system_status.set_state("init")
-                        self.system_config.notification = None
+# <<<<<<< Updated upstream
+#                         self.system_config.notification = None
+# =======
+                        with self.system_config.notification_lock:
+                            if self.system_config.cancel_recording_command:
+                                self.system_config.cancel_recording_command = False
+                            else:
+                                self.system_config.notification = None
+                        transcriber = self.system_config.get_transcriber()
+                        if transcriber is not None:
+                            transcriber.stop_transcription_and_start_emotion_classification()
+# >>>>>>> Stashed changes
                         self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
                     self.system_status.set_state('manual_photo_comments_pending')
@@ -84,6 +95,19 @@ class BackendSystem:
                         if emotion_classifier.stop_event.is_set():
                             emotion_classifier.start()
                             emotion_classifier.stop_transcription_and_start_emotion_classification()
+
+
+                    # Processing pending task first
+                    if self.system_config.pending_task_list:
+                        photo = self.system_config.pending_task_list.pop(0)
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'picture',
+                                                               'content': photo,
+                                                               'position': 'middle-right'}
+
+                        self.system_status.set_state('photo_comments_pending')
+
+                    # Detect implicit input
                     if self.detect_gaze_and_zoom_in():
                         # self.system_config.show_interest_icon = True
                         self.system_status.trigger('gaze')
@@ -93,8 +117,13 @@ class BackendSystem:
                         self.system_status.set_state('manual_photo_comments_pending')
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
-                        # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                        self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+# <<<<<<< Updated upstream
+#                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+#                         self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+# =======
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
                     elif self.detect_interested_audio():
                         self.system_status.set_state('audio_comments_pending')
                         action = self.system_status.get_current_state()
@@ -103,10 +132,18 @@ class BackendSystem:
                         self.system_status.set_state('manual_photo_comments_pending')
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
-                        # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                        self.system_config.notification = {'notif_type': 'picture',
-                                                        'content': self.system_config.potential_interested_frame,
-                                                        'position': 'middle-right'}
+# <<<<<<< Updated upstream
+#                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
+#                         self.system_config.notification = {'notif_type': 'picture',
+#                                                         'content': self.system_config.potential_interested_frame,
+#                                                         'position': 'middle-right'}
+# =======
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'picture',
+                                                               'content': self.system_config.potential_interested_frame,
+                                                               'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
+# >>>>>>> Stashed changes
                 # else:
 
 
@@ -125,7 +162,18 @@ class BackendSystem:
                         success = ActionParser.parse(action, self.system_config).execute()
                         if not success:
                             self.system_status.set_state("init")
-                            self.system_config.notification = None
+# <<<<<<< Updated upstream
+#                             self.system_config.notification = None
+# =======
+                            with self.system_config.notification_lock:
+                                if self.system_config.cancel_recording_command:
+                                    self.system_config.cancel_recording_command = False
+                                else:
+                                    self.system_config.notification = None
+                            transcriber = self.system_config.get_transcriber()
+                            if transcriber is not None:
+                                transcriber.stop_transcription_and_start_emotion_classification()
+# >>>>>>> Stashed changes
                         self.silence_start_time = None
 
                     elif self.detect_user_ignore():
@@ -196,13 +244,16 @@ class BackendSystem:
     def detect_user_move_to_another_place(self):
         current_frame = self.system_config.vision_detector.original_frame
 
-        difference = cv2.subtract(current_frame, self.previous_vision_frame)
-        result = not np.any(difference)
-        if result:
-            return False
-        else:
-            cv2.imwrite("diff.jpg", difference)
-
+# <<<<<<< Updated upstream
+#         difference = cv2.subtract(current_frame, self.previous_vision_frame)
+#         result = not np.any(difference)
+#         if result:
+#             return False
+#         else:
+#             cv2.imwrite("diff.jpg", difference)
+#
+# =======
+# >>>>>>> Stashed changes
         if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
             previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
@@ -305,9 +356,12 @@ class BackendSystem:
 
     def set_user_explicit_input(self, user_input):
         self.user_explicit_input = user_input
-
         if self.user_explicit_input == 'stop_recording':
             self.system_config.stop_recording_command = True
+            self.user_explicit_input = None
+        elif self.user_explicit_input == 'cancel_recording':
+            self.system_config.stop_recording_command = True
+            self.system_config.cancel_recording_command = True
             self.user_explicit_input = None
 
     def simulate_func(self, func):
