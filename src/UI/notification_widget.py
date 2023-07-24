@@ -49,6 +49,14 @@ class NotificationWidget:
                                                      image=self.listening_photo_comments_icon)
 
             self.picture_notification_box.place(relwidth=1, relheight=1)
+        elif self.notif_type == "listening_picture_comments":
+            self.listening_photo_comments_icon = CTkImage(
+                Image.open(os.path.join(self.asset_path, "listening_img_comments_box.png")),
+                size=(375, 300))
+            self.picture_notification_box = CTkLabel(self.parent, text="",
+                                                     image=self.listening_photo_comments_icon)
+
+            self.picture_notification_box.place(relwidth=1, relheight=1)
 
         elif self.notif_type == "like_icon":
             self.like_icon = CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
@@ -73,7 +81,7 @@ class NotificationWidget:
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "processing_icon":
             self.processing_icon = CTkImage(Image.open(os.path.join(self.asset_path, "processing_icon.png")),
-                                            size=(250, 72))
+                                            size=(61, 71))
             self.icon = CTkLabel(self.parent, text="", image=self.processing_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "picture_thumbnail":
@@ -89,7 +97,13 @@ class NotificationWidget:
             self.icon.configure(bg_color="systemTransparent")
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
             self.icon.lift()
-            print("mic icon created")
+        elif self.notif_type == "fpv_photo_icon":
+            self.fpv_photo_icon = CTkImage(Image.open(os.path.join(self.asset_path, "fpv_photo_icon.png")),
+                                           size=(60, 57))
+            self.icon = CTkLabel(self.parent, text="", image=self.fpv_photo_icon)
+            self.icon.configure(bg_color="systemTransparent")
+            self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+            self.icon.lift()
 
     def configure(self, **kwargs):
         if "text" in kwargs:
@@ -119,7 +133,7 @@ class NotificationWidget:
             if self.notif_type == "picture_thumbnail":
                 self.picture_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER, relwidth=0.45, relheight=0.25)
             else:
-                self.picture_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER, relwidth=0.6, relheight=0.34)
+                self.picture_label.place(relx=0.5, rely=0.65, anchor=tk.CENTER, relwidth=0.6, relheight=0.34)
 
             # self.picture_label.pack()
 

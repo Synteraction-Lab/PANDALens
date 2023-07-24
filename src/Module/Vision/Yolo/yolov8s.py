@@ -1,8 +1,10 @@
 import json
+import multiprocessing
 import ssl
 import time
 import urllib
 from collections import deque
+from multiprocessing.managers import BaseManager
 
 import cv2
 import numpy as np
@@ -12,11 +14,15 @@ from src.Module.Gaze.frame_stream import PupilCamera
 
 from scipy.spatial import distance
 
+from src.Module.Gaze.gaze_data import GazeData
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class ObjectDetector:
-    def __init__(self, simulate=False, debug_info=False, cv_imshow=True):
+    def __init__(self, simulate=False, debug_info=False, cv_imshow=True, record=False):
+        self.recording = record
+        self.last_time = None
         self.potential_interested_object = None
         self.original_frame = None
         self.norm_gaze_position = None
@@ -33,6 +39,7 @@ class ObjectDetector:
         self.fixation_detected = False
 
         self.prev_object = None
+        self.gaze_data = None
 
         # load model
         self.model = YOLO('ultralyticsplus/yolov8s')
@@ -51,7 +58,7 @@ class ObjectDetector:
         # self.map_imagenet_id()
 
         # open webcam
-        self.cap = cv2.VideoCapture(0)
+        self.cap = None
 
         # Define a threshold for zoom detection
         self.zoom_threshold = 0.1  # adjust as needed
@@ -68,7 +75,6 @@ class ObjectDetector:
         self.interested_categories = ['cat', 'dog']
 
     def detect_fixation(self, frame):
-        return
         if frame is None or self.gaze_position == (0, 0):
             return None
 
@@ -116,7 +122,7 @@ class ObjectDetector:
                 cv2.circle(frame, (int(outlier[0]), int(outlier[1])), radius=3, color=(255, 0, 0), thickness=-1)
 
             # Display the area value of the bounding rectangle
-            cv2.putText(frame, "Area: {:.2f}".format(rect_area/threshold_area), (int(min_x), int(min_y) - 10),
+            cv2.putText(frame, "Area: {:.2f}".format(rect_area / threshold_area), (int(min_x), int(min_y) - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         if self.debug_info:
@@ -183,24 +189,30 @@ class ObjectDetector:
 
         if closest_distance <= self.distance_threshold and closest_object is not None:
             self.closest_object = closest_object
+            self.gaze_data.put_closest_object(closest_object)
 
             # Compare sizes only if the current and previous objects are the same
             if self.prev_object == closest_object and closest_size > self.prev_size * (1 + self.zoom_threshold):
                 self.zoom_in = True
+                self.gaze_data.put_zoom_in(True)
             else:
                 self.zoom_in = False
+                self.gaze_data.put_zoom_in(False)
 
             # Update the previous object and size
             self.prev_object = closest_object
             self.prev_size = closest_size
         else:
             self.closest_object = None
+            self.gaze_data.put_closest_object(None)
             self.zoom_in = False
+            self.gaze_data.put_zoom_in(False)
 
-        self.detect_fixation(frame)
+        # self.detect_fixation(frame)
 
         if potential_interested_object != closest_object:
             self.potential_interested_object = potential_interested_object
+            self.gaze_data.put_potential_interested_object(potential_interested_object)
 
         render = render_result(model=self.model, image=frame, result=results[0])
         frame = np.array(render.convert('RGB'))
@@ -220,6 +232,7 @@ class ObjectDetector:
                 cv2.putText(frame, "Fixation Detected", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
 
             self.person_count = person_count
+            self.gaze_data.put_person_count(person_count)
             cv2.putText(frame, f"Person Count: {self.person_count}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.0,
                         (0, 255, 0), 2)
 
@@ -228,7 +241,7 @@ class ObjectDetector:
         return frame
 
     def detect_zoom_in_with_pupil_core(self):
-        camera = PupilCamera(frame_format="bgr")
+        camera = PupilCamera(frame_format="bgr", recording=self.recording)
         try:
             while True:
                 recent_world = None
@@ -258,18 +271,26 @@ class ObjectDetector:
                     frame = recent_world
                     frame_height, frame_width = frame.shape[:2]
                     self.original_frame = frame
+                    self.gaze_data.put_original_frame(frame)
                     self.frame_height = frame_height
                     self.frame_width = frame_width
                     if fixation_x is not None and fixation_y is not None:
                         fixation_y = 1 - fixation_y
                         self.fixation_position = (int(fixation_x * frame_width), int(fixation_y * frame_height))
                         self.fixation_detected = True
+                        self.gaze_data.put_fixation_detected(True)
                     else:
                         self.fixation_detected = False
+                        self.gaze_data.put_fixation_detected(False)
                     if gaze_x is not None and gaze_y is not None:
                         gaze_x = float(np.array(gaze_x_list).mean())
                         gaze_y = 1 - float(np.array(gaze_y_list).mean())
+                        # calculate time diff between current and previous gaze
+                        # if self.last_time is not None:
+                        #     print("time diff:", time.time() - self.last_time)
+                        self.last_time = time.time()
                         self.norm_gaze_position = (gaze_x, gaze_y)
+                        self.gaze_data.put_norm_gaze_position(self.norm_gaze_position)
                         self.gaze_position = (int(gaze_x * frame_width), int(gaze_y * frame_height))
 
                     self.process_frame(frame)
@@ -290,6 +311,7 @@ class ObjectDetector:
 
             self.frame_height, self.frame_width = frame.shape[:2]
             self.original_frame = frame
+            self.gaze_data.put_original_frame(frame)
             self.process_frame(frame)
 
             # press 'q' to quit
@@ -299,7 +321,10 @@ class ObjectDetector:
         self.cap.release()
         cv2.destroyAllWindows()
 
-    def run(self):
+    def run(self, gaze_data=None):
+        # open webcam
+        self.gaze_data = gaze_data
+        self.cap = cv2.VideoCapture(0)
         if self.simulate:
             self.detect_zoom_in()
         else:
@@ -308,5 +333,12 @@ class ObjectDetector:
 
 if __name__ == '__main__':
     # Set simulate to False if you use Pupil Core. Set to True to use mouse cursor.
-    detector = ObjectDetector(simulate=False, debug_info=True, cv_imshow=True)
-    detector.run()
+    BaseManager.register('GazeData', GazeData)
+    manager = BaseManager()
+    manager.start()
+    gaze_data = manager.GazeData()
+    object_detector = ObjectDetector(simulate=False, debug_info=True, cv_imshow=True,)
+    thread_vision = multiprocessing.Process(target=object_detector.run, args=(gaze_data,))
+    thread_vision.start()
+    while True:
+        norm_pose = gaze_data.get_norm_gaze_position()

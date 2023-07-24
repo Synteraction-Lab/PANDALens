@@ -24,6 +24,7 @@ A software that enables you to write ubiquitously with the assistance of GPT.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg)
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
 - An OpenAI account to access the GPT API.
+- [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
 
 ## Installation and Setup
@@ -110,13 +111,16 @@ You can also modify the prompt in this folder to improve the experience.
 ## Manipulation For Travel Blog
 
 ### Step 1
-- Run ``python main.py``
+- Run ``sudo -S "/Applications/Pupil Capture.app/Contents/MacOS/pupil_capture"`` in your terminal to start the Pupil Lab software.
 
 ### Step 2
+- Run ``python main.py``
+
+### Step 3
 - Set up your device & task, including entering the user_id, selecting task type and output modality, and selecting your source for voice recording.
 - Click "Save" to save the configuration.
 
-### Step 3
+### Step 4
 - You can use our ring mouse to manipulate the menu. You can use your mouse and keyboard if you use it for desktop settings.
   - To start a new recording, press the ``arrow_right`` key on your keyboard or click the right button in the GUI. 
   - To get a summarization or generate full writing, press the ``arrow_up`` key on your keyboard or click the top button in the GUI. 
@@ -124,13 +128,13 @@ You can also modify the prompt in this folder to improve the experience.
   - To hide/show the GUI, please click the mouse's left button.
   - You can scroll your mouse wheel up and down the generated writing.
 
-### Step 4
+### Step 5
 If you want to generate a travel blog, please press the ``right_command`` key on your keyboard then enter the title in GUI.
 Then you can find the exported file in the ``data`` folder. 
 
 If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.json`` folder.
 
-### Step 5 (OPTIONAL: DEBUGGING MODE)
+### Step 6 (OPTIONAL: DEBUGGING MODE)
 
 If you want to rerun the program and load the previous chat history (with the same PID), you can press the `Esc` key on the keyboard. 
 

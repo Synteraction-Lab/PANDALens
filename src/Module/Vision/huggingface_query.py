@@ -10,7 +10,7 @@ API_TOKEN = os.environ["HUGGINGFACE_API_KEY"]
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 IMAGE_CLASSIFICATION_API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 OBJECT_DETECTION_API_URL = "https://api-inference.huggingface.co/models/facebook/detr-resnet-50"
-IMAGE_CAPTION_API_URL = "https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning"
+IMAGE_CAPTION_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large"
 
 
 def compress_image(image_path, max_size=720):
@@ -42,8 +42,8 @@ def get_image_caption(image_path):
         response = query(image_path, model_url=IMAGE_CAPTION_API_URL)
         return response[0]['generated_text']
     except Exception as e:
-        image_to_text = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning")
-        return image_to_text(image_path)[0]['generated_text']
+        # image_to_text = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning")
+        return None
 
 
 if __name__ == '__main__':

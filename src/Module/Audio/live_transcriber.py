@@ -194,7 +194,7 @@ class LiveTranscriber:
         with self.lock:
             self.full_text = ""
             self.transcription = ['']
-        self.model = "small.en"
+        self.model = "base.en"
         self.mode = "voice_transcription"
 
     def stop(self):

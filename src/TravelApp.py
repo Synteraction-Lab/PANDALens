@@ -5,12 +5,11 @@ import time
 import tkinter as tk
 
 import customtkinter
+import numpy as np
 import pandas
 from PIL import Image
-from customtkinter import CTkFrame
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
-from pynput.mouse import Listener as MouseListener
 
 from src.BackendSystem import BackendSystem
 from src.Data.SystemConfig import SystemConfig
@@ -24,16 +23,14 @@ from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
 import numpy as np
 
-INTEREST_ICON_SHOW_DURATION = 5
-
-IMAGE_FRAME_SHOW_DURATION = 10
+SHOW_GAZE_MOVEMENT = False
 
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.temporal_audio_response = None
         self.audio_process = None
         self.notification_window = None
-        self.progress_bar = None
         self.notification_widget = None
         self.frame_placed_time = None
         self.interest_icon_placed_time = None
@@ -64,13 +61,12 @@ class App:
         self.root.title("UbiWriter")
         # self.root.wm_attributes("-topmost", True)
         self.init_screen_size = "800x600"
+        self.is_muted = False
 
         show_devices()
 
         # Open Setup panel
         DevicePanel(self.root, parent_object_save_command=self.update_config)
-
-        self.system_config.set_vision_analysis()
 
         # Pack and run the main UI
         self.pack_layout()
@@ -84,7 +80,8 @@ class App:
             pid_num = os.path.join("p1", "01")
             task_name = "travel_blog"
             audio_device_idx = 0
-            naive = False
+            naive = "UbiWriter"
+            gaze_record = False
         else:
             try:
                 df = pandas.read_csv(config_path)
@@ -92,25 +89,28 @@ class App:
                 task_name = df[df['item'] == 'task']['details'].item()
                 audio_device_idx = df[df['item'] == 'audio_device']['details'].item()
                 naive = df[df['item'] == 'naive']['details'].item()
+                gaze_record = df[df['item'] == 'gaze_recording']['details'].item() == "True"
             except Exception as e:
+                print("Config file has an error!", e)
                 pid_num = os.path.join("p1", "01")
                 task_name = "travel_blog"
                 audio_device_idx = 0
-                naive = False
-                print("Config file has an error! travelapp")
+                naive = "UbiWriter"
+                gaze_record = False
 
         # Set up path
         folder_path = os.path.join(os.path.join("data", "recordings"), pid_num)
         self.system_config.set_folder_path(folder_path)
         self.system_config.set_audio_file_name(os.path.join(folder_path, audio_file))
         self.system_config.set_transcriber(LiveTranscriber(device_index=audio_device_idx))
-        # self.system_config.set_emotion_classifier(EmotionClassifier(device_index=audio_device_idx))
 
         self.system_config.set_naive(naive)
 
+        self.system_config.set_vision_analysis(record=gaze_record)
         self.system_config.set_bg_audio_analysis(device=audio_device_idx)
         self.system_config.set_image_folder(os.path.join(folder_path, image_folder))
         self.log_path = os.path.join(folder_path, "log.csv")
+        self.system_config.set_log_path(self.log_path)
 
         self.chat_history_file_name = os.path.join(folder_path, chat_file)
         slim_history_file_name = os.path.join(folder_path, slim_history_file)
@@ -142,7 +142,7 @@ class App:
                                                                       "comments_to_gpt"]:
                 func = "Stop Recording"
             elif key == keyboard.Key.up and self.mute_button.winfo_ismapped():
-                func = "Mute"
+                func = "Mute/Unmute"
             elif key == keyboard.Key.down and self.text_visibility_button.winfo_ismapped():
                 func = "Hide/Show Text"
             elif key == keyboard.Key.up and self.shown_button:
@@ -177,9 +177,14 @@ class App:
             self.hide_text()
         elif func == "Cancel Recording":
             self.backend_system.set_user_explicit_input('cancel_recording')
-        # >>>>>>> Stashed changes
         elif func == "Photo" or func == "Retake":
+            if self.notification_widget is not None:
+                if self.notification_widget.notif_type == "processing_icon":
+                    self.backend_system.add_photo_to_pending_task_list()
+                    self.hide_button()
+                return
             self.backend_system.set_user_explicit_input('take_photo')
+            self.hide_text()
         elif func == "Summary":
             self.backend_system.set_user_explicit_input('full_writing')
         # elif func == "Discard":
@@ -188,15 +193,21 @@ class App:
             self.backend_system.set_user_explicit_input('stop_recording')
         elif func == "Select":
             self.backend_system.set_user_explicit_input('select')
+            self.hide_text()
         elif func == "Terminate Waiting for User Response":
             self.backend_system.set_user_explicit_input('terminate_waiting_for_user_response')
             self.hide_text()
             self.hide_button()
         elif func == "Store":
             self.create_output_file()
-        elif func == "Mute":
-            self.hide_mute_button()
-            self.mute_audio()
+        elif func == "Mute/Unmute":
+            if self.is_muted:
+                self.system_config.audio_feedback_finished_playing = False
+                self.play_audio_response(self.temporal_audio_response)
+                self.temporal_audio_response = None
+            else:
+                self.mute_audio()
+            self.switch_mute_button()
         elif func == "Hide/Show Text":
             self.switch_text_visibility_button()
 
@@ -215,12 +226,16 @@ class App:
             return
         if self.ring_mouse_mode:
             # if pressed:
+            if self.last_notification is not None:
+                print(self.last_notification["notif_type"])
             func = None
             current_system_state = self.backend_system.system_status.get_current_state()
             is_audio_finished = self.system_config.detect_audio_feedback_finished()
             if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                        'show_gpt_response', 'audio_comments_pending'] and is_audio_finished:
+                                        'show_gpt_response', 'audio_comments_pending']:
                 func = "Terminate Waiting for User Response"
+                if not is_audio_finished:
+                    self.mute_audio()
             elif self.notification_widget is None:
                 func = "Hide"
             elif self.last_notification["notif_type"] == "processing_icon":
@@ -237,7 +252,7 @@ class App:
         self.root.geometry(f"{screen_width}x{screen_height}+0+0")
 
         self.root.configure(bg='black')
-        self.is_hidden_text = False
+        self.is_hidden_text = True
         self.manipulation_frame = tk.Frame(self.root, bg='black')
         self.manipulation_frame.place(relx=0.5, rely=0.5, anchor='center')
         self.manipulation_frame.place_configure(relwidth=1.0, relheight=1.0)
@@ -287,6 +302,11 @@ class App:
 
         self.shown_button = False
 
+        if SHOW_GAZE_MOVEMENT:
+            self.canvas = tk.Canvas(self.root, width=10, height=10, bg='black', bd=0, highlightthickness=0)
+            self.circle = self.canvas.create_oval(0, 0, 10, 10, fill='yellow')
+            self.canvas.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.attributes("-fullscreen", True)
         self.update_ui_based_on_timer()
@@ -294,7 +314,6 @@ class App:
     def on_close(self):
         self.root.destroy()
         self.keyboard_listener.stop()
-        # self.mouse_listener.stop()
 
     def determinate_voice_feedback_process(self):
         voice_feedback_process = self.system_config.voice_feedback_process
@@ -305,19 +324,19 @@ class App:
         # get UI update info from backend
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
-        # self.listen_show_interest_icon_from_backend()
         self.listen_progress_bar_from_backend()
-
-        # remove UI elements
-        now = time.time()
-
-        # if self.interest_icon_placed_time is not None:
-        #     if now - self.interest_icon_placed_time > INTEREST_ICON_SHOW_DURATION:
-        #         self.remove_interest_icon()
-        #         self.interest_icon_placed_time = None
-
-        # run this function again after 0.3 seconds
+        if SHOW_GAZE_MOVEMENT:
+            self.listen_gaze_pos_from_backend()
         self.root.after(300, self.update_ui_based_on_timer)
+
+    def listen_gaze_pos_from_backend(self):
+        gaze_pos = self.system_config.gaze_pos
+        if gaze_pos is None:
+            return
+        if gaze_pos is not None:
+            # Update canvas position
+            if 0 < gaze_pos[0] < 1 and 0 < gaze_pos[1] < 1:
+                self.canvas.place(relx=gaze_pos[0], rely=gaze_pos[1], anchor=tk.CENTER)
 
     def listen_progress_bar_from_backend(self):
         progress_bar_percentage = self.system_config.progress_bar_percentage
@@ -363,8 +382,18 @@ class App:
             print("New notification: ", notification)
             if self.last_notification is not None:
                 # Remove previous notification if it's not the same as the current one or the current one is set to None
-                if notification is None or notification["notif_type"] != self.last_notification["notif_type"]:
+                if notification is None:
                     self.remove_notification()
+                elif notification["notif_type"] != self.last_notification["notif_type"]:
+                    self.remove_notification()
+                    if notification["notif_type"] == "listening_icon" and \
+                            self.last_notification["notif_type"] == "picture":
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {
+                                "notif_type": "listening_picture_comments",
+                                "content": self.last_notification["content"],
+                                "position": self.last_notification["position"]
+                            }
 
             if notification is not None:
                 if self.last_notification is None:
@@ -375,7 +404,10 @@ class App:
                 if notification["notif_type"] == "text":
                     # print("Notification: ", notification["content"])
                     self.notification_widget.configure(text=notification["content"])
-                elif notification["notif_type"] == "picture":
+                elif (notification["notif_type"] == "picture"
+                      or notification["notif_type"] == "listening_picture_comments"
+                      or notification["notif_type"] == "picture_thumbnail") \
+                        and notification["content"] is not None:
                     self.notification_widget.configure(image=notification["content"])
 
             self.last_notification = notification
@@ -401,7 +433,7 @@ class App:
         # Set location for the notification window
         if notification["position"] == "top-center":
             relx, rely = 0.5, 0.1
-        elif notification["position"] == "top_right":
+        elif notification["position"] == "top-right":
             relx, rely = 0.8, 0.1
         elif notification["position"] == "middle-right":
             relx, rely = 0.8, 0.5
@@ -436,20 +468,8 @@ class App:
             self.notification_window.destroy()
             self.notification_window = None
 
-    # def listen_show_interest_icon_from_backend(self):
-    #     if self.system_config.show_interest_icon:
-    #         self.show_interest_icon()
-    #         self.system_config.show_interest_icon = False
-
-    # def show_interest_icon(self):
-    #     self.interest_icon = customtkinter.CTkImage(Image.open(os.path.join(self.asset_path, "light_icon.png")),
-    #                                                 size=(20, 20))
-    #     self.interest_icon_label = customtkinter.CTkLabel(self.root, text="", image=self.interest_icon)
-    #     self.interest_icon_label.place(relx=0.85, rely=0.05, anchor='center')
-    #     self.interest_icon_placed_time = time.time()
-
-    # def remove_interest_icon(self):
-    #     self.interest_icon_label.destroy()
+        self.hide_mute_button()
+        self.hide_text_visibility_button()
 
     def remove_notification_with_delay(self):
         self.system_config.notification = None
@@ -461,9 +481,7 @@ class App:
         if text_feedback_to_show is not None and text_feedback_to_show != self.last_text_feedback_to_show:
             self.last_text_feedback_to_show = text_feedback_to_show
             self.render_text_response(text_feedback_to_show)
-            # self.system_config.text_feedback_to_show = None
         if audio_feedback_to_show is not None:
-            # print("audio text to show: ", self.system_config.text_feedback_to_show)
             self.system_config.audio_feedback_finished_playing = False
             self.render_audio_response(audio_feedback_to_show)
             self.system_config.audio_feedback_to_show = None
@@ -477,18 +495,20 @@ class App:
         self.manipulation_frame.update_idletasks()
         self.manipulation_frame.update()
         self.root.update_idletasks()
-        # self.root.update()
 
     def hide_button(self):
         for direction, button in self.buttons.items():
             button.place_forget()
             self.root.update_idletasks()
         self.shown_button = False
-        # self.root.update()
 
     def show_button(self):
         for direction, button in self.buttons.items():
             button.place(**self.buttons_places[direction])  # Place the button
+        self.shown_button = True
+
+    def show_photo_button(self):
+        self.buttons["down"].place(**self.buttons_places["down"])
         self.shown_button = True
 
     def hide_show_content(self):
@@ -516,7 +536,6 @@ class App:
 
     def show_text(self):
         if self.stored_text_widget_content is not None:
-            # print(self.stored_text_widget_content)
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.is_hidden_text = False
@@ -531,21 +550,36 @@ class App:
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
             self.text_widget.place_configure(relheight=0.55, relwidth=0.65)
             self.stored_text_widget_content = text_response
+            self.is_hidden_text = False
             self.show_text_visibility_button()
             self.root.update_idletasks()
             self.text_widget.update()
+            self.root.after(6000, self.auto_scroll_text)
+
+    def auto_scroll_text(self):
+        if self.text_widget is not None:
+            if self.text_widget.winfo_ismapped():
+                self.text_widget.yview_scroll(1, "units")
+                self.root.after(3500, self.auto_scroll_text)
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
-        self.play_audio_response(audio_response)
+        if self.is_muted:
+            self.temporal_audio_response = audio_response
+            self.system_config.audio_feedback_finished_playing = True
+        else:
+            self.play_audio_response(audio_response)
 
     def play_audio_response(self, response):
+        if response is None:
+            return
         self.audio_process = subprocess.Popen(['say', '-v', 'Daniel', '-r', '180', response])
         self.check_subprocess()
 
     def check_subprocess(self):
         if self.audio_process.poll() is None:  # Subprocess is still running
-            self.root.after(400, self.check_subprocess)
+            self.root.after(3500, self.check_subprocess)
+            self.root.update_idletasks()
         else:
             # Perform actions when subprocess finishes
             self.system_config.audio_feedback_to_show = None
@@ -563,8 +597,21 @@ class App:
 
     def show_mute_button(self):
         if self.mute_button is not None:
+            if self.is_muted:
+                self.mute_button.configure(text="Unmute")
+            else:
+                self.mute_button.configure(text="Mute")
             self.mute_button.place(relx=0.5, rely=0.1, anchor='center')
             self.root.update_idletasks()
+
+    def switch_mute_button(self):
+        if self.mute_button is not None:
+            if self.is_muted:
+                self.mute_button.configure(text="Mute")
+                self.is_muted = False
+            else:
+                self.mute_button.configure(text="Unmute")
+                self.is_muted = True
 
     def hide_mute_button(self):
         if self.mute_button is not None:

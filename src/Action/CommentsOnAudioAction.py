@@ -18,7 +18,8 @@ class CommentsOnAudioAction(Action):
                 return False
             user_request["user_voice_transcription"] = voice_transcription
 
-        user_request["interested audio"] = self.system_config.interesting_audio
+        if not self.system_config.naive:
+            user_request["interested audio"] = self.system_config.interesting_audio
 
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)

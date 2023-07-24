@@ -10,6 +10,7 @@ import numpy as np
 from src.Command.Command import Command
 from src.Data.SystemConfig import SystemConfig
 from src.Module.Vision.utilities import take_picture
+from src.Utilities.image_processor import store_img
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -46,14 +47,17 @@ class AutoPhotoCommand(Command):
         for i in range(AUTO_PHOTO_NUM):
             photo_file_path = os.path.join(image_folder, f'{now_time}_{i}.png')
 
-            if self.system_config.vision_detector.original_frame is not None:
-                frame = self.system_config.vision_detector.original_frame.copy()
+            original_frame = self.system_config.vision_detector.get_original_frame()
+
+            if original_frame is not None:
+                frame = original_frame.copy()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture(photo_file_path)
 
-            os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
-            cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            # os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
+            # cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            store_img(photo_file_path, frame)
         if AUTO_PHOTO_NUM > 1:
             latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
             # remove all the photos other than the best one
@@ -66,7 +70,7 @@ class AutoPhotoCommand(Command):
             frame = PIL.Image.open(os.path.join(image_folder, latest_photo_filename))
 
         self.system_config.set_latest_photo_file_path(os.path.join(image_folder, latest_photo_filename))
-        self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+        # self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
         return frame
 
 

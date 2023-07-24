@@ -31,24 +31,25 @@ class CommentsOnPhotoAction(Action):
             except Exception as e:
                 print("Error: cannot get image info", e)
 
-        # get location & time
-        try:
-            user_request["location"] = get_current_location()
-        except Exception as e:
-            print("Error: cannot get location", e)
 
-        user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
+            # get location & time
+            try:
+                user_request["location"] = get_current_location()
+            except Exception as e:
+                print("Error: cannot get location", e)
 
-        # get background audio
-        audio = self.system_config.get_bg_audio_analysis_result()
-        if audio is not None:
-            user_request["background audio"] = audio
+            user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
 
-        # get user behavior
-        if self.system_config.user_behavior_when_recording is not None:
-            user_behavior = self.system_config.user_behavior_when_recording
-            self.system_config.user_behavior_when_recording = None
-            user_request["user_behavior"] = user_behavior
+            # get background audio
+            audio = self.system_config.get_bg_audio_analysis_result()
+            if audio is not None:
+                user_request["background audio"] = audio
+
+            # get user behavior
+            if self.system_config.user_behavior_when_recording is not None:
+                user_behavior = self.system_config.user_behavior_when_recording
+                self.system_config.user_behavior_when_recording = None
+                user_request["user_behavior"] = user_behavior
 
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)
