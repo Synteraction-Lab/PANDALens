@@ -8,7 +8,7 @@ from pyplr.pupil import PupilCore
 
 
 class PupilCamera:
-    def __init__(self, frame_format="bgr"):
+    def __init__(self, frame_format="bgr", recording=False):
         self.context = zmq.Context()
         self.addr = "127.0.0.1"  # remote ip or localhost
         self.req_port = "50020"  # same as in the pupil remote gui
@@ -41,12 +41,13 @@ class PupilCamera:
 
         # get current time in format: MM-DD-HH-MM-SS
         self.current_time = datetime.now().strftime("%m-%d-%H-%M-%S")
-        self.pupil_core.command("R {}".format(self.current_time))
+        if recording:
+            print("Start recording")
+            self.pupil_core.command("R {}".format(self.current_time))
         annotation = self.pupil_core.new_annotation(
             label=f'start time: {self.current_time}',
             custom_fields={'whatever': 'info', 'you': 'want'})
         self.pupil_core.send_annotation(annotation)
-
 
         # Set the frame format via the Network API plugin
         self.notify({"subject": "frame_publishing.set_format", "format": self.FRAME_FORMAT})

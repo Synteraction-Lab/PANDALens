@@ -1,3 +1,4 @@
+import json
 import os
 import threading
 import time
@@ -128,15 +129,29 @@ class GPT:
         append_json_data(path, data)
 
     def resume_stored_history(self):
-        file_name = self.slim_history_file_name if os.path.isfile(
-            self.slim_history_file_name) else self.chat_history_file_name
+        file_name = self.chat_history_file_name
         with open(file_name) as f:
-            chat_history = f.read()
             print("Resuming the conversation:", file_name)
-        self.process_prompt_and_get_gpt_response(command=chat_history,
-                                                 prefix="Resume the conversation history\
-                                                             (Don't show the timestamp in the following answers)",
-                                                 is_prompt_stored=False)
+            chat_data = json.load(f)
+
+        # Create a list to store our messages
+        messages = []
+
+        # Loop through the recordings in the chat data
+        for recording in chat_data["recordings"]:
+            # Create a dictionary for each message and add it to our messages list
+            message = {
+                "role": recording["role"],
+                "content": recording["content"]
+            }
+            self.message_list.append(message)
+
+        print(self.message_list)
+
+        # self.process_prompt_and_get_gpt_response(command=chat_history,
+        #                                          prefix="Resume the conversation history\
+        #                                                      (Don't show the timestamp in the following answers)",
+        #                                          is_prompt_stored=False)
 
     def append_chat_history(self, response):
         self.chat_history += response
@@ -166,7 +181,7 @@ class GPT:
                 t.start()
 
         except Exception as e:
-            print(e)
+            print("GPT:", e)
             response = self.handle_exception_in_response_generation(new_message)
 
         self.store(role=ROLE_AI, text=response)
@@ -176,40 +191,43 @@ class GPT:
 
     def handle_exception_in_response_generation(self, new_message):
         gpt_response = "No Response from GPT."
-        with self.history_lock:
-            if num_tokens_from_messages(self.message_list) > CONCISE_THRESHOLD:
-                self.chat_history = self.task_description + self.slim_history
+        try:
+            with self.history_lock:
+                if num_tokens_from_messages(self.message_list) > CONCISE_THRESHOLD:
+                    self.chat_history = self.task_description + self.slim_history
 
-                # Combine important moments with the last few messages
-                last_messages = []
-                found_last_messages = False
+                    # Combine important moments with the last few messages
+                    last_messages = []
+                    found_last_messages = False
 
-                start_range = max(-5, 1 - len(self.message_list))
-                for i in range(-start_range, 0):
-                    sent_message_lists = [
+                    start_range = max(-5, 1 - len(self.message_list))
+                    for i in range(-start_range, 0):
+                        sent_message_lists = [
+                            {"role": ROLE_SYSTEM, "content": self.task_description},
+                            {"role": ROLE_HUMAN, "content": f"Here is concise chat context: {self.slim_history}"},
+                            *self.message_list[i:-1],
+                            new_message,
+                        ]
+
+                        if num_tokens_from_messages(sent_message_lists) <= CONCISE_THRESHOLD:
+                            last_messages = self.message_list[i:-1]
+                            found_last_messages = True
+                            break
+
+                    concise_context_messages = [
                         {"role": ROLE_SYSTEM, "content": self.task_description},
                         {"role": ROLE_HUMAN, "content": f"Here is concise chat context: {self.slim_history}"},
-                        *self.message_list[i:-1],
-                        new_message,
                     ]
 
-                    if num_tokens_from_messages(sent_message_lists) <= CONCISE_THRESHOLD:
-                        last_messages = self.message_list[i:-1]
-                        found_last_messages = True
-                        break
+                    previous_iteration = self.message_list[max(-3, 1 - len(self.message_list)):-1]
+                    if found_last_messages:
+                        self.message_list = concise_context_messages + last_messages + [new_message]
+                    else:
+                        self.message_list = concise_context_messages + previous_iteration + [new_message]
 
-                concise_context_messages = [
-                    {"role": ROLE_SYSTEM, "content": self.task_description},
-                    {"role": ROLE_HUMAN, "content": f"Here is concise chat context: {self.slim_history}"},
-                ]
-
-                previous_iteration = self.message_list[max(-3, 1 - len(self.message_list)):-1]
-                if found_last_messages:
-                    self.message_list = concise_context_messages + last_messages + [new_message]
-                else:
-                    self.message_list = concise_context_messages + previous_iteration + [new_message]
-
-                gpt_response = generate_gpt_response(self.message_list)
+                    gpt_response = generate_gpt_response(self.message_list)
+        except Exception as e:
+            print("GPT Exception Handler:", e)
 
         return gpt_response
 
@@ -235,7 +253,7 @@ class GPT:
             new_message = [{"role": ROLE_HUMAN, "content": str(sent_prompt.rstrip())}]
             time.sleep(1)
             # print("\nSlim Sent Prompt: \n", sent_prompt, "\n******\n")
-            response = generate_gpt_response(new_message, max_tokens=1000, api_key_idx=1)
+            response = generate_gpt_response(new_message, max_tokens=3000, api_key_idx=1)
 
             with self.history_lock:
                 self.slim_history = response.lstrip()

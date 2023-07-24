@@ -4,6 +4,7 @@ import time
 import cv2
 import numpy as np
 
+from src.Command.PhotoCommand import PhotoCommand
 from src.Data.SystemConfig import SystemConfig
 from src.Data.SystemStatus import SystemStatus
 from src.Module.Audio.live_transcriber import LiveTranscriber
@@ -23,6 +24,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 class BackendSystem:
     def __init__(self, system_config):
+        self.last_gaze_detection_time = 0
         self.previous_sentiment_scores = None
         self.user_explicit_input = None
         self.silence_start_time = None
@@ -32,13 +34,14 @@ class BackendSystem:
         self.previous_norm_pos = None
         self.system_config = system_config
         self.system_status = SystemStatus()
-        self.log_path = os.path.join(self.system_config.folder_path + "log.csv")
+        self.log_path = self.system_config.log_path
         self.current_state = None
 
     def run(self):
         while True:
             # Get the current state
             current_state = self.system_status.get_current_state()
+            self.system_config.gaze_pos = self.system_config.vision_detector.get_norm_gaze_position()
             if current_state != self.current_state:
                 self.current_state = current_state
                 print("Current state: " + current_state)
@@ -51,28 +54,48 @@ class BackendSystem:
                     success = ActionParser.parse(action, self.system_config).execute()
                     if not success:
                         self.system_status.set_state("init")
-                        self.system_config.notification = None
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = None
+                        transcriber = self.system_config.get_transcriber()
+                        if transcriber is not None:
+                            transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = {'notif_type': 'processing_icon',
+                                                           'position': 'middle-right'}
+
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                     # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                    self.system_config.notification = {'notif_type': 'picture',
-                                                       'content': self.system_config.potential_interested_frame,
-                                                       'position': 'middle-right'}
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = {'notif_type': 'picture',
+                                                           'content': self.system_config.potential_interested_frame,
+                                                           'position': 'middle-right'}
+                    self.system_config.start_non_audio_feedback_display()
                 elif self.user_explicit_input == 'full_writing':
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = {'notif_type': 'processing_icon',
+                                                           'position': 'middle-right'}
                     self.system_status.set_state('full_writing_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                 elif self.user_explicit_input == 'select':
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = {'notif_type': 'processing_icon',
+                                                           'position': 'middle-right'}
                     self.system_status.set_state('select_moments')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
                 elif self.user_explicit_input == "terminate_waiting_for_user_response":
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = None
                     self.system_status.set_state("init")
-                    self.system_config.notification = None
                     self.silence_start_time = None
+                    transcriber = self.system_config.get_transcriber()
+                    if transcriber is not None:
+                        transcriber.stop_transcription_and_start_emotion_classification()
 
                 self.user_explicit_input = None
                 continue
@@ -84,55 +107,90 @@ class BackendSystem:
                         if emotion_classifier.stop_event.is_set():
                             emotion_classifier.start()
                             emotion_classifier.stop_transcription_and_start_emotion_classification()
+
+                    # Processing pending task first
+                    if self.system_config.pending_task_list:
+                        print(len(self.system_config.pending_task_list))
+                        photo = self.system_config.pending_task_list.pop(0)
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'picture',
+                                                               'content': photo,
+                                                               'position': 'middle-right'}
+
+                        self.system_status.set_state('photo_comments_pending')
+
+                    # Detect implicit input
                     if self.detect_gaze_and_zoom_in():
-                        # self.system_config.show_interest_icon = True
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {
+                                'notif_type': 'fpv_photo_icon',
+                                'position': 'top-right'
+                            }
                         self.system_status.trigger('gaze')
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                     elif self.detect_positive_tone():
                         self.system_status.set_state('manual_photo_comments_pending')
+                        log_manipulation(self.log_path, "positive_tone")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                        self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
                     elif self.detect_interested_audio():
                         self.system_status.set_state('audio_comments_pending')
+                        log_manipulation(self.log_path, f"interested_audio: {self.system_config.interesting_audio}")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                     elif self.detect_interested_object():
                         self.system_status.set_state('manual_photo_comments_pending')
+                        log_manipulation(self.log_path, f"interested_object: {self.system_config.interesting_object}")
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
                         # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                        self.system_config.notification = {'notif_type': 'picture',
-                                                        'content': self.system_config.potential_interested_frame,
-                                                        'position': 'middle-right'}
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'picture',
+                                                               'content': self.system_config.potential_interested_frame,
+                                                               'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
                 # else:
-
 
             elif current_state == 'photo_pending':
                 if self.detect_user_move_to_another_place():
                     self.system_status.trigger('move_to_another_place')
+                    log_manipulation(self.log_path, "move_to_another_place")
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
             elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
                                    'show_gpt_response', 'audio_comments_pending']:
                 if self.system_config.detect_audio_feedback_finished():
-                    if self.detect_user_speak():
+                    if self.detect_user_speak() and self.system_config.non_audio_feedback_display_ended():
                         self.system_config.text_feedback_to_show = ""
                         self.system_status.trigger('speak')
                         action = self.system_status.get_current_state()
                         success = ActionParser.parse(action, self.system_config).execute()
                         if not success:
                             self.system_status.set_state("init")
-                            self.system_config.notification = None
+                            with self.system_config.notification_lock:
+                                self.system_config.notification = None
+                            transcriber = self.system_config.get_transcriber()
+                            if transcriber is not None:
+                                transcriber.stop_transcription_and_start_emotion_classification()
                         self.silence_start_time = None
 
                     elif self.detect_user_ignore():
+                        transcriber = self.system_config.get_transcriber()
+                        if transcriber is not None:
+                            transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_status.trigger('ignore')
-                        self.system_config.notification = None
+                        log_manipulation(self.log_path, "ignore")
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = None
                         self.system_config.text_feedback_to_show = ""
                         self.silence_start_time = None
+                else:
+                    self.silence_start_time = None
             elif current_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
                                    'comments_on_audio', 'select_moments']:
                 if self.detect_gpt_response():
@@ -149,12 +207,13 @@ class BackendSystem:
     def detect_gaze_and_zoom_in(self):
         previous_frame_sim = 0
         last_interested_frame_sim = 0
-        zoom_in = self.system_config.vision_detector.zoom_in
-        closest_object = self.system_config.vision_detector.closest_object
-        person_count = self.system_config.vision_detector.person_count
-        fixation_detected = self.system_config.vision_detector.fixation_detected
-        current_frame = self.system_config.vision_detector.original_frame
-        norm_pos = self.system_config.vision_detector.norm_gaze_position
+        zoom_in = self.system_config.vision_detector.get_zoom_in()
+        closest_object = self.system_config.vision_detector.get_closest_object()
+        person_count = self.system_config.vision_detector.get_person_count()
+        fixation_detected = self.system_config.vision_detector.get_fixation_detected()
+        current_frame = self.system_config.vision_detector.get_original_frame()
+        norm_pos = self.system_config.vision_detector.get_norm_gaze_position()
+        self.system_config.gaze_pos = norm_pos
 
         if self.simulated_fixation:
             self.simulated_fixation = False
@@ -168,6 +227,7 @@ class BackendSystem:
 
         if self.system_config.potential_interested_frame is not None:
             last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
+            # cv2.imwrite("curr.jpg", current_frame)
 
         not_similar_frame = last_interested_frame_sim < 0.6
 
@@ -176,43 +236,62 @@ class BackendSystem:
               f"not_similar_frame: {not_similar_frame}")
 
         if (zoom_in or fixation_detected) and not_similar_frame and norm_pos is not None:
-            # print(f"Zoom in: {zoom_in}, fixation: {fixation_detected}, "
-            #       f"frame_sim: {last_interested_frame_sim, previous_frame_sim}")
+            now = time.time()
+            dynamic_threshold = self.calculate_dynamic_threshold(last_interested_frame_sim)
+            if now - self.last_gaze_detection_time > dynamic_threshold:
+                # Conditions to determine the user's behavior
+                if zoom_in and fixation_detected:
+                    self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
+                elif self.zoom_in:
+                    self.system_config.user_behavior = f"Moving close to: {closest_object}"
+                elif fixation_detected:
+                    self.system_config.user_behavior = f"Looking at: {closest_object}"
 
-            # Conditions to determine the user's behavior
-            if zoom_in and fixation_detected:
-                self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
-            elif self.zoom_in:
-                self.system_config.user_behavior = f"Moving close to: {closest_object}"
-            elif fixation_detected:
-                self.system_config.user_behavior = f"Looking at: {closest_object}"
-
-            log_manipulation(self.log_path, self.system_config.user_behavior)
-            self.previous_vision_frame = current_frame
-            return True
+                log_manipulation(self.log_path, self.system_config.user_behavior)
+                self.previous_vision_frame = current_frame
+                self.system_config.potential_interested_frame = current_frame
+                self.last_gaze_detection_time = now
+                return True
         self.previous_vision_frame = current_frame
         return False
 
-    def detect_user_move_to_another_place(self):
-        current_frame = self.system_config.vision_detector.original_frame
+    def calculate_dynamic_threshold(self, last_interested_frame_sim):
+        BASE_THRESHOLD = 15  # set your base threshold value here
+        THRESHOLD_FACTOR = 200  # set your factor for adjusting threshold here
 
-        difference = cv2.subtract(current_frame, self.previous_vision_frame)
-        result = not np.any(difference)
-        if result:
-            return False
-        else:
-            cv2.imwrite("diff.jpg", difference)
+        threshold = BASE_THRESHOLD + (last_interested_frame_sim * last_interested_frame_sim * THRESHOLD_FACTOR)
+        return threshold
+
+    def detect_user_move_to_another_place(self):
+        current_frame = self.system_config.vision_detector.get_original_frame()
+
+        # difference = cv2.subtract(current_frame, self.previous_vision_frame)
+        # result = not np.any(difference)
+        # if result:
+        #     return False
+        # else:
+        #     cv2.imwrite("diff1.jpg", difference)
 
         if self.system_config.potential_interested_frame is not None:
             potential_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
             previous_frame_sim = compare_histograms(self.previous_vision_frame, current_frame)
             print(potential_frame_sim, previous_frame_sim)
             self.previous_vision_frame = current_frame
+
+            difference = cv2.subtract(current_frame, self.system_config.potential_interested_frame)
+            result = not np.any(difference)
+            if result:
+                return False
+            else:
+                cv2.imwrite("diff2.jpg", difference)
+
             if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
                 # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
-                self.system_config.notification = {'notif_type': 'picture',
-                                                   'content': self.system_config.potential_interested_frame,
-                                                   'position': 'middle-right'}
+                with self.system_config.notification_lock:
+                    self.system_config.notification = {'notif_type': 'picture',
+                                                       'content': self.system_config.potential_interested_frame,
+                                                       'position': 'middle-right'}
+                self.system_config.start_non_audio_feedback_display()
                 return True
         return False
 
@@ -220,18 +299,19 @@ class BackendSystem:
         voice_transcribe = self.system_config.get_transcriber()
         if voice_transcribe.stop_event.is_set():
             voice_transcribe.start()
-
-        voice_transcribe.stop_emotion_classification_and_start_transcription()
+        if voice_transcribe.mode != "voice_transcription":
+            voice_transcribe.stop_emotion_classification_and_start_transcription()
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is None:
             time.sleep(0.3)
             return False
         print(f"{category}: {score}")
         # if category is speech, then return True
-        if category == 'Speech' and score > 0.7:
-            self.silence_start_time = None
-            self.system_config.progress_bar_percentage = None
-            return True
+        if category is not None and score is not None:
+            if category == 'Speech' and score > 0.7:
+                self.silence_start_time = None
+                self.system_config.progress_bar_percentage = None
+                return True
         time.sleep(0.3)
         return False
 
@@ -247,7 +327,6 @@ class BackendSystem:
 
         if scores['joy'] + scores['surprise'] > 0.7 and scores != self.previous_sentiment_scores:
             self.previous_sentiment_scores = scores
-            print("Positive tone detected")
             emotion_classifier.stop_emotion_classification_and_start_transcription()
             return True
 
@@ -264,8 +343,8 @@ class BackendSystem:
         return False
 
     def detect_interested_object(self):
-        if self.system_config.vision_detector.potential_interested_object is not None:
-            potential_interested_object = self.system_config.vision_detector.potential_interested_object
+        potential_interested_object = self.system_config.vision_detector.get_potential_interested_object()
+        if potential_interested_object is not None:
             last_time = self.system_config.previous_interesting_object_time.get(potential_interested_object, 0)
             if time.time() - last_time > 60:
                 self.system_config.interesting_object = potential_interested_object
@@ -313,6 +392,14 @@ class BackendSystem:
     def simulate_func(self, func):
         if func == "gaze":
             self.simulated_fixation = True
+
+    def add_photo_to_pending_task_list(self):
+        photo = PhotoCommand(self.system_config).execute()
+        self.system_config.pending_task_list.append(photo)
+        with self.system_config.notification_lock:
+            self.system_config.notification = {'notif_type': 'picture_thumbnail',
+                                               'content': photo,
+                                               'position': 'middle-right'}
 
 
 def test():

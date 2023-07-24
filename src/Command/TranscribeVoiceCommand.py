@@ -20,12 +20,14 @@ class TranscribeVoiceCommand(Command):
             if voice_transcriber.stop_event.is_set():
                 voice_transcriber.start()
 
+        if voice_transcriber.mode != "voice_transcription":
+            voice_transcriber.stop_emotion_classification_and_start_transcription()
+
         # Stop the transcriber when no voice is detected for 6 seconds
         while True:
             if self.system_config.stop_recording_command:
                 self.system_config.stop_recording_command = False
                 self.system_config.progress_bar_percentage = None
-                time.sleep(1)
                 break
             if not self.detect_user_speak():
                 if self.silence_start_time is None:
@@ -33,9 +35,6 @@ class TranscribeVoiceCommand(Command):
                 else:
                     time_diff = time.time() - self.silence_start_time
                     self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
-                    # self.system_config.notification = {'notif_type': 'text',
-                    #                                    'content': f"Stop Recording in {int(SILENCE_THRESHOLD - time_diff)}s",
-                    #                                    'position': 'top-center'}
                     # print(f"Stop Recording in {int(SILENCE_THRESHOLD-time_diff)}s")
                     if time_diff > SILENCE_THRESHOLD:
                         self.silence_start_time = None
@@ -45,12 +44,14 @@ class TranscribeVoiceCommand(Command):
                 self.silence_start_time = None
             time.sleep(0.5)
 
+        self.system_config.notification = {'notif_type': 'processing_icon',
+                                           'position': 'middle-right'}
+
         time.sleep(2)
         self.system_config.progress_bar_percentage = None
         full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
-        self.system_config.notification = {'notif_type': 'processing_icon',
-                                           'position': 'middle-right'}
+
         return full_transcription
 
     def detect_user_speak(self):

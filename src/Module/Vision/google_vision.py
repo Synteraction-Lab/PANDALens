@@ -4,16 +4,19 @@ import os
 from google.cloud import vision
 
 
-def get_image_labels(path):
+def get_image_labels(content):
     # Instantiates a client
     client = vision.ImageAnnotatorClient()
 
-    # The name of the image file to annotate
-    file_name = os.path.abspath(path)
+    # # The name of the image file to annotate
+    # file_name = os.path.abspath(path)
+    #
+    # # Loads the image into memory
+    # with io.open(file_name, 'rb') as image_file:
+    #     content = image_file.read()
 
     # Loads the image into memory
-    with io.open(file_name, 'rb') as image_file:
-        content = image_file.read()
+    content = content.getvalue()
 
     image = vision.Image(content=content)
 
@@ -29,14 +32,20 @@ def get_image_labels(path):
     return label_str
 
 
-def get_image_texts(path):
+def get_image_texts(content):
     client = vision.ImageAnnotatorClient()
     # The name of the image file to annotate
-    file_name = os.path.abspath(path)
+    # file_name = os.path.abspath(path)
+    #
+    # # Loads the image into memory
+    # with io.open(file_name, 'rb') as image_file:
+    #     content = image_file.read()
+
+    # byte_io = io.BytesIO()
+    # content.save(byte_io, format='JPEG')
 
     # Loads the image into memory
-    with io.open(file_name, 'rb') as image_file:
-        content = image_file.read()
+    content = content.getvalue()
 
     image = vision.Image(content=content)
 

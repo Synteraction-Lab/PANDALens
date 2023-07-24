@@ -21,33 +21,35 @@ class CommentsOnPhotoAction(Action):
                 return False
             user_request["user_voice_transcription"] = voice_transcription
 
-        # get image info
-        get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
-        try:
-            if get_image_info_command is not None:
-                image_info = get_image_info_command.execute()
-                user_request["image_info"] = image_info
-        except Exception as e:
-            print("Error: cannot get image info", e)
+        print("naive: ", self.system_config.naive)
+        if not self.system_config.naive:
+            # get image info
+            get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
+            try:
+                if get_image_info_command is not None:
+                    image_info = get_image_info_command.execute()
+                    user_request["image_info"] = image_info
+            except Exception as e:
+                print("Error: cannot get image info", e)
 
-        # get location & time
-        try:
-            user_request["location"] = get_current_location()
-        except Exception as e:
-            print("Error: cannot get location", e)
+            # get location & time
+            try:
+                user_request["location"] = get_current_location()
+            except Exception as e:
+                print("Error: cannot get location", e)
 
-        user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
+            user_request["time"] = datetime.now().strftime("%Y/%m/%d, %H:%M")
 
-        # get background audio
-        audio = self.system_config.get_bg_audio_analysis_result()
-        if audio is not None:
-            user_request["background audio"] = audio
+            # get background audio
+            audio = self.system_config.get_bg_audio_analysis_result()
+            if audio is not None:
+                user_request["background audio"] = audio
 
-        # get user behavior
-        if self.system_config.user_behavior_when_recording is not None:
-            user_behavior = self.system_config.user_behavior_when_recording
-            self.system_config.user_behavior_when_recording = None
-            user_request["user_behavior"] = user_behavior
+            # get user behavior
+            if self.system_config.user_behavior_when_recording is not None:
+                user_behavior = self.system_config.user_behavior_when_recording
+                self.system_config.user_behavior_when_recording = None
+                user_request["user_behavior"] = user_behavior
 
         # send request to GPT
         send_gpt_request_command = CommandParser.parse("send_gpt_request", self.system_config)

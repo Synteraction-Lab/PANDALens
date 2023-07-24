@@ -8,4 +8,3 @@ class ShowAudioFeedbackCommand(Command):
 
     def execute(self):
         print(f"\nAudio Feedback:\n{self.system_config.audio_feedback_to_show}")
-        # self.system_config.audio_feedback_to_show = None

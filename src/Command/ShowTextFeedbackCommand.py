@@ -8,5 +8,3 @@ class ShowTextFeedbackCommand(Command):
 
     def execute(self):
         print(f"\nText feedback:\n{self.system_config.text_feedback_to_show}")
-        # ui.listen_feedback_from_backend()
-        # self.system_config.text_feedback_to_show = None

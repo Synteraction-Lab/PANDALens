@@ -1,11 +1,13 @@
 import os
 import tkinter as tk
 
+import customtkinter
 import pandas
 
 from src.Module.Audio.live_transcriber import get_recording_devices
 from src.Storage.writer import record_device_config
-from src.UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label
+from src.UI.widget_generator import get_button, get_dropdown_menu, get_entry_with_placeholder, get_label, \
+    get_checkbutton
 from src.Utilities.constant import CONFIG_FILE_NAME, VISUAL_OUTPUT, AUDIO_OUTPUT
 from src.Utilities.file import get_second_monitor_original_pos, \
     get_possible_tasks
@@ -47,42 +49,19 @@ class DevicePanel:
         for device in input_devices:
             self.audio_device_list.append(device["name"])
 
-        # if get_system_name() == "Darwin":
-        #     command = 'ffmpeg -f avfoundation -list_devices true -i ""'
-        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        #     output = process.communicate()[1].decode("utf-8")
-        #     self.get_mac_device(output)
-        # elif get_system_name() == "Windows":
-        #     command = 'ffmpeg -list_devices true -f dshow -i dummy'
-        #     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        #     output = process.communicate()[1].decode("utf-8")
-        #     self.get_windows_device(output)
-
-    def get_mac_device(self, output):
-        is_audio_line = False
-        for line in output.split("\n"):
-            if line.__contains__("AVFoundation video devices:"):
-                continue
-            elif line.__contains__("AVFoundation audio devices:"):
-                is_audio_line = True
-                continue
-            if line.__contains__("[AVFoundation indev") and is_audio_line:
-                self.audio_device_list.append(line.split("] ")[-1])
-
-    def get_windows_device(self, output):
-        for line in output.split("\n"):
-            if line.__contains__("[dshow") and line.__contains__("(audio)"):
-                self.audio_device_list.append(line.split("\"")[1])
-
     def set_default_device_config(self, path):
         self.pid_num = os.path.join("p1", "01")
         self.task_name = "travel_blog"
         self.output_modality = AUDIO_OUTPUT
         self.audio_device_idx = 0
+        self.naive = "UbiWriter"
+        self.gaze_recording = False
         save_device_config(path, "pid", self.pid_num)
         save_device_config(path, "task", self.task_name)
         save_device_config(path, "output", self.output_modality)
         save_device_config(path, "audio_device", self.audio_device_idx)
+        save_device_config(path, "naive", self.naive)
+        save_device_config(path, "gaze_recording", self.gaze_recording)
 
     def load_config(self):
         if not os.path.isfile(self.path):
@@ -94,8 +73,19 @@ class DevicePanel:
             self.output_modality = self.df[self.df['item'] == 'output']['details'].item()
             self.audio_device_idx = self.df[self.df['item'] == 'audio_device']['details'].item()
             self.naive = self.df[self.df['item'] == 'naive']['details'].item()
+            self.gaze_recording = self.df[self.df['item'] == 'gaze_recording']['details'].item()
         except:
             print("Config file has an error! device_panel.py")
+            # delete previous file
+            os.remove(self.path)
+            self.set_default_device_config(self.path)
+            self.df = pandas.read_csv(self.path)
+            self.pid_num = self.df[self.df['item'] == 'pid']['details'].item()
+            self.task_name = self.df[self.df['item'] == 'task']['details'].item()
+            self.output_modality = self.df[self.df['item'] == 'output']['details'].item()
+            self.audio_device_idx = self.df[self.df['item'] == 'audio_device']['details'].item()
+            self.naive = self.df[self.df['item'] == 'naive']['details'].item()
+            self.gaze_recording = self.df[self.df['item'] == 'gaze_recording']['details'].item()
 
     def update_pid(self):
         self.pid_num = self.pid_txt.get_text()
@@ -108,6 +98,10 @@ class DevicePanel:
     def update_naive(self):
         self.naive = self.naive_var.get()
         self.df.loc[self.df['item'] == "naive", ['details']] = self.naive
+
+    def update_gaze_recording(self):
+        self.gaze_recording = self.gaze_recording_var.get()
+        self.df.loc[self.df['item'] == "gaze_recording", ['details']] = self.gaze_recording
 
     def update_output(self):
         self.output_modality = self.output_var.get()
@@ -122,6 +116,8 @@ class DevicePanel:
         self.update_task()
         self.update_output()
         self.update_screen_recording_source()
+        self.update_naive()
+        self.update_gaze_recording()
         self.df.to_csv(self.path, index=False)
         if self.parent_object_save_command is not None:
             self.parent_object_save_command()
@@ -142,6 +138,9 @@ class DevicePanel:
 
         self.recording_device_frame = tk.Frame(self.frame)
         self.recording_device_frame.pack(pady=10, anchor="w")
+
+        self.gaze_recording_frame = tk.Frame(self.frame)
+        self.gaze_recording_frame.pack(pady=10, anchor="w")
 
         self.pid_label = get_label(self.pid_frame, text="PID", pattern=0)
         self.pid_label.pack(side="left", padx=5)
@@ -172,20 +171,20 @@ class DevicePanel:
 
         self.output_options.pack(side="left", padx=5)
 
-        #ubiwriter vs naive llm
+        # ubiwriter vs naive llm
         self.naive_label = get_label(self.task_frame, text="System Type", pattern=0)
         self.naive_label.pack(side="left", padx=5)
 
         self.naive_var = tk.StringVar()
-        self.naive_var.set("Ubiwriter")
+        self.naive_var.set(self.naive)
 
-        self.naive_list = ["Ubiwriter", "Naive LLM"]
+        self.naive_list = ["UbiWriter", "Naive LLM"]
         self.naive_options = get_dropdown_menu(self.task_frame, values=self.naive_list,
-                                                variable=self.naive_var)
+                                               variable=self.naive_var)
 
         self.naive_options.pack(side="left", padx=5)
 
-        #audio device
+        # audio device
         self.audio_device = tk.StringVar()
         self.audio_device.set(self.audio_device_idx)
 
@@ -195,6 +194,13 @@ class DevicePanel:
                                                variable=self.audio_device)
 
         self.audio_options.grid(column=1, row=2, columnspan=1, padx=10, pady=10, sticky="w")
+
+        self.gaze_recording_var = customtkinter.BooleanVar()
+        self.gaze_recording_var.set(self.gaze_recording)
+        self.gaze_recording_checkbox = get_checkbutton(self.gaze_recording_frame, text="Gaze Recording",
+                                                                 # command=self.update_gaze_recording,
+                                                                 variable=self.gaze_recording_var)
+        self.gaze_recording_checkbox.pack(side="left", padx=5)
 
         self.close_frame = tk.Frame(self.frame)
         self.close_frame.pack(pady=10)

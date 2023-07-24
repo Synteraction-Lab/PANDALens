@@ -10,6 +10,8 @@ src/Module/LLM/keys.py
 *.wav
 *.pt
 */test.py
+*.doc
+*.docx
 # System Files
 .DS_Store
 Thumbs.db
