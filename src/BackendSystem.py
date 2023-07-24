@@ -162,8 +162,7 @@ class BackendSystem:
                     log_manipulation(self.log_path, "move_to_another_place")
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                   'show_gpt_response', 'audio_comments_pending']:
+            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending', 'audio_comments_pending']: #'show_gpt_response'
                 if self.system_config.detect_audio_feedback_finished():
                     if self.detect_user_speak() and self.system_config.non_audio_feedback_display_ended():
                         self.system_config.text_feedback_to_show = ""

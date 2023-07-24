@@ -169,6 +169,8 @@ class App:
             self.hide_show_content()
         if func == "Show Photo Button":
             self.show_photo_button()
+        if func == "Show Voice Button":
+            self.show_voice_button()
         if func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
             self.hide_text()
@@ -235,6 +237,10 @@ class App:
                 func = "Hide"
             elif self.last_notification["notif_type"] == "processing_icon":
                 func = "Show Photo Button"
+            elif self.last_text_feedback_to_show:
+                func = "Show Voice Button"
+            # elif self.last_notification["notif_type"] == "processing_icon":
+            #     func = "Show Voice Button"
             self.parse_button_press(func)
 
     def pack_layout(self):
@@ -500,6 +506,11 @@ class App:
     def show_photo_button(self):
         self.buttons["down"].place(**self.buttons_places["down"])
         self.shown_button = True
+    
+    def show_voice_button(self):
+        self.buttons["right"].place(**self.buttons_places["right"])
+        self.shown_button = True
+
 
     def hide_show_content(self):
         if self.shown_button:
@@ -554,9 +565,10 @@ class App:
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
+        #self.show_voice_button()
         if self.is_muted:
             self.temporal_audio_response = audio_response
-            self.system_config.audio_feedback_finished_playing = True
+            self.system_config.audio_feedback_finished_playing = False
         else:
             self.play_audio_response(audio_response)
 
