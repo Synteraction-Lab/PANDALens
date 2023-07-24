@@ -41,24 +41,22 @@ class SendGPTRequestCommand(Command):
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
-                    self.system_config.notification = {'notif_type': 'mic_icon',
-                                                       'position': 'in-box-bottom-right'}
+                    self.system_config.gpt_response_type = "full"
+                    self.system_config.notification = None
 
                 elif "selecting" in json_response['mode']:
-                    self.system_config.notification = {'notif_type': 'mic_icon',
-                                                       'position': 'in-box-bottom-right'}
-                    
                     moment_list = ""
-
                     for key, val in json_response["response"].items():
                         moment_list += f"{int(key)}. {val}\n"
 
                     text_response = "Moments:\n" + moment_list
                     audio_response = "Here are the summaries of your moments." + moment_list
 
-
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
+                    self.system_config.gpt_response_type = "selecting"
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = None
 
                 elif json_response['mode'] == "authoring":
                     question_to_users = json_response['response'].get('question to users')
@@ -75,16 +73,21 @@ class SendGPTRequestCommand(Command):
                         text_response = f"{question_to_users}"
                         audio_response = text_response
 
+                    with self.system_config.notification_lock:
+                        self.system_config.audio_feedback_to_show = audio_response
+                        self.system_config.notification = {'notif_type': 'text',
+                                                           'content': f"{text_response}",
+                                                           'position': 'middle-right'}
+                    self.system_config.gpt_response_type = "authoring"
+
+            else:
+                with self.system_config.notification_lock:
                     self.system_config.audio_feedback_to_show = audio_response
                     self.system_config.notification = {'notif_type': 'text',
                                                        'content': f"{text_response}",
                                                        'position': 'middle-right'}
+                self.system_config.self.gpt_response_type = "authoring"
 
-            else:
-                self.system_config.audio_feedback_to_show = audio_response
-                self.system_config.notification = {'notif_type': 'text',
-                                                   'content': f"{text_response}",
-                                                   'position': 'middle-right'}
         except Exception as e:
             print(f"GPT Response Parse Error: {e}")
             self.system_config.audio_feedback_to_show = audio_response

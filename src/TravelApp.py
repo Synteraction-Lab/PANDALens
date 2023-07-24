@@ -28,6 +28,7 @@ SHOW_GAZE_MOVEMENT = False
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.auto_scroll_id = None
         self.temporal_audio_response = None
         self.audio_process = None
         self.notification_window = None
@@ -165,16 +166,16 @@ class App:
             return
         log_manipulation(self.log_path, func)
         if func == "Hide" or func == "Show":
-            self.hide_show_content()
-        # <<<<<<< Updated upstream
-        if func == "Voice" or func == "Stop":
-            self.backend_system.set_user_explicit_input('voice_comment')
-        # =======
+            self.hide_show_buttons()
+            self.hide_text()
+            self.mute_audio()
         elif func == "Show Photo Button":
             self.show_photo_button()
         elif func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
-            self.hide_text()
+            self.mute_audio()
+            # self.hide_text()
+            self.hide_button()
         elif func == "Cancel Recording":
             self.backend_system.set_user_explicit_input('cancel_recording')
         elif func == "Photo" or func == "Retake":
@@ -242,6 +243,10 @@ class App:
                 func = "Show Photo Button"
             elif current_system_state in ["comments_on_audio", "comments_on_photo", "comments_to_gpt"]:
                 func = "Cancel Recording"
+            elif self.last_text_feedback_to_show:
+                func = "Show Voice Button"
+            # elif self.last_notification["notif_type"] == "processing_icon":
+            #     func = "Show Voice Button"
             self.parse_button_press(func)
 
     def pack_layout(self):
@@ -500,6 +505,8 @@ class App:
         for direction, button in self.buttons.items():
             button.place_forget()
             self.root.update_idletasks()
+        self.hide_mute_button()
+        self.hide_text_visibility_button()
         self.shown_button = False
 
     def show_button(self):
@@ -509,6 +516,10 @@ class App:
 
     def show_photo_button(self):
         self.buttons["down"].place(**self.buttons_places["down"])
+        self.shown_button = True
+
+    def show_voice_button(self):
+        self.buttons["right"].place(**self.buttons_places["right"])
         self.shown_button = True
 
     def hide_show_content(self):
@@ -545,6 +556,7 @@ class App:
             self.hide_text()
             return
         else:
+            self.show_voice_button()
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.insert(tk.END, text_response)
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
@@ -554,13 +566,25 @@ class App:
             self.show_text_visibility_button()
             self.root.update_idletasks()
             self.text_widget.update()
-            self.root.after(6000, self.auto_scroll_text)
+
+            # Cancel the old auto scroll if it exists
+            if self.auto_scroll_id is not None:
+                self.root.after_cancel(self.auto_scroll_id)
+
+            # Schedule a new auto scroll and store its ID
+            self.auto_scroll_id = self.root.after(6000, self.auto_scroll_text)
 
     def auto_scroll_text(self):
         if self.text_widget is not None:
             if self.text_widget.winfo_ismapped():
                 self.text_widget.yview_scroll(1, "units")
-                self.root.after(3500, self.auto_scroll_text)
+
+                # Cancel the old auto scroll if it exists
+                if self.auto_scroll_id is not None:
+                    self.root.after_cancel(self.auto_scroll_id)
+
+                # Schedule a new auto scroll and store its ID
+                self.auto_scroll_id = self.root.after(3500, self.auto_scroll_text)
 
     def render_audio_response(self, audio_response):
         self.show_mute_button()
@@ -584,9 +608,10 @@ class App:
             # Perform actions when subprocess finishes
             self.system_config.audio_feedback_to_show = None
             self.system_config.audio_feedback_finished_playing = True
-            self.hide_mute_button()
-            self.hide_text_visibility_button()
-            print("Audio feedback finished playing")
+            if self.system_config.gpt_response_type == "authoring":
+                self.hide_mute_button()
+                self.hide_text_visibility_button()
+                print("Audio feedback finished playing")
 
     def create_output_file(self):
         dialog = customtkinter.CTkInputDialog(text="Enter the title:", title="UbiWriter")

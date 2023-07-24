@@ -112,6 +112,7 @@ class SystemConfig(object):
         self.pending_task_list = []
         self.notification_lock = threading.Lock()
         self.cancel_recording_command = False
+        self.gpt_response_type = None
 
     def get_final_transcription(self):
         return self.final_transcription

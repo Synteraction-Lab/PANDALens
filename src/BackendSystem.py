@@ -166,8 +166,8 @@ class BackendSystem:
                     log_manipulation(self.log_path, "move_to_another_place")
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                   'show_gpt_response', 'audio_comments_pending']:
+            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending', 'audio_comments_pending']\
+                    or (current_state == 'show_gpt_response' and self.system_config.gpt_response_type == "authoring"):
                 if self.system_config.detect_audio_feedback_finished():
                     if self.detect_user_speak() and self.system_config.non_audio_feedback_display_ended():
                         self.system_config.text_feedback_to_show = ""
@@ -206,6 +206,11 @@ class BackendSystem:
                     self.system_status.trigger('gpt_generate_response')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
+
+            elif current_state == 'show_gpt_response' and not self.system_config.gpt_response_type == "authoring":
+                self.system_status.set_state("init")
+                with self.system_config.notification_lock:
+                    self.system_config.notification = None
 
     def take_user_explict_input(self, user_input):
         self.system_status.trigger(user_input)
@@ -333,7 +338,7 @@ class BackendSystem:
 
     def detect_interested_audio(self):
         score, category = self.system_config.get_bg_audio_analysis_result()
-        if category is not None:
+        if category is not None and score is not None:
             if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.7:
                 last_time = self.system_config.previous_interesting_audio_time.get(category, 0)
                 if time.time() - last_time > 60:
@@ -398,9 +403,9 @@ class BackendSystem:
             self.simulated_fixation = True
 
     def add_photo_to_pending_task_list(self):
-        photo = PhotoCommand(self.system_config).execute()
-        self.system_config.pending_task_list.append(photo)
         with self.system_config.notification_lock:
+            photo = PhotoCommand(self.system_config).execute()
+            self.system_config.pending_task_list.append(photo)
             self.system_config.notification = {'notif_type': 'picture_thumbnail',
                                                'content': photo,
                                                'position': 'middle-right'}
