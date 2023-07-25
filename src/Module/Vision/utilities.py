@@ -1,7 +1,7 @@
 import cv2
 
 
-def take_picture(save_path=None):
+def take_picture():
     # create a VideoCapture object to access the camera
     cap = cv2.VideoCapture(0)
 

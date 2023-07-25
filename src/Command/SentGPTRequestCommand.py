@@ -42,7 +42,8 @@ class SendGPTRequestCommand(Command):
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response
                     self.system_config.gpt_response_type = "full"
-                    self.system_config.notification = None
+                    with self.system_config.notification_lock:
+                        self.system_config.notification = None
 
                 elif "selecting" in json_response['mode']:
                     moment_list = ""
@@ -51,6 +52,7 @@ class SendGPTRequestCommand(Command):
 
                     text_response = "Moments:\n" + moment_list
                     audio_response = "Here are the summaries of your moments." + moment_list
+                    self.system_config.latest_moment_list = moment_list
 
                     self.system_config.text_feedback_to_show = text_response
                     self.system_config.audio_feedback_to_show = audio_response

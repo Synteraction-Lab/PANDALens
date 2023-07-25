@@ -35,22 +35,21 @@ class BackendSystem:
         self.system_config = system_config
         self.system_status = SystemStatus()
         self.log_path = self.system_config.log_path
-        self.current_state = None
+        self.prev_state = None
 
     def run(self):
         while True:
             # Get the current state
             current_state = self.system_status.get_current_state()
-            self.system_config.gaze_pos = self.system_config.vision_detector.get_norm_gaze_position()
-            if current_state != self.current_state:
-                self.current_state = current_state
+            # self.system_config.gaze_pos = self.system_config.vision_detector.get_norm_gaze_position()
+            if current_state != self.prev_state:
+                self.prev_state = current_state
                 print("Current state: " + current_state)
 
             if self.detect_user_explicit_input():
                 if self.user_explicit_input == 'voice_comment':
                     self.system_status.set_state('comments_to_gpt')
                     action = self.system_status.get_current_state()
-                    print("Action: " + action)
                     success = ActionParser.parse(action, self.system_config).execute()
                     if not success:
                         self.system_status.set_state("init")
@@ -111,10 +110,10 @@ class BackendSystem:
                             emotion_classifier.start()
                             emotion_classifier.stop_transcription_and_start_emotion_classification()
 
-
                     # Processing pending task first
                     if self.system_config.pending_task_list:
                         photo = self.system_config.pending_task_list.pop(0)
+                        time.sleep(0.5)
                         with self.system_config.notification_lock:
                             self.system_config.notification = {'notif_type': 'picture',
                                                                'content': photo,
@@ -166,7 +165,7 @@ class BackendSystem:
                     log_manipulation(self.log_path, "move_to_another_place")
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending', 'audio_comments_pending']\
+            elif current_state in ['photo_comments_pending', 'manual_photo_comments_pending', 'audio_comments_pending'] \
                     or (current_state == 'show_gpt_response' and self.system_config.gpt_response_type == "authoring"):
                 if self.system_config.detect_audio_feedback_finished():
                     if self.detect_user_speak() and self.system_config.non_audio_feedback_display_ended():
@@ -207,10 +206,7 @@ class BackendSystem:
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
 
-            elif current_state == 'show_gpt_response' and not self.system_config.gpt_response_type == "authoring":
-                self.system_status.set_state("init")
-                with self.system_config.notification_lock:
-                    self.system_config.notification = None
+            # elif prev_state == 'show_gpt_response' and not self.system_config.gpt_response_type == "authoring":
 
     def take_user_explict_input(self, user_input):
         self.system_status.trigger(user_input)
@@ -397,6 +393,8 @@ class BackendSystem:
             self.system_config.stop_recording_command = True
             self.system_config.cancel_recording_command = True
             self.user_explicit_input = None
+        elif self.user_explicit_input == 'hide_text_box':
+            self.system_status.set_state("init")
 
     def simulate_func(self, func):
         if func == "gaze":
@@ -408,7 +406,7 @@ class BackendSystem:
             self.system_config.pending_task_list.append(photo)
             self.system_config.notification = {'notif_type': 'picture_thumbnail',
                                                'content': photo,
-                                               'position': 'middle-right'}
+                                               'position': 'middle-right', 'duration': 1.5}
 
 
 def test():

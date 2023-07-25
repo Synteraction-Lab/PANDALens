@@ -16,7 +16,7 @@ class PhotoCommand(Command):
 
     def execute(self):
         try:
-            print("Manual photo command is executed")
+            print("Pending photo command is executed")
             image_folder = self.system_config.get_image_folder()
             now_time = datetime.now().strftime("%H_%M_%S")
 
@@ -24,17 +24,14 @@ class PhotoCommand(Command):
 
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame is not None:
-                if original_frame != []:
-                    frame = original_frame.copy()
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                else:
-                    frame = take_picture(photo_file_path)
+            if original_frame:
+                frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
-                frame = take_picture(photo_file_path)
+                frame = take_picture()
+                original_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
             store_img(photo_file_path, frame)
-            return cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+            return original_frame
         except:
             print("Manual photo command is not executed")
             return None

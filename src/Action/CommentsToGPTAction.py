@@ -19,8 +19,11 @@ class CommentsToGPTAction(Action):
             user_request["user_voice_transcription"] = voice_transcription
 
         if self.system_config.last_request_type == "selecting":
-            user_request["user_voice_transcription"] += \
-                '\nNote: Only use the moment(s) I picked and based on it, ' \
+            user_request[
+                "user_voice_transcription"] = f"From moment list: {self.system_config.latest_moment_list}. " \
+                                              f"** I will only select: {user_request['user_voice_transcription']} **"
+            user_request["System"] = \
+                '\nNote: ONLY use the moment(s) the user mentioned and based on it, ' \
                 'generate a full travel blog' \
                 'in the following JSON format: ' \
                 '{"mode": "full",' \

@@ -113,6 +113,7 @@ class SystemConfig(object):
         self.notification_lock = threading.Lock()
         self.cancel_recording_command = False
         self.gpt_response_type = None
+        self.latest_moment_list = None
 
     def get_final_transcription(self):
         return self.final_transcription

@@ -42,36 +42,58 @@ class AutoPhotoCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
-        image_folder = self.system_config.get_image_folder()
-        now_time = datetime.now().strftime("%H_%M_%S")
-        for i in range(AUTO_PHOTO_NUM):
-            photo_file_path = os.path.join(image_folder, f'{now_time}_{i}.png')
-
+        # image_folder = self.system_config.get_image_folder()
+        # now_time = datetime.now().strftime("%H_%M_%S")
+        # for i in range(AUTO_PHOTO_NUM):
+        #     photo_file_path = os.path.join(image_folder, f'{now_time}_{i}.png')
+        #
+        #     original_frame = self.system_config.vision_detector.get_original_frame()
+        #
+        #     if original_frame is not None:
+        #         frame = original_frame.copy()
+        #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #     else:
+        #         frame = take_picture(photo_file_path)
+        #
+        #     # os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
+        #     # cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        #     store_img(photo_file_path, frame)
+        # if AUTO_PHOTO_NUM > 1:
+        #     latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
+        #     # remove all the photos other than the best one
+        #     for filename in os.listdir(image_folder):
+        #         if filename.startswith(now_time) and (filename.endswith('.png') or filename.endswith('.jpg')):
+        #             if filename != latest_photo_filename:
+        #                 os.remove(os.path.join(image_folder, filename))
+        # else:
+        #     latest_photo_filename = f'{now_time}_0.png'
+        #     frame = PIL.Image.open(os.path.join(image_folder, latest_photo_filename))
+        #
+        # self.system_config.set_latest_photo_file_path(os.path.join(image_folder, latest_photo_filename))
+        # self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+        try:
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame is not None:
-                frame = original_frame.copy()
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if original_frame:
+                frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
-                frame = take_picture(photo_file_path)
+                frame = take_picture()
+                original_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
-            # os.makedirs(os.path.dirname(photo_file_path), exist_ok=True)
-            # cv2.imwrite(photo_file_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            self.system_config.potential_interested_frame = original_frame
+
+            image_folder = self.system_config.get_image_folder()
+            now_time = datetime.now().strftime("%H_%M_%S")
+
+            photo_file_path = os.path.join(image_folder, f'{now_time}.png')
+
+            self.system_config.set_latest_photo_file_path(photo_file_path)
+
             store_img(photo_file_path, frame)
-        if AUTO_PHOTO_NUM > 1:
-            latest_photo_filename, _, frame = find_best_quality_img(image_folder, prefix=now_time)
-            # remove all the photos other than the best one
-            for filename in os.listdir(image_folder):
-                if filename.startswith(now_time) and (filename.endswith('.png') or filename.endswith('.jpg')):
-                    if filename != latest_photo_filename:
-                        os.remove(os.path.join(image_folder, filename))
-        else:
-            latest_photo_filename = f'{now_time}_0.png'
-            frame = PIL.Image.open(os.path.join(image_folder, latest_photo_filename))
-
-        self.system_config.set_latest_photo_file_path(os.path.join(image_folder, latest_photo_filename))
-        # self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
-        return frame
+            return frame
+        except Exception as e:
+            print(e)
+            return None
 
 
 def test():

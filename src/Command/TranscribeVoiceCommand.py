@@ -31,7 +31,7 @@ class TranscribeVoiceCommand(Command):
                 if self.system_config.cancel_recording_command:
                     self.system_config.notification = {'notif_type': 'cancel_recording_icon',
                                                        'position': 'middle-right',
-                                                       'duration': 1.5}
+                                                       'duration': 1}
                     voice_transcriber.stop_transcription_and_start_emotion_classification()
                     return ""
 
@@ -50,13 +50,12 @@ class TranscribeVoiceCommand(Command):
                         break
             else:
                 self.silence_start_time = None
-            # time.sleep(0.5)
 
         self.system_config.notification = {'notif_type': 'processing_icon',
                                            'position': 'middle-right'}
 
-        time.sleep(2)
         self.system_config.progress_bar_percentage = None
+        time.sleep(0.5)
         full_transcription = voice_transcriber.stop_transcription_and_start_emotion_classification()
         print(f"Full transcription: {full_transcription}")
 

@@ -43,7 +43,7 @@ class LiveTranscriber:
         self.model = model
         self.device_index = device_index
         self.phrase_timeout = 3
-        self.record_timeout = 2
+        self.record_timeout = 3
         self.silence_threshold = silence_threshold
         self.stop_event = threading.Event()
         self.stop_event.set()
@@ -72,7 +72,8 @@ class LiveTranscriber:
             raise ValueError(f"No input microphone named \"{self.device_index}\" found")
 
         # self.recorder.adjust_for_ambient_noise(self.source)
-        self.audio_model = whisper.load_model(self.model)
+        self.base_audio_model = whisper.load_model("base.en")
+        self.small_audio_model = whisper.load_model("small.en")
 
         self.temp_file = NamedTemporaryFile().name
         self.transcription = ['']
@@ -100,7 +101,7 @@ class LiveTranscriber:
         phrase_time = None
 
         self.stop_listening = self.recorder.listen_in_background(self.source, self.record_callback,
-                                                                     phrase_time_limit=self.record_timeout)
+                                                                 phrase_time_limit=self.record_timeout)
 
         while not self.stop_event.is_set():
             now = datetime.utcnow()
@@ -115,7 +116,6 @@ class LiveTranscriber:
                     data = self.data_queue.get()
                     last_sample += data
 
-
                 audio_data = sr.AudioData(last_sample, self.source.SAMPLE_RATE, self.source.SAMPLE_WIDTH)
                 wav_data = io.BytesIO(audio_data.get_wav_data())
 
@@ -124,7 +124,9 @@ class LiveTranscriber:
 
                 if self.mode == "voice_transcription":
                     with self.lock:
-                        result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available())
+                        result = self.base_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                                  no_speech_threshold=0.2,
+                                                                  logprob_threshold=None,)
                         text = result['text'].strip()
 
                         if phrase_complete:
@@ -137,9 +139,9 @@ class LiveTranscriber:
                         #     print(line)
                         print(" ".join(self.transcription))
                 else:
-                    result = self.audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
-                                                         no_speech_threshold=0.2,
-                                                         logprob_threshold=None, )
+                    result = self.small_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                               no_speech_threshold=0.2,
+                                                               logprob_threshold=None, )
                     text = result['text'].strip()
 
                     if phrase_complete:
@@ -155,7 +157,7 @@ class LiveTranscriber:
                     # for line in self.transcription:
                     #     print(line)
                     if self.scores:
-                        print(f"Sentence: {text}, Joy score: {self.scores['joy']}",
+                        print(f"Sentence: {text}\nJoy score: {self.scores['joy']}",
                               f"Surprise score: {self.scores['surprise']}")
                 print('', end='', flush=True)
 
@@ -186,7 +188,6 @@ class LiveTranscriber:
             final_result = " ".join(self.transcription)
         self.full_text = ""
         self.transcription = ['']
-        self.model = "small.en"
         self.mode = "emotion_classification"
         return final_result.strip()
 
@@ -194,7 +195,6 @@ class LiveTranscriber:
         with self.lock:
             self.full_text = ""
             self.transcription = ['']
-        self.model = "base.en"
         self.mode = "voice_transcription"
 
     def stop(self):

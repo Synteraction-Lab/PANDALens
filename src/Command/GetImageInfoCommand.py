@@ -10,6 +10,8 @@ from io import BytesIO
 from PIL import Image
 
 MAX_SIZE = 720
+
+
 def compress_image(image_path, max_size=MAX_SIZE):
     image = Image.open(image_path)
     image.thumbnail((max_size, max_size))

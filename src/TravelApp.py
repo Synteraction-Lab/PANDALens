@@ -8,6 +8,7 @@ import customtkinter
 import numpy as np
 import pandas
 from PIL import Image
+from customtkinter import CTkLabel
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
 
@@ -28,6 +29,9 @@ SHOW_GAZE_MOVEMENT = False
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.notification_to_be_removed_with_delay = None
+        self.last_click_time = None
+        self.warning_notification = None
         self.auto_scroll_id = None
         self.temporal_audio_response = None
         self.audio_process = None
@@ -170,7 +174,7 @@ class App:
             self.hide_text()
             self.mute_audio()
         elif func == "Show Photo Button":
-            self.show_photo_button()
+            self.switch_photo_button()
         elif func == "Voice" or func == "Stop":
             self.backend_system.set_user_explicit_input('voice_comment')
             self.mute_audio()
@@ -179,10 +183,12 @@ class App:
         elif func == "Cancel Recording":
             self.backend_system.set_user_explicit_input('cancel_recording')
         elif func == "Photo" or func == "Retake":
-            if self.notification_widget is not None:
-                if self.notification_widget.notif_type == "processing_icon":
-                    self.backend_system.add_photo_to_pending_task_list()
-                    self.hide_button()
+            # if self.notification_widget is not None:
+            if self.backend_system.system_status.get_current_state() in ['comments_on_photo', 'comments_to_gpt',
+                                                                         'full_writing_pending',
+                                                                         'comments_on_audio', 'select_moments']:
+                self.backend_system.add_photo_to_pending_task_list()
+                self.hide_button()
                 return
             self.backend_system.set_user_explicit_input('take_photo')
             self.hide_text()
@@ -211,6 +217,8 @@ class App:
             self.switch_mute_button()
         elif func == "Hide/Show Text":
             self.switch_text_visibility_button()
+        elif func == "Hide Text Box":
+            self.backend_system.set_user_explicit_input('hide_text_box')
 
     def on_release(self, key):
         if not self.config_updated:
@@ -226,28 +234,58 @@ class App:
         if not self.config_updated:
             return
         if self.ring_mouse_mode:
-            # if pressed:
-            if self.last_notification is not None:
-                print(self.last_notification["notif_type"])
+            # prevent double click
+            if self.last_click_time is not None and time.time() - self.last_click_time < 0.5:
+                self.show_warning_notification("Please don't click frequently.")
+                return
+            self.last_click_time = time.time()
             func = None
+            print("Mouse clicked")
             current_system_state = self.backend_system.system_status.get_current_state()
-            is_audio_finished = self.system_config.detect_audio_feedback_finished()
             if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
-                                        'show_gpt_response', 'audio_comments_pending']:
+                                        'audio_comments_pending'] \
+                    or (current_system_state == 'show_gpt_response' and
+                        self.system_config.gpt_response_type == "authoring"):
                 func = "Terminate Waiting for User Response"
-                if not is_audio_finished:
+                if not self.system_config.detect_audio_feedback_finished():
                     self.mute_audio()
-            elif self.notification_widget is None:
+            elif self.notification_widget is None and current_system_state not in ['comments_on_photo',
+                                                                                   'comments_to_gpt',
+                                                                                   'full_writing_pending',
+                                                                                   'comments_on_audio',
+                                                                                   'select_moments']:
                 func = "Hide"
-            elif self.last_notification["notif_type"] == "processing_icon":
-                func = "Show Photo Button"
+            elif current_system_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
+                                          'comments_on_audio', 'select_moments']:
+                if self.last_notification is None:
+                    func = "Show Photo Button"
+                elif self.last_notification["notif_type"] == "processing_icon":
+                    func = "Show Photo Button"
             elif current_system_state in ["comments_on_audio", "comments_on_photo", "comments_to_gpt"]:
                 func = "Cancel Recording"
             elif self.last_text_feedback_to_show:
                 func = "Show Voice Button"
-            # elif self.last_notification["notif_type"] == "processing_icon":
-            #     func = "Show Voice Button"
+            elif self.text_widget.winfo_ismapped():
+                func = "Hide Text Box"
+            else:
+                self.show_warning_notification("Please click the button later.")
             self.parse_button_press(func)
+
+    def show_warning_notification(self, message):
+        if self.warning_notification is None:
+            self.warning_notification = CTkLabel(self.root, text=message, fg_color="#42AF74",
+                                                 font=("Robot", 20))
+        else:
+            self.warning_notification.configure(text=message)
+        self.warning_notification.place(relx=0.9, rely=0.1, anchor='center')
+
+        # remove warning notification after 1 seconds
+        self.root.after(1000, self.remove_warning_notification)
+
+    def remove_warning_notification(self):
+        if self.warning_notification is not None:
+            self.warning_notification.place_forget()
+            self.root.update_idletasks()
 
     def pack_layout(self):
         # set the dimensions of the window to match the screen
@@ -384,7 +422,6 @@ class App:
             notification = self.system_config.notification
             # Update the notification if not the same as the previous one
         if not self.are_equal(notification, self.last_notification):
-            print("New notification: ", notification)
             if self.last_notification is not None:
                 # Remove previous notification if it's not the same as the current one or the current one is set to None
                 if notification is None:
@@ -393,16 +430,14 @@ class App:
                     self.remove_notification()
                     if notification["notif_type"] == "listening_icon" and \
                             self.last_notification["notif_type"] == "picture":
-                        with self.system_config.notification_lock:
-                            self.system_config.notification = {
-                                "notif_type": "listening_picture_comments",
-                                "content": self.last_notification["content"],
-                                "position": self.last_notification["position"]
-                            }
+                        notification = self.system_config.notification = {
+                            "notif_type": "listening_picture_comments",
+                            "content": self.last_notification["content"],
+                            "position": self.last_notification["position"]
+                        }
 
             if notification is not None:
-                if self.last_notification is None:
-                    self.hide_button()
+                self.hide_button()
                 if self.notification_widget is None:
                     self.show_notification_widget(notification)
 
@@ -450,6 +485,7 @@ class App:
         # Pack the notification widget based on the notif_type of the notification
         self.notification_widget = NotificationWidget(self.notification_window, notification["notif_type"])
         if "duration" in notification.keys():
+            self.notification_to_be_removed_with_delay = notification
             self.root.after(int(notification["duration"] * 1000), self.remove_notification_with_delay)
 
         # Set the size and location of the notification window
@@ -467,18 +503,22 @@ class App:
 
     def remove_notification(self):
         if self.notification_widget is not None:
-            self.notification_widget.destroy()
-            self.notification_widget = None
+            if self.system_config.notification != self.last_notification:
+                self.notification_widget.destroy()
+                self.notification_widget = None
         if self.notification_window is not None:
-            self.notification_window.destroy()
-            self.notification_window = None
+            if self.system_config.notification != self.last_notification:
+                self.notification_window.destroy()
+                self.notification_window = None
 
         self.hide_mute_button()
         self.hide_text_visibility_button()
 
     def remove_notification_with_delay(self):
-        self.system_config.notification = None
-        self.remove_notification()
+        if self.notification_to_be_removed_with_delay == self.system_config.notification:
+            self.system_config.notification = None
+            self.remove_notification()
+            self.notification_to_be_removed_with_delay = None
 
     def listen_gpt_feedback_from_backend(self):
         text_feedback_to_show = self.system_config.text_feedback_to_show
@@ -514,9 +554,12 @@ class App:
             button.place(**self.buttons_places[direction])  # Place the button
         self.shown_button = True
 
-    def show_photo_button(self):
-        self.buttons["down"].place(**self.buttons_places["down"])
-        self.shown_button = True
+    def switch_photo_button(self):
+        if self.shown_button:
+            self.hide_button()
+        else:
+            self.buttons["down"].place(**self.buttons_places["down"])
+            self.shown_button = True
 
     def show_voice_button(self):
         self.buttons["right"].place(**self.buttons_places["right"])
@@ -556,7 +599,6 @@ class App:
             self.hide_text()
             return
         else:
-            self.show_voice_button()
             self.text_widget.delete(1.0, tk.END)
             self.text_widget.insert(tk.END, text_response)
             self.text_widget.place(relx=0.5, rely=0.5, anchor='center')
@@ -564,7 +606,9 @@ class App:
             self.stored_text_widget_content = text_response
             self.is_hidden_text = False
             self.show_text_visibility_button()
+            self.show_voice_button()
             self.root.update_idletasks()
+            self.system_config.text_feedback_to_show = None
             self.text_widget.update()
 
             # Cancel the old auto scroll if it exists

@@ -18,7 +18,7 @@ To achieve writing & revise full blog mode, perform the following actions:
 
 
 The writing & revise full blog mode focuses on writing and revising the final full travel blog when I give you instructions for writing a full blog. To achieve writing & revise full blog mode, perform the following actions:
-1) Consider previously selected interesting moments.
+1) Consider user's selected moments (i.e., ONLY use the moment(s) the user mentioned in "user_voice_transcription") in previous selecting mode.
 2) Adopt the user's preferred writing style.
 3) Revise the content & structure when users ask you to do so.
 4) Return the response **ONLY** in JSON format, with the following structure: ```json{"mode": "full", "response": {"full writing": "[full travel blog content in first person narration]", "revised parts": "[the newly added or revised content, return 'None' when no revision.]"}}```

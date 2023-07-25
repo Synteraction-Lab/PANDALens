@@ -28,21 +28,16 @@ class ManualPhotoCommand(Command):
 
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame is not None:
-                if original_frame != []:
-                    frame = original_frame.copy()
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                else:
-                    frame = take_picture(photo_file_path)
+            if original_frame:
+                frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
-                frame = take_picture(photo_file_path)
+                frame = take_picture()
+                original_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
             self.system_config.set_latest_photo_file_path(photo_file_path)
 
-            self.system_config.potential_interested_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
+            self.system_config.potential_interested_frame = original_frame
 
             store_img(photo_file_path, frame)
-            return frame
         except:
             print("Manual photo command is not executed")
-            return None

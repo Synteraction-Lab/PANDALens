@@ -22,7 +22,7 @@ def compress_image(image_path, max_size=720):
     return compressed_image
 
 
-def query(filename, model_url, timeout=5):
+def query(filename, model_url, timeout=3.5):
     try:
         sent_data = compress_image(filename)
         response = requests.post(model_url, headers=headers, data=sent_data, timeout=timeout)
