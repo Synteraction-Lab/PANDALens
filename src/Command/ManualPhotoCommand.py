@@ -28,7 +28,7 @@ class ManualPhotoCommand(Command):
 
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame:
+            if original_frame is not None and original_frame != []:
                 frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture()
@@ -39,5 +39,6 @@ class ManualPhotoCommand(Command):
             self.system_config.potential_interested_frame = original_frame
 
             store_img(photo_file_path, frame)
-        except:
+        except Exception as e:
+            print(e)
             print("Manual photo command is not executed")

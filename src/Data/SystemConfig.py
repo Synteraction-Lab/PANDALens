@@ -114,6 +114,7 @@ class SystemConfig(object):
         self.cancel_recording_command = False
         self.gpt_response_type = None
         self.latest_moment_list = None
+        self.image_info_dict = {}
 
     def get_final_transcription(self):
         return self.final_transcription

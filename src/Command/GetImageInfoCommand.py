@@ -1,5 +1,4 @@
-import io
-import time
+import concurrent.futures
 
 from src.Command.Command import Command
 from src.Module.Vision.google_vision import get_image_labels, get_image_texts
@@ -27,21 +26,37 @@ class GetImageInfoCommand(Command):
         self.system_config = sys_config
 
     def execute(self):
-        img = compress_image(self.system_config.latest_photo_file_path)
-
         try:
-            photo_label = get_image_labels(img)
-            photo_ocr = get_image_texts(img)
+            img = compress_image(self.system_config.latest_photo_file_path)
         except Exception as e:
-            print("Error in getting image info using Google Vision API: ", e)
-            photo_label = None
-            photo_ocr = None
-        try:
+            print(e)
+            image_info = {"error": "Image is not found"}
+            self.system_config.image_info_dict[self.system_config.latest_photo_file_path] = image_info
+            return image_info
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_label = executor.submit(get_image_labels, img)
+            future_to_ocr = executor.submit(get_image_texts, img)
             img.seek(0)
-            photo_caption = get_image_caption(img)
-        except:
-            print("Error in getting image info using Huggingface API.")
-            photo_caption = None
+            future_to_caption = executor.submit(get_image_caption, img)
+
+            try:
+                photo_label = future_to_label.result()
+            except Exception as e:
+                print("Error in getting image info using Google Vision API: ", e)
+                photo_label = None
+
+            try:
+                photo_ocr = future_to_ocr.result()
+            except Exception as e:
+                print("Error in getting image info using Google Vision API: ", e)
+                photo_ocr = None
+
+            try:
+                photo_caption = future_to_caption.result()
+            except Exception as e:
+                print("Error in getting image info using Huggingface API: ", e)
+                photo_caption = None
 
         image_info = {}
 
@@ -56,5 +71,7 @@ class GetImageInfoCommand(Command):
             image_info["photo_ocr"] = photo_ocr.rstrip()
         if photo_caption is not None:
             image_info["photo_caption"] = photo_caption.rstrip()
+
+        self.system_config.image_info_dict[self.system_config.latest_photo_file_path] = image_info
 
         return image_info

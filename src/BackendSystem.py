@@ -70,7 +70,6 @@ class BackendSystem:
                     self.system_status.set_state('manual_photo_comments_pending')
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
-                    # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                     with self.system_config.notification_lock:
                         self.system_config.notification = {'notif_type': 'picture',
                                                            'content': self.system_config.potential_interested_frame,
@@ -112,13 +111,13 @@ class BackendSystem:
 
                     # Processing pending task first
                     if self.system_config.pending_task_list:
-                        photo = self.system_config.pending_task_list.pop(0)
+                        photo, photo_file_path = self.system_config.pending_task_list.pop(0)
                         time.sleep(0.5)
                         with self.system_config.notification_lock:
                             self.system_config.notification = {'notif_type': 'picture',
                                                                'content': photo,
                                                                'position': 'middle-right'}
-
+                        self.system_config.set_latest_photo_file_path(photo_file_path)
                         self.system_status.set_state('photo_comments_pending')
 
                     # Detect implicit input
@@ -402,8 +401,8 @@ class BackendSystem:
 
     def add_photo_to_pending_task_list(self):
         with self.system_config.notification_lock:
-            photo = PhotoCommand(self.system_config).execute()
-            self.system_config.pending_task_list.append(photo)
+            photo, path = PhotoCommand(self.system_config).execute()
+            self.system_config.pending_task_list.append((photo, path))
             self.system_config.notification = {'notif_type': 'picture_thumbnail',
                                                'content': photo,
                                                'position': 'middle-right', 'duration': 1.5}

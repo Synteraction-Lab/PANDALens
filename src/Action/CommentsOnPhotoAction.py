@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime
 
 from src.Action.Action import Action
@@ -13,6 +14,9 @@ class CommentsOnPhotoAction(Action):
     def execute(self):
         user_request = {}
 
+        get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
+        threading.Thread(target=get_image_info_command.execute).start()
+
         # transcribe voice
         transcribe_command = CommandParser.parse("transcribe_voice", self.system_config)
         if transcribe_command is not None:
@@ -23,14 +27,11 @@ class CommentsOnPhotoAction(Action):
 
         if not self.system_config.naive:
             # get image info
-            get_image_info_command = CommandParser.parse("get_image_info", self.system_config)
-            try:
-                if get_image_info_command is not None:
-                    image_info = get_image_info_command.execute()
-                    user_request["image_info"] = image_info
-            except Exception as e:
-                print("Error: cannot get image info", e)
+            while not self.system_config.image_info_dict.get(self.system_config.latest_photo_file_path, None):
+                pass
 
+            image_info = self.system_config.image_info_dict.get(self.system_config.latest_photo_file_path, None)
+            user_request["image_info"] = image_info
 
             # get location & time
             try:

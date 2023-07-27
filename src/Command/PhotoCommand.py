@@ -24,14 +24,14 @@ class PhotoCommand(Command):
 
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame:
+            if original_frame is not None and original_frame != []:
                 frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture()
                 original_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
             store_img(photo_file_path, frame)
-            return original_frame
+            return original_frame, photo_file_path
         except:
             print("Manual photo command is not executed")
             return None

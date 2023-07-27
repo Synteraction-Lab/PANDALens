@@ -74,7 +74,7 @@ class AutoPhotoCommand(Command):
         try:
             original_frame = self.system_config.vision_detector.get_original_frame()
 
-            if original_frame:
+            if original_frame is not None and original_frame != []:
                 frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
             else:
                 frame = take_picture()
