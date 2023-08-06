@@ -14,7 +14,7 @@ interesting_audioset_categories = [
     'Music',
     # 'Speech',
     'Animal',
-    'Vehicle',
+    # 'Vehicle',
     'Natural sounds',
     # 'Human sounds',
     'Musical instrument',
@@ -27,21 +27,21 @@ interesting_audioset_categories = [
     'Water sounds',
     'Wind',
     # 'Typing',
-    'Door',
+    # 'Door',
     'Bird',
     'Dog',
     'Cat',
-    'Alarm',
-    'Phone ring',
+    # 'Alarm',
+    # 'Phone ring',
     'Chainsaw',
     'Rain',
     'Ocean waves',
     'Train',
     'Airplane',
     'Helicopter',
-    'Car',
-    'Motorcycle',
-    'Bicycle',
+    # 'Car',
+    # 'Motorcycle',
+    # 'Bicycle',
     'Siren',
     'Church bells',
     'Clock alarm',
@@ -115,6 +115,7 @@ class SystemConfig(object):
         self.gpt_response_type = None
         self.latest_moment_list = None
         self.image_info_dict = {}
+        self.gpt_question_count = 0
 
     def get_final_transcription(self):
         return self.final_transcription

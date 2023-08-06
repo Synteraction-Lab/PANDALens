@@ -257,7 +257,7 @@ class ObjectDetector:
                         if msg["confidence"] > fixation_conf:
                             fixation_conf = msg["confidence"]
                             fixation_x, fixation_y = msg['norm_pos']
-                    elif topic == "gaze.3d.01.":
+                    elif topic == "gaze.3d.1.":
                         # if msg['confidence'] > 0.1:
                         gaze_x, gaze_y = msg['norm_pos']
                         gaze_x_list.append(gaze_x)
@@ -337,7 +337,7 @@ if __name__ == '__main__':
     manager = BaseManager()
     manager.start()
     gaze_data = manager.GazeData()
-    object_detector = ObjectDetector(simulate=False, debug_info=True, cv_imshow=True,)
+    object_detector = ObjectDetector(simulate=True, debug_info=True, cv_imshow=True,)
     thread_vision = multiprocessing.Process(target=object_detector.run, args=(gaze_data,))
     thread_vision.start()
     while True:

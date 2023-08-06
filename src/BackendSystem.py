@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 class BackendSystem:
     def __init__(self, system_config):
+        self.user_confirm_move_to_another_place = False
         self.last_gaze_detection_time = 0
         self.previous_sentiment_scores = None
         self.user_explicit_input = None
@@ -103,6 +104,7 @@ class BackendSystem:
 
             if current_state == 'init':
                 if not self.system_config.naive:
+                    self.system_config.gpt_question_count = 0
                     emotion_classifier = self.system_config.get_transcriber()
                     if emotion_classifier is not None:
                         if emotion_classifier.stop_event.is_set():
@@ -271,6 +273,14 @@ class BackendSystem:
         return threshold
 
     def detect_user_move_to_another_place(self):
+        if self.user_confirm_move_to_another_place:
+            self.user_confirm_move_to_another_place = False
+            with self.system_config.notification_lock:
+                self.system_config.notification = {'notif_type': 'picture',
+                                                   'content': self.system_config.potential_interested_frame,
+                                                   'position': 'middle-right'}
+            self.system_config.start_non_audio_feedback_display()
+            return True
         current_frame = self.system_config.vision_detector.get_original_frame()
 
         if self.system_config.potential_interested_frame is not None:
@@ -279,14 +289,15 @@ class BackendSystem:
             print(potential_frame_sim, previous_frame_sim)
             self.previous_vision_frame = current_frame
 
-            difference = cv2.subtract(current_frame, self.system_config.potential_interested_frame)
-            result = not np.any(difference)
-            if result:
-                return False
-            else:
-                cv2.imwrite("diff2.jpg", difference)
+            # difference = cv2.subtract(current_frame, self.system_config.potential_interested_frame)
+            # result = not np.any(difference)
+            # if result:
+            #     return False
+            # else:
+            #     cv2.imwrite("diff2.jpg", difference)
 
-            if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
+            # if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
+            if potential_frame_sim < 0.65:
                 # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                 with self.system_config.notification_lock:
                     self.system_config.notification = {'notif_type': 'picture',
@@ -312,6 +323,19 @@ class BackendSystem:
             if category == 'Speech' and score > 0.7:
                 self.silence_start_time = None
                 self.system_config.progress_bar_percentage = None
+                return True
+        time.sleep(0.3)
+        return False
+
+    def detect_speech_without_init_voice_transcribe(self) -> bool:
+        score, category = self.system_config.get_bg_audio_analysis_result()
+        if category is None:
+            time.sleep(0.3)
+            return False
+        print(f"{category}: {score}")
+        # if category is speech, then return True
+        if category is not None and score is not None:
+            if category == 'Speech' and score > 0.7:
                 return True
         time.sleep(0.3)
         return False
@@ -394,6 +418,8 @@ class BackendSystem:
             self.user_explicit_input = None
         elif self.user_explicit_input == 'hide_text_box':
             self.system_status.set_state("init")
+        elif self.user_explicit_input == 'finish_photo_pending_status':
+            self.user_confirm_move_to_another_place = True
 
     def simulate_func(self, func):
         if func == "gaze":

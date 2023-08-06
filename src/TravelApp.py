@@ -24,6 +24,8 @@ from src.UI.widget_generator import get_button
 from src.Utilities.constant import audio_file, chat_file, slim_history_file, config_path, image_folder
 import numpy as np
 
+PERSON_COUNT_THRESHOLD_FOR_AUDIO_ON = 5
+
 SHOW_GAZE_MOVEMENT = False
 
 
@@ -152,7 +154,12 @@ class App:
                 func = "Hide/Show Text"
             elif key == keyboard.Key.up and self.shown_button:
                 func = "Select"
-            elif key == keyboard.Key.down and self.shown_button:
+            elif key == keyboard.Key.down and (self.shown_button or (
+                        self.notification_widget is None and current_system_state not in ['comments_on_photo',
+                                                                                          'comments_to_gpt',
+                                                                                          'full_writing_pending',
+                                                                                          'comments_on_audio',
+                                                                                          'select_moments'])):
                 func = "Photo"
             elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
@@ -219,6 +226,8 @@ class App:
             self.switch_text_visibility_button()
         elif func == "Hide Text Box":
             self.backend_system.set_user_explicit_input('hide_text_box')
+        elif func == "Finish Photo Pending Status":
+            self.backend_system.set_user_explicit_input('finish_photo_pending_status')
 
     def on_release(self, key):
         if not self.config_updated:
@@ -235,13 +244,15 @@ class App:
             return
         if self.ring_mouse_mode:
             # prevent double click
-            if self.last_click_time is not None and time.time() - self.last_click_time < 0.5:
+            if self.last_click_time is not None and time.time() - self.last_click_time < 0.3:
                 self.show_warning_notification("Please don't click frequently.")
                 return
             self.last_click_time = time.time()
             func = None
             print("Mouse clicked")
             current_system_state = self.backend_system.system_status.get_current_state()
+            if current_system_state == "photo_pending":
+                func = "Finish Photo Pending Status"
             if current_system_state in ['photo_comments_pending', 'manual_photo_comments_pending',
                                         'audio_comments_pending'] \
                     or (current_system_state == 'show_gpt_response' and
@@ -256,19 +267,19 @@ class App:
                                                                                    'select_moments']:
                 func = "Hide"
             elif current_system_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
-                                          'comments_on_audio', 'select_moments']:
-                if self.last_notification is None:
-                    func = "Show Photo Button"
-                elif self.last_notification["notif_type"] == "processing_icon":
-                    func = "Show Photo Button"
+                                          'comments_on_audio', 'select_moments'] and self.last_notification is None:
+                func = "Show Photo Button"
+            elif current_system_state in ['comments_on_photo', 'comments_to_gpt', 'full_writing_pending',
+                                          'comments_on_audio', 'select_moments'] and self.last_notification["notif_type"] == "processing_icon":
+                func = "Show Photo Button"
             elif current_system_state in ["comments_on_audio", "comments_on_photo", "comments_to_gpt"]:
                 func = "Cancel Recording"
             elif self.last_text_feedback_to_show:
                 func = "Show Voice Button"
             elif self.text_widget.winfo_ismapped():
                 func = "Hide Text Box"
-            else:
-                self.show_warning_notification("Please click the button later.")
+            # else:
+            #     self.show_warning_notification("Please click the button later.")
             self.parse_button_press(func)
 
     def show_warning_notification(self, message):
@@ -449,6 +460,8 @@ class App:
                       or notification["notif_type"] == "picture_thumbnail") \
                         and notification["content"] is not None:
                     self.notification_widget.configure(image=notification["content"])
+                elif notification["notif_type"] == "audio_icon":
+                    self.notification_widget.configure(label=notification["label"])
 
             self.last_notification = notification
 
@@ -631,6 +644,10 @@ class App:
                 self.auto_scroll_id = self.root.after(3500, self.auto_scroll_text)
 
     def render_audio_response(self, audio_response):
+        # Switch the audio feedback on if many people are shown in the FPV
+        if self.system_config.vision_detector.get_person_count() > PERSON_COUNT_THRESHOLD_FOR_AUDIO_ON:
+            self.is_muted = True
+
         self.show_mute_button()
         if self.is_muted:
             self.temporal_audio_response = audio_response

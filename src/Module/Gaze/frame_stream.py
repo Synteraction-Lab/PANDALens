@@ -29,7 +29,7 @@ class PupilCamera:
         # recv just pupil/gaze/notifications
         self.sub.setsockopt_string(zmq.SUBSCRIBE, "frame.world")
         self.sub.setsockopt_string(zmq.SUBSCRIBE, "fixations")
-        self.sub.setsockopt_string(zmq.SUBSCRIBE, "gaze.3d.01.")
+        self.sub.setsockopt_string(zmq.SUBSCRIBE, "gaze.3d.1.")
         # self.sub.subscribe('fixations')  # receive all gaze messages
         # self.sub.subscribe('gaze.3d.1.')
 

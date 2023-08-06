@@ -65,9 +65,12 @@ class SendGPTRequestCommand(Command):
                     summary_of_new_content = json_response['response'].get('summary of new content')
                     if question_to_users is not None:
                         audio_response = f"{question_to_users}"
-                        if audio_response.strip() == "None":
-                            audio_response = "I have no question for you. Anything you want to add?"
-                        text_response = audio_response
+                        if audio_response.strip() == "None" or self.system_config.gpt_question_count >= 2:
+                            audio_response = None
+                            text_response = "I have no question for you. Anything you want to add?"
+                        else:
+                            self.system_config.gpt_question_count += 1
+                            text_response = audio_response
                     elif summary_of_new_content is not None:
                         question_to_users = extract_question_sentences(summary_of_new_content).strip()
                         if question_to_users == "":

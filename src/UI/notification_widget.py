@@ -4,7 +4,7 @@ from customtkinter import CTkLabel, CTkImage, CTkTextbox
 import tkinter as tk
 import os
 
-from src.UI.UI_config import MAIN_GREEN_COLOR
+from src.UI.UI_config import MAIN_GREEN_COLOR, MAIN_COLOR_LIGHT
 
 
 class NotificationWidget:
@@ -60,7 +60,7 @@ class NotificationWidget:
 
         elif self.notif_type == "like_icon":
             self.like_icon = CTkImage(Image.open(os.path.join(self.asset_path, "like_icon.png")),
-                                      size=(60, 54))
+                                      size=(72, 65))
             self.icon = CTkLabel(self.parent, text="", image=self.like_icon)
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "listening_icon":
@@ -76,8 +76,9 @@ class NotificationWidget:
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "audio_icon":
             self.audio_icon = CTkImage(Image.open(os.path.join(self.asset_path, "audio_icon.png")),
-                                       size=(60, 55))
-            self.icon = CTkLabel(self.parent, text="", image=self.audio_icon)
+                                       size=(50, 45))
+            self.icon = CTkLabel(self.parent, text="", image=self.audio_icon, text_color=MAIN_GREEN_COLOR,
+                                 font=('Robot Bold', 20))
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         elif self.notif_type == "processing_icon":
             self.processing_icon = CTkImage(Image.open(os.path.join(self.asset_path, "processing_icon.png")),
@@ -140,6 +141,8 @@ class NotificationWidget:
             # Set the image on the label widget
             self.picture_label.configure(image=img_tk)
             self.picture_label.image = img_tk
+        if "label" in kwargs:
+            self.icon.configure(text=kwargs["label"], compound='top')
 
     def destroy(self):
         if self.notif_type == "text":
