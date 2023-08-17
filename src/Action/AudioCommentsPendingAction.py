@@ -13,5 +13,6 @@ class AudioCommentsPendingAction(Action):
         self.system_config.notification = {'notif_type': 'audio_icon',
                                            'label': self.system_config.interesting_audio,
                                            'position': 'middle-right'}
-        time.sleep(5)
+        self.system_config.start_non_audio_feedback_display()
+        time.sleep(0.3)
         # self.system_config.audio_feedback_to_show = self.system_config.notification

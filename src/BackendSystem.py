@@ -10,7 +10,7 @@ from src.Data.SystemStatus import SystemStatus
 from src.Module.Audio.live_transcriber import LiveTranscriber
 from src.Module.LLM.GPT import GPT
 from src.Module.Vision.utilities import compare_histograms
-from src.Storage.writer import log_manipulation
+from src.Storage.writer import log_manipulation, remove_file_async
 from src.Action import ActionParser
 
 import warnings
@@ -20,6 +20,14 @@ from src.Utilities.constant import chat_file, slim_history_file
 SILENCE_THRESHOLD = 10
 
 warnings.filterwarnings("ignore", category=UserWarning)
+
+
+def calculate_dynamic_threshold(last_interested_frame_sim):
+    BASE_THRESHOLD = 15  # set your base threshold value here
+    THRESHOLD_FACTOR = 200  # set your factor for adjusting threshold here
+
+    threshold = BASE_THRESHOLD + (last_interested_frame_sim * last_interested_frame_sim * THRESHOLD_FACTOR)
+    return threshold
 
 
 class BackendSystem:
@@ -153,8 +161,8 @@ class BackendSystem:
                         ActionParser.parse(action, self.system_config).execute()
 
                         with self.system_config.notification_lock:
-                            self.system_config.notification = {'notif_type': 'picture',
-                                                               'content': self.system_config.potential_interested_frame,
+                            self.system_config.notification = {'notif_type': 'like_object_icon',
+                                                               'label': self.system_config.interesting_object,
                                                                'position': 'middle-right'}
                         self.system_config.start_non_audio_feedback_display()
 
@@ -207,8 +215,6 @@ class BackendSystem:
                     action = self.system_status.get_current_state()
                     ActionParser.parse(action, self.system_config).execute()
 
-            # elif prev_state == 'show_gpt_response' and not self.system_config.gpt_response_type == "authoring":
-
     def take_user_explict_input(self, user_input):
         self.system_status.trigger(user_input)
         action = self.system_status.get_current_state()
@@ -237,7 +243,6 @@ class BackendSystem:
 
         if self.system_config.potential_interested_frame is not None:
             last_interested_frame_sim = compare_histograms(self.system_config.potential_interested_frame, current_frame)
-            # cv2.imwrite("curr.jpg", current_frame)
 
         not_similar_frame = last_interested_frame_sim < 0.6
 
@@ -247,12 +252,12 @@ class BackendSystem:
 
         if (zoom_in or fixation_detected) and not_similar_frame and norm_pos is not None:
             now = time.time()
-            dynamic_threshold = self.calculate_dynamic_threshold(last_interested_frame_sim)
+            dynamic_threshold = calculate_dynamic_threshold(last_interested_frame_sim)
             if now - self.last_gaze_detection_time > dynamic_threshold:
                 # Conditions to determine the user's behavior
                 if zoom_in and fixation_detected:
                     self.system_config.user_behavior = f"Moving close to and looking at: {closest_object}"
-                elif self.zoom_in:
+                elif zoom_in:
                     self.system_config.user_behavior = f"Moving close to: {closest_object}"
                 elif fixation_detected:
                     self.system_config.user_behavior = f"Looking at: {closest_object}"
@@ -264,13 +269,6 @@ class BackendSystem:
                 return True
         self.previous_vision_frame = current_frame
         return False
-
-    def calculate_dynamic_threshold(self, last_interested_frame_sim):
-        BASE_THRESHOLD = 15  # set your base threshold value here
-        THRESHOLD_FACTOR = 200  # set your factor for adjusting threshold here
-
-        threshold = BASE_THRESHOLD + (last_interested_frame_sim * last_interested_frame_sim * THRESHOLD_FACTOR)
-        return threshold
 
     def detect_user_move_to_another_place(self):
         if self.user_confirm_move_to_another_place:
@@ -289,15 +287,8 @@ class BackendSystem:
             print(potential_frame_sim, previous_frame_sim)
             self.previous_vision_frame = current_frame
 
-            # difference = cv2.subtract(current_frame, self.system_config.potential_interested_frame)
-            # result = not np.any(difference)
-            # if result:
-            #     return False
-            # else:
-            #     cv2.imwrite("diff2.jpg", difference)
-
             # if potential_frame_sim < 0.6 and previous_frame_sim < 0.85:
-            if potential_frame_sim < 0.65:
+            if potential_frame_sim < 0.75:
                 # self.system_config.frame_shown_in_picture_window = self.system_config.potential_interested_frame
                 with self.system_config.notification_lock:
                     self.system_config.notification = {'notif_type': 'picture',
@@ -350,7 +341,7 @@ class BackendSystem:
         if scores is None:
             return False
 
-        if scores['joy'] + scores['surprise'] > 0.7 and scores != self.previous_sentiment_scores:
+        if scores['joy'] + scores['surprise'] > 0.75 and scores != self.previous_sentiment_scores:
             self.previous_sentiment_scores = scores
             emotion_classifier.stop_emotion_classification_and_start_transcription()
             return True
@@ -358,7 +349,7 @@ class BackendSystem:
     def detect_interested_audio(self):
         score, category = self.system_config.get_bg_audio_analysis_result()
         if category is not None and score is not None:
-            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.7:
+            if category in self.system_config.get_bg_audio_interesting_categories() and score > 0.8:
                 last_time = self.system_config.previous_interesting_audio_time.get(category, 0)
                 if time.time() - last_time > 60:
                     self.system_config.interesting_audio = category
@@ -384,12 +375,12 @@ class BackendSystem:
             print("Silence start time: ", self.silence_start_time)
         else:
             time_diff = time.time() - self.silence_start_time
-            print(f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it.")
+            print(f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it. Start time: {self.silence_start_time}")
             # self.system_config.notification = f"Reply in {int(SILENCE_THRESHOLD - time_diff)}s or ignore it."
             self.system_config.progress_bar_percentage = (SILENCE_THRESHOLD - time_diff) / SILENCE_THRESHOLD
             if time_diff > SILENCE_THRESHOLD:
                 self.silence_start_time = None
-                self.system_config.progress_bar_percentage = None
+                self.system_config.progress_bar_percentage = 0
                 voice_transcribe = self.system_config.get_transcriber()
                 if not voice_transcribe.stop_event.is_set():
                     voice_transcribe.stop_transcription_and_start_emotion_classification()
@@ -420,6 +411,8 @@ class BackendSystem:
             self.system_status.set_state("init")
         elif self.user_explicit_input == 'finish_photo_pending_status':
             self.user_confirm_move_to_another_place = True
+        elif self.user_explicit_input == 'retake_photo':
+            self.replace_new_photo()
 
     def simulate_func(self, func):
         if func == "gaze":
@@ -429,9 +422,24 @@ class BackendSystem:
         with self.system_config.notification_lock:
             photo, path = PhotoCommand(self.system_config).execute()
             self.system_config.pending_task_list.append((photo, path))
+            # reduce question number when user take a photo to pending list
+            self.system_config.gpt_question_count += 1
             self.system_config.notification = {'notif_type': 'picture_thumbnail',
                                                'content': photo,
                                                'position': 'middle-right', 'duration': 1.5}
+
+    def replace_new_photo(self):
+        self.silence_start_time = time.time()
+        print("Silence start time: ", self.silence_start_time)
+        remove_file_async(self.system_config.latest_photo_file_path)
+        self.system_status.set_state('manual_photo_comments_pending')
+        ActionParser.parse('manual_photo_comments_pending', self.system_config).execute()
+        with self.system_config.notification_lock:
+            self.system_config.notification = {'notif_type': 'picture',
+                                               'content': self.system_config.potential_interested_frame,
+                                               'position': 'middle-right'}
+
+        self.system_config.start_non_audio_feedback_display()
 
 
 def test():

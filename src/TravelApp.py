@@ -31,6 +31,7 @@ SHOW_GAZE_MOVEMENT = False
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.enable_to_retake_photo = False
         self.notification_to_be_removed_with_delay = None
         self.last_click_time = None
         self.warning_notification = None
@@ -79,6 +80,9 @@ class App:
         self.pack_layout()
 
         self.root.bind('<Button-1>', self.on_click)
+
+        # Remote reset system by admin
+        self.root.bind('<Next>', self.experimenter_click)
 
         self.root.mainloop()
 
@@ -144,6 +148,7 @@ class App:
         func = None
         try:
             current_system_state = self.backend_system.system_status.get_current_state()
+            print("Current system state: ", current_system_state)
             if key == keyboard.Key.right and current_system_state in ["comments_on_audio",
                                                                       "comments_on_photo",
                                                                       "comments_to_gpt"]:
@@ -152,8 +157,11 @@ class App:
                 func = "Mute/Unmute"
             elif key == keyboard.Key.down and self.text_visibility_button.winfo_ismapped():
                 func = "Hide/Show Text"
-            elif key == keyboard.Key.up and self.shown_button:
+            elif key == keyboard.Key.up and self.shown_button and current_system_state == "init":
                 func = "Select"
+            elif key == keyboard.Key.down and self.enable_to_retake_photo:
+                func = "Retake"
+                self.enable_to_retake_photo = False
             elif key == keyboard.Key.down and (self.shown_button or (
                         self.notification_widget is None and current_system_state not in ['comments_on_photo',
                                                                                           'comments_to_gpt',
@@ -189,7 +197,7 @@ class App:
             self.hide_button()
         elif func == "Cancel Recording":
             self.backend_system.set_user_explicit_input('cancel_recording')
-        elif func == "Photo" or func == "Retake":
+        elif func == "Photo":
             # if self.notification_widget is not None:
             if self.backend_system.system_status.get_current_state() in ['comments_on_photo', 'comments_to_gpt',
                                                                          'full_writing_pending',
@@ -199,6 +207,8 @@ class App:
                 return
             self.backend_system.set_user_explicit_input('take_photo')
             self.hide_text()
+        elif func == "Retake":
+            self.backend_system.set_user_explicit_input('retake_photo')
         elif func == "Summary":
             self.backend_system.set_user_explicit_input('full_writing')
         # elif func == "Discard":
@@ -239,12 +249,16 @@ class App:
         except Exception as e:
             print(e)
 
+    def experimenter_click(self, event):
+        log_manipulation(self.log_path, "Experimenter Clicked")
+        self.on_click()
+
     def on_click(self, *args, **kwargs):
         if not self.config_updated:
             return
         if self.ring_mouse_mode:
             # prevent double click
-            if self.last_click_time is not None and time.time() - self.last_click_time < 0.3:
+            if self.last_click_time is not None and time.time() - self.last_click_time < 0.2:
                 self.show_warning_notification("Please don't click frequently.")
                 return
             self.last_click_time = time.time()
@@ -379,9 +393,9 @@ class App:
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
         self.listen_progress_bar_from_backend()
-        if SHOW_GAZE_MOVEMENT:
-            self.listen_gaze_pos_from_backend()
-        self.root.after(300, self.update_ui_based_on_timer)
+        # if SHOW_GAZE_MOVEMENT:
+        #     self.listen_gaze_pos_from_backend()
+        self.root.after(100, self.update_ui_based_on_timer)
 
     def listen_gaze_pos_from_backend(self):
         gaze_pos = self.system_config.gaze_pos
@@ -400,7 +414,9 @@ class App:
                 if self.notification_window is not None:
                     self.notification_window.attributes("-alpha", progress_bar_percentage)
             else:
+                self.hide_button()
                 self.remove_notification()
+                self.system_config.progress_bar_percentage = None
 
     def are_equal(self, n1, n2):
         # If both are None
@@ -448,6 +464,7 @@ class App:
                         }
 
             if notification is not None:
+                self.enable_to_retake_photo = False
                 self.hide_button()
                 if self.notification_widget is None:
                     self.show_notification_widget(notification)
@@ -460,7 +477,13 @@ class App:
                       or notification["notif_type"] == "picture_thumbnail") \
                         and notification["content"] is not None:
                     self.notification_widget.configure(image=notification["content"])
+                    # enable to retake photo when showing the picture to users
+                    if notification["notif_type"] == "picture":
+                        self.switch_photo_button()
+                        self.enable_to_retake_photo = True
                 elif notification["notif_type"] == "audio_icon":
+                    self.notification_widget.configure(label=notification["label"])
+                elif notification["notif_type"] == "like_object_icon":
                     self.notification_widget.configure(label=notification["label"])
 
             self.last_notification = notification
@@ -555,9 +578,10 @@ class App:
         self.root.update_idletasks()
 
     def hide_button(self):
+        print("hide button")
         for direction, button in self.buttons.items():
             button.place_forget()
-            self.root.update_idletasks()
+        self.root.update_idletasks()
         self.hide_mute_button()
         self.hide_text_visibility_button()
         self.shown_button = False

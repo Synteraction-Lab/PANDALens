@@ -45,7 +45,7 @@ class ObjectDetector:
         self.model = YOLO('ultralyticsplus/yolov8s')
 
         # set model parameters
-        self.model.overrides['conf'] = 0.3  # NMS confidence threshold
+        self.model.overrides['conf'] = 0.6  # NMS confidence threshold
         self.model.overrides['iou'] = 0.45  # NMS IoU threshold
         self.model.overrides['agnostic_nms'] = False  # NMS class-agnostic
         self.model.overrides['max_det'] = 100  # maximum number of detections per image
@@ -72,7 +72,7 @@ class ObjectDetector:
         if simulate:
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
 
-        self.interested_categories = ['cat', 'dog']
+        self.interested_categories = ['bird', 'cat', 'dog', 'cow', 'elephant', 'bear']
 
     def detect_fixation(self, frame):
         if frame is None or self.gaze_position == (0, 0):

@@ -72,8 +72,8 @@ class LiveTranscriber:
             raise ValueError(f"No input microphone named \"{self.device_index}\" found")
 
         # self.recorder.adjust_for_ambient_noise(self.source)
-        self.base_audio_model = whisper.load_model("base.en")
-        self.small_audio_model = whisper.load_model("small.en")
+        self.base_audio_model = whisper.load_model("tiny.en")
+        self.small_audio_model = whisper.load_model("base.en")
 
         self.temp_file = NamedTemporaryFile().name
         self.transcription = ['']
@@ -124,9 +124,9 @@ class LiveTranscriber:
 
                 if self.mode == "voice_transcription":
                     with self.lock:
-                        result = self.base_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
-                                                                  no_speech_threshold=0.2,
-                                                                  logprob_threshold=None,)
+                        result = self.small_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                                   no_speech_threshold=0.2,
+                                                                   logprob_threshold=None, )
                         text = result['text'].strip()
 
                         if phrase_complete:
@@ -139,9 +139,9 @@ class LiveTranscriber:
                         #     print(line)
                         print(" ".join(self.transcription))
                 else:
-                    result = self.small_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
-                                                               no_speech_threshold=0.2,
-                                                               logprob_threshold=None, )
+                    result = self.base_audio_model.transcribe(self.temp_file, fp16=torch.cuda.is_available(),
+                                                              no_speech_threshold=0.2,
+                                                              logprob_threshold=None, )
                     text = result['text'].strip()
 
                     if phrase_complete:

@@ -63,20 +63,23 @@ class SendGPTRequestCommand(Command):
                 elif json_response['mode'] == "authoring":
                     question_to_users = json_response['response'].get('question to users')
                     summary_of_new_content = json_response['response'].get('summary of new content')
+                    self.system_config.gpt_question_count += 1
+                    print("question #:", self.system_config.gpt_question_count)
                     if question_to_users is not None:
                         audio_response = f"{question_to_users}"
-                        if audio_response.strip() == "None" or self.system_config.gpt_question_count >= 2:
+                        if audio_response.strip() == "None" or self.system_config.gpt_question_count > 2:
                             audio_response = None
                             text_response = "I have no question for you. Anything you want to add?"
                         else:
-                            self.system_config.gpt_question_count += 1
                             text_response = audio_response
                     elif summary_of_new_content is not None:
                         question_to_users = extract_question_sentences(summary_of_new_content).strip()
+                        audio_response = f"{question_to_users}"
                         if question_to_users == "":
                             question_to_users = "I have no question for you. Anything you want to add?"
+                            audio_response = None
+
                         text_response = f"{question_to_users}"
-                        audio_response = text_response
 
                     with self.system_config.notification_lock:
                         self.system_config.audio_feedback_to_show = audio_response

@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 
-from src.Utilities.file import is_file_exists, ITEM, DETAILS, TIME
+from src.Utilities.file import is_file_exists, ITEM, DETAILS, TIME, remove_file
 
 
 def append_json_data(file_name, new_data):
@@ -52,13 +52,14 @@ def log_manipulation(file_name, item):
 
 def generate_output_file(chat_history_path, image_path, title='UbiWriter Output'):
     full_writing = retrieve_full_writing_from_chat_history(chat_history_path)
+    moment_summary = retrieve_moment_summary_from_chat_history(chat_history_path)
     images = retrieve_all_images(image_path)
     # get current path's parent directory
     data_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     data_path = os.path.join(data_path, "data")
     output_filename = title + ".docx"
     output_path = os.path.join(data_path, output_filename)
-    pack_doc(full_writing, images, output_path, title)
+    pack_doc(full_writing, moment_summary, images, output_path, title)
 
 
 def retrieve_full_writing_from_chat_history(chat_history_path):
@@ -76,6 +77,26 @@ def retrieve_full_writing_from_chat_history(chat_history_path):
             pass
 
 
+def retrieve_moment_summary_from_chat_history(chat_history_path):
+    import json
+    with open(chat_history_path, "r") as f:
+        data = json.load(f, strict=False)
+
+    summary = ""
+
+    # Get the last json item with "mode" == "full"
+    for item in reversed(data["recordings"]):
+        try:
+            record = json.loads(item["content"], strict=False)
+            if record["mode"] == "authoring":
+                if "summary of new content" in record["response"]:
+                    summary += record["response"]["summary of new content"] + "\n\n"
+        except:
+            pass
+
+    return summary + "--------------------------\n\n"
+
+
 def retrieve_all_images(image_path):
     # return all images in the folder
     import os
@@ -85,7 +106,7 @@ def retrieve_all_images(image_path):
             (f.endswith(".png") or f.endswith(".jpg"))]
 
 
-def pack_doc(full_writing, images, output_path, title):
+def pack_doc(full_writing, moment_summary, images, output_path, title):
     from docx import Document
     from docx.shared import Inches
     document = Document()
@@ -96,7 +117,14 @@ def pack_doc(full_writing, images, output_path, title):
         run = paragraph.add_run()
         run.add_picture(image, width=Inches(1.25))
 
+    document.add_paragraph(f'{moment_summary}\n')
     document.add_paragraph(f'{full_writing}\n')
 
     document.save(output_path)
     print("Doc is saved to:", output_path)
+
+
+def remove_file_async(file_name):
+    import threading
+    threading.Thread(target=remove_file, args=(file_name,)).start()
+
