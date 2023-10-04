@@ -45,7 +45,7 @@ class ObjectDetector:
         self.model = YOLO('ultralyticsplus/yolov8s')
 
         # set model parameters
-        self.model.overrides['conf'] = 0.6  # NMS confidence threshold
+        self.model.overrides['conf'] = 0.7  # NMS confidence threshold
         self.model.overrides['iou'] = 0.45  # NMS IoU threshold
         self.model.overrides['agnostic_nms'] = False  # NMS class-agnostic
         self.model.overrides['max_det'] = 100  # maximum number of detections per image

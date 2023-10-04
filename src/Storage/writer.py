@@ -98,12 +98,15 @@ def retrieve_moment_summary_from_chat_history(chat_history_path):
 
 
 def retrieve_all_images(image_path):
-    # return all images in the folder
-    import os
-    # return all the png and jpg files in the folder
-    return [os.path.join(image_path, f) for f in os.listdir(image_path) if
-            os.path.isfile(os.path.join(image_path, f)) and
-            (f.endswith(".png") or f.endswith(".jpg"))]
+    # Get all the png and jpg files in the folder
+    all_images = [os.path.join(image_path, f) for f in os.listdir(image_path) if
+                  os.path.isfile(os.path.join(image_path, f)) and
+                  (f.endswith(".png") or f.endswith(".jpg"))]
+
+    # Sort the images by modification time (oldest first)
+    all_images.sort(key=lambda x: os.path.getmtime(x))
+
+    return all_images
 
 
 def pack_doc(full_writing, moment_summary, images, output_path, title):
@@ -117,8 +120,12 @@ def pack_doc(full_writing, moment_summary, images, output_path, title):
         run = paragraph.add_run()
         run.add_picture(image, width=Inches(1.25))
 
-    document.add_paragraph(f'{moment_summary}\n')
+
     document.add_paragraph(f'{full_writing}\n')
+
+    document.add_paragraph(f'\n\n------------------\n\n')
+
+    document.add_paragraph(f'{moment_summary}\n')
 
     document.save(output_path)
     print("Doc is saved to:", output_path)

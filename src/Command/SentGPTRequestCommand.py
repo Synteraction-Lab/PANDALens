@@ -2,6 +2,8 @@ from src.Command.Command import Command
 from src.Utilities.json import detect_json
 import re
 
+MAX_QUESTION_NUMBER = 1
+
 
 def extract_question_sentences(text):
     # Define a regular expression pattern to match question sentences
@@ -67,7 +69,7 @@ class SendGPTRequestCommand(Command):
                     print("question #:", self.system_config.gpt_question_count)
                     if question_to_users is not None:
                         audio_response = f"{question_to_users}"
-                        if audio_response.strip() == "None" or self.system_config.gpt_question_count > 2:
+                        if audio_response.strip() == "None" or self.system_config.gpt_question_count > MAX_QUESTION_NUMBER:
                             audio_response = None
                             text_response = "I have no question for you. Anything you want to add?"
                         else:
@@ -75,7 +77,7 @@ class SendGPTRequestCommand(Command):
                     elif summary_of_new_content is not None:
                         question_to_users = extract_question_sentences(summary_of_new_content).strip()
                         audio_response = f"{question_to_users}"
-                        if question_to_users == "":
+                        if question_to_users == "" or self.system_config.gpt_question_count > MAX_QUESTION_NUMBER:
                             question_to_users = "I have no question for you. Anything you want to add?"
                             audio_response = None
 

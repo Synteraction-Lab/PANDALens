@@ -17,7 +17,7 @@ import warnings
 
 from src.Utilities.constant import chat_file, slim_history_file
 
-SILENCE_THRESHOLD = 10
+SILENCE_THRESHOLD = 8
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -72,13 +72,12 @@ class BackendSystem:
                             transcriber.stop_transcription_and_start_emotion_classification()
                         self.system_config.text_feedback_to_show = ""
                 elif self.user_explicit_input == 'take_photo':
-                    with self.system_config.notification_lock:
-                        self.system_config.notification = {'notif_type': 'processing_icon',
-                                                           'position': 'middle-right'}
+                    # with self.system_config.notification_lock:
+                    #     self.system_config.notification = {'notif_type': 'processing_icon',
+                    #                                        'position': 'middle-right'}
 
                     self.system_status.set_state('manual_photo_comments_pending')
-                    action = self.system_status.get_current_state()
-                    ActionParser.parse(action, self.system_config).execute()
+                    ActionParser.parse('manual_photo_comments_pending', self.system_config).execute()
                     with self.system_config.notification_lock:
                         self.system_config.notification = {'notif_type': 'picture',
                                                            'content': self.system_config.potential_interested_frame,
@@ -413,6 +412,10 @@ class BackendSystem:
             self.user_confirm_move_to_another_place = True
         elif self.user_explicit_input == 'retake_photo':
             self.replace_new_photo()
+        elif self.user_explicit_input == 'take_photo':
+            with self.system_config.notification_lock:
+                self.system_config.notification = {'notif_type': 'processing_icon',
+                                                   'position': 'middle-right'}
 
     def simulate_func(self, func):
         if func == "gaze":

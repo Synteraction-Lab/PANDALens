@@ -445,8 +445,8 @@ class App:
         return True
 
     def listen_notification_from_backend(self):
-        with self.system_config.notification_lock:
-            notification = self.system_config.notification
+        # with self.system_config.notification_lock:
+        notification = self.system_config.notification
             # Update the notification if not the same as the previous one
         if not self.are_equal(notification, self.last_notification):
             if self.last_notification is not None:
