@@ -1,21 +1,19 @@
 # UbiWriter
-A software that enables you to write ubiquitously with the assistance of GPT.
+A software that enables you to write ubiquitously on OHMD with the assistance of GPT.
 
 ## Publications
-- [publication_name](publication_link), VENUE'XX
+- [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](https://doi.org/10.1145/3613904.3642320), CHI'2024
 ```
-<Bibtext>
+Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
+and Can Liu. 2024. PANDALens: Towards AI-assisted In-Context Writing
+on OHMD During Travels. In Proceedings of the CHI Conference on Human
+Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
+ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 
 ```
 
 ## Contact person
 - [Runze Cai](http://runzecai.com)
-
-
-## Project links
-- Project folder: [here](project_link)
-- Documentation: [here](guide_link)
-- [Version info](VERSION.md)
 
 
 ## Requirements
@@ -87,11 +85,11 @@ and [Use Client Libraries](https://cloud.google.com/vision/docs/detect-labels-im
 6. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first, then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
 You can also modify the prompt in this folder to improve the experience.
 
-## Windows specific issues
+## Windows-specific issues
 - Windows defender issue
   - Windows Defender will treat the keyboardListener in App.py as a threat and automatically delete the file 
     - To overcome this problem, follow these steps
-      1. Press Windows + I keys and open Settings
+      1. Press the Windows + I keys and open Settings
       2. Click on Update & Security
       3. Go to Windows Security
       4. Click on Virus & Threat protection
@@ -111,7 +109,7 @@ You can also modify the prompt in this folder to improve the experience.
 ## Manipulation For Travel Blog
 
 ### Step 1
-- Run ``sudo -S "/Applications/Pupil Capture.app/Contents/MacOS/pupil_capture"`` in your terminal to start the Pupil Lab software.
+- Run ``sudo -S "/Applications/Pupil Capture.app/Contents/MacOS/pupil_capture"`` in your terminal to start the Pupil Lab software for macOS.
 
 ### Step 2
 - Run ``python main.py``
@@ -127,18 +125,19 @@ You can also modify the prompt in this folder to improve the experience.
   - To take a picture, please press the ``arrow_down`` key on your keyboard or click the bottom button in the GUI. If you want to make any comments on the picture, after the picture windows show up, you can start a new recording and say your comments following the above instructions.
   - To hide/show the GUI, please click the mouse's left button.
   - You can scroll your mouse wheel up and down the generated writing.
+  - To map the ring interaction to the above settings, you can leverage tools, e.g., Karabiner-Elements.
 
 ### Step 5
 If you want to generate a travel blog, please press the ``right_command`` key on your keyboard then enter the title in GUI.
-Then you can find the exported file in the ``data`` folder. 
+Then, you can find the exported file in the ``data`` folder. 
 
-If you want to check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.json`` folder.
+To check your full conversation history with GPT, you can check the history recording in the ``data/recording/{USER_ID}/chat_history.json`` folder.
 
 ### Step 6 (OPTIONAL: DEBUGGING MODE)
 
-If you want to rerun the program and load the previous chat history (with the same PID), you can press the `Esc` key on the keyboard. 
+If you want to rerun the program and load the previous chat history (with the same PID), press the `Esc` key on the keyboard. 
 
-However, please note that we cannot guarantee that it will resume your entire chat history, as OpenAI has limitations on the length of requests.
+However, please keep in mind that we cannot promise that it will resume your entire chat history, as OpenAI has limitations on the length of requests.
 
 ## References
 
