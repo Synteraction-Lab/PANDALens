@@ -19,8 +19,9 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 ## Requirements
 - Python 3.9.2 (better to create a new [conda env](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
-  - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg)
+  - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
+  - Note: macOS is the preferred OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs. But feel free to replace them with other APIs.
 - An OpenAI account to access the GPT API.
 - [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
@@ -138,6 +139,10 @@ To check your full conversation history with GPT, you can check the history reco
 If you want to rerun the program and load the previous chat history (with the same PID), press the `Esc` key on the keyboard. 
 
 However, please keep in mind that we cannot promise that it will resume your entire chat history, as OpenAI has limitations on the length of requests.
+
+### Step 8 (OPTIONAL: REPLACE AUDIO FEEDBACK SOUND)
+
+In the released code, we leverage the free and native text-to-speech API in macOS. If you use another OS or want a better user experience, we recommend replacing the API with Google's or OpenAI's text-to-speech API.
 
 ## References
 
