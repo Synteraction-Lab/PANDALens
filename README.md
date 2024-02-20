@@ -1,4 +1,4 @@
-# UbiWriter
+# PANDALens
 A software that enables you to write ubiquitously on OHMD with the assistance of GPT.
 
 ## Publications
