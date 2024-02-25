@@ -5,7 +5,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 - [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](https://doi.org/10.1145/3613904.3642320), CHI'2024
 ```
 Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
-and Can Liu. 2024. PANDALens: Towards AI-assisted In-Context Writing
+and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
 on OHMD During Travels. In Proceedings of the CHI Conference on Human
 Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
 ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
