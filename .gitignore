@@ -17,6 +17,8 @@ src/Module/LLM/keys.py
 Thumbs.db
 /local.properties
 
+venv
+
 # IDEs and editors
 .idea
 .gradle

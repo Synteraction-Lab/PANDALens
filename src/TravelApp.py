@@ -496,9 +496,10 @@ class App:
 
         self.system_config.progress_bar_percentage = 1
 
-        self.notification_window = tk.Toplevel(self.root)
+        self.notification_window = customtkinter.CTkToplevel(self.root)
+        print(self.notification_window.configure(fg_color = "black"))
         self.notification_window.overrideredirect(True)
-        self.notification_window.overrideredirect(False)
+        # self.notification_window.overrideredirect(False)
         self.notification_window.attributes("-topmost", True)
         # self.notification_window.configure(background="black")
 

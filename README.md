@@ -17,7 +17,7 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 
 
 ## Requirements
-- Python 3.9.2 (better to create a new [conda env](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
+- Python 3.9.18 (better to create a new [conda env](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
