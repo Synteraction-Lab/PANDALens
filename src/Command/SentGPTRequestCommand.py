@@ -2,7 +2,7 @@ from src.Command.Command import Command
 from src.Utilities.json import detect_json
 import re
 
-MAX_QUESTION_NUMBER = 1
+MAX_QUESTION_NUMBER = 2
 
 
 def extract_question_sentences(text):

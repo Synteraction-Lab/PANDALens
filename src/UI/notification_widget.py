@@ -107,8 +107,8 @@ class NotificationWidget:
         elif self.notif_type == "fpv_photo_icon":
             self.fpv_photo_icon = CTkImage(Image.open(os.path.join(self.asset_path, "fpv_photo_icon.png")),
                                            size=(60, 57))
-            self.icon = CTkLabel(self.parent, text="", image=self.fpv_photo_icon)
-            self.icon.configure(bg_color="systemTransparent")
+            self.icon = CTkLabel(self.parent, text="", image=self.fpv_photo_icon, text_color=MAIN_GREEN_COLOR,
+                                 font=('Robot Bold', 20))
             self.icon.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
             self.icon.lift()
 
