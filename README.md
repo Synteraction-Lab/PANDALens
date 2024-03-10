@@ -3,6 +3,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 
 ## Publications
 - [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](https://doi.org/10.1145/3613904.3642320), CHI'2024
+  - PDF: [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](paper/PANDALens_CHI24.pdf)
 ```
 Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
 and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
@@ -21,7 +22,7 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
-  - Note: macOS is the preferred OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs. But feel free to replace them with other APIs.
+  - **Note: macOS is the preferred and verified OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs.** But feel free to replace them with other APIs when you using other OS.
 - An OpenAI account to access the GPT API.
 - [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
@@ -32,7 +33,27 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 2. Run `pip install -r requirements.txt` to install the necessary Python packages.
 3. Set your environment variables with your OpenAI API keys. You will need two keys in our case (create them here: [OpneAI Account](https://platform.openai.com/account/api-keys)), which can be set as follows:
 
-   - Windows: 
+   - MacOS:
+
+      - Option 1: Set your ‘OPENAI_API_KEY’ Environment Variable using zsh:
+
+         1. Run the following command in your terminal, replacing `<yourkey>` with your API key.
+
+            ```echo "export OPENAI_API_KEY_U1='yourkey1'" >> ~/.zshrc```
+            ```echo "export OPENAI_API_KEY_U2='yourkey2'" >> ~/.zshrc```
+
+         2. Update the shell with the new variable:
+
+            ```source ~/.zshrc```
+
+         3. Confirm that you have set your environment variable using the following command.
+
+            ```echo $OPENAI_API_KEY_U1```
+            ```echo $OPENAI_API_KEY_U2```
+
+        - Option 2: Set your ‘OPENAI_API_KEY’ Environment Variable using bash:
+          Follow the directions in Option 1, replacing `.zshrc` with `.bash_profile`.
+   -  Windows: 
 
       - Option 1: Set your ‘OPENAI_API_KEY’ Environment Variable via the cmd prompt:
 
@@ -59,27 +80,6 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
             Variable name: `OPENAI_API_KEY_U1`, Variable value: `<yourkey1>`
 
             Variable name: `OPENAI_API_KEY_U2`, Variable value: `<yourkey2>`
-
-   - Linux / MacOS:
-
-      - Option 1: Set your ‘OPENAI_API_KEY’ Environment Variable using zsh:
-
-         1. Run the following command in your terminal, replacing `<yourkey>` with your API key.
-
-            ```echo "export OPENAI_API_KEY_U1='yourkey1'" >> ~/.zshrc```
-            ```echo "export OPENAI_API_KEY_U2='yourkey2'" >> ~/.zshrc```
-
-         2. Update the shell with the new variable:
-
-            ```source ~/.zshrc```
-
-         3. Confirm that you have set your environment variable using the following command.
-
-            ```echo $OPENAI_API_KEY_U1```
-            ```echo $OPENAI_API_KEY_U2```
-
-        - Option 2: Set your ‘OPENAI_API_KEY’ Environment Variable using bash:
-          Follow the directions in Option 1, replacing `.zshrc` with `.bash_profile`.
 4. Follow the same approach above; add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
 5. Set up your Google Cloud Vision following these guides: [Google Cloud Vision Setup](https://cloud.google.com/vision/docs/setup)
 and [Use Client Libraries](https://cloud.google.com/vision/docs/detect-labels-image-client-libraries)
