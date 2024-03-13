@@ -12,6 +12,8 @@ Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
 ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 
 ```
+- [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), CHI Interactivity 2024, Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf)
+
 
 ## Contact person
 - [Runze Cai](http://runzecai.com)
