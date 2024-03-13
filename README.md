@@ -3,16 +3,18 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 
 ## Publications
 - [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](https://doi.org/10.1145/3613904.3642320), CHI'2024
-  - PDF: [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](paper/PANDALens_CHI24.pdf)
-```
-Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
-and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
-on OHMD During Travels. In Proceedings of the CHI Conference on Human
-Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
-ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
+  - Full Paper Camera Ready [PDF]: [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](paper/PANDALens_CHI24.pdf).
+  - ```
+    Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
+    and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
+    on OHMD During Travels. In Proceedings of the CHI Conference on Human
+    Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
+    ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
+    
+    ```
+  - CHI Interactivity 2024 (Demo Paper): [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf).
 
-```
-- [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), CHI Interactivity 2024, Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf)
+ 
 
 
 ## Contact person
