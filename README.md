@@ -27,7 +27,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
-- An OpenAI account to access the GPT API.
+- An OpenAI account to access the GPT API, a Hugging Face account to access the BLIP API, and a Google Cloud Account to access the Vision API.
 - [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
 
