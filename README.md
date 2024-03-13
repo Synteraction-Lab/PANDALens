@@ -23,10 +23,10 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 
 ## Requirements
 - Python 3.9.18 (better to create a new [conda env](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
+- **Note: macOS is the preferred and verified OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs.** But feel free to replace them with other APIs when you are using another OS.
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
-  - **Note: macOS is the preferred and verified OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs.** But feel free to replace them with other APIs when you using other OS.
 - An OpenAI account to access the GPT API.
 - [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
