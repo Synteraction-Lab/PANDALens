@@ -22,8 +22,8 @@ interesting_audioset_categories = [
     'Thunderstorm',
     'Fireworks',
     'Applause',
-    'Babies crying',
-    'Footsteps',
+    # 'Babies crying',
+    # 'Footsteps',
     'Water sounds',
     'Wind',
     # 'Typing',
@@ -46,11 +46,11 @@ interesting_audioset_categories = [
     'Church bells',
     'Clock alarm',
     'Cooking and kitchen sounds',
-    'Computer keyboard',
-    'Camera shutter',
+    # 'Computer keyboard',
+    # 'Camera shutter',
     'Crackling fire',
     'Screaming',
-    'Whispering',
+    # 'Whispering',
     'Guitar',
     'Piano',
     'Violin',
@@ -116,6 +116,7 @@ class SystemConfig(object):
         self.latest_moment_list = None
         self.image_info_dict = {}
         self.gpt_question_count = 0
+        self.pending_photo_thumbnail = None
 
     def get_final_transcription(self):
         return self.final_transcription

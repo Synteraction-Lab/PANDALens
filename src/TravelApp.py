@@ -5,10 +5,11 @@ import time
 import tkinter as tk
 
 import customtkinter
+import cv2
 import numpy as np
 import pandas
-from PIL import Image
-from customtkinter import CTkLabel
+from PIL import Image, ImageTk
+from customtkinter import CTkLabel, CTkImage
 from pynput import keyboard
 from pynput.keyboard import Key, Listener as KeyboardListener
 
@@ -31,6 +32,7 @@ SHOW_GAZE_MOVEMENT = False
 
 class App:
     def __init__(self, test_mode=False, ring_mouse_mode=False):
+        self.thumbnail_window = None
         self.enable_to_retake_photo = False
         self.notification_to_be_removed_with_delay = None
         self.last_click_time = None
@@ -148,7 +150,6 @@ class App:
         func = None
         try:
             current_system_state = self.backend_system.system_status.get_current_state()
-            print("Current system state: ", current_system_state)
             if key == keyboard.Key.right and current_system_state in ["comments_on_audio",
                                                                       "comments_on_photo",
                                                                       "comments_to_gpt"]:
@@ -162,12 +163,7 @@ class App:
             elif key == keyboard.Key.down and self.enable_to_retake_photo:
                 func = "Retake"
                 self.enable_to_retake_photo = False
-            elif key == keyboard.Key.down and (self.shown_button or (
-                        self.notification_widget is None and current_system_state not in ['comments_on_photo',
-                                                                                          'comments_to_gpt',
-                                                                                          'full_writing_pending',
-                                                                                          'comments_on_audio',
-                                                                                          'select_moments'])):
+            elif key == keyboard.Key.down:
                 func = "Photo"
             elif key == keyboard.Key.right and self.shown_button:
                 func = "Voice"
@@ -188,6 +184,8 @@ class App:
             self.hide_show_buttons()
             self.hide_text()
             self.mute_audio()
+            if self.system_config.gpt_response_type in ["selecting", "full"]:
+                self.backend_system.system_status.set_state("init")
         elif func == "Show Photo Button":
             self.switch_photo_button()
         elif func == "Voice" or func == "Stop":
@@ -201,7 +199,8 @@ class App:
             # if self.notification_widget is not None:
             if self.backend_system.system_status.get_current_state() in ['comments_on_photo', 'comments_to_gpt',
                                                                          'full_writing_pending',
-                                                                         'comments_on_audio', 'select_moments']:
+                                                                         'comments_on_audio', 'select_moments',
+                                                                         'show_gpt_response']:
                 self.backend_system.add_photo_to_pending_task_list()
                 self.hide_button()
                 return
@@ -263,7 +262,6 @@ class App:
                 return
             self.last_click_time = time.time()
             func = None
-            print("Mouse clicked")
             current_system_state = self.backend_system.system_status.get_current_state()
             if current_system_state == "photo_pending":
                 func = "Finish Photo Pending Status"
@@ -288,12 +286,10 @@ class App:
                 func = "Show Photo Button"
             elif current_system_state in ["comments_on_audio", "comments_on_photo", "comments_to_gpt"]:
                 func = "Cancel Recording"
-            elif self.last_text_feedback_to_show:
-                func = "Show Voice Button"
+            # elif self.last_text_feedback_to_show:
+            #     func = "Show Voice Button"
             elif self.text_widget.winfo_ismapped():
                 func = "Hide Text Box"
-            # else:
-            #     self.show_warning_notification("Please click the button later.")
             self.parse_button_press(func)
 
     def show_warning_notification(self, message):
@@ -306,6 +302,63 @@ class App:
 
         # remove warning notification after 1 seconds
         self.root.after(1000, self.remove_warning_notification)
+
+    def show_photo_thumbnail(self, photo):
+        if self.thumbnail_window is not None:
+            self.thumbnail_window.destroy()
+        self.thumbnail_window = customtkinter.CTkToplevel(self.root)
+        self.thumbnail_window.overrideredirect(True)
+        self.thumbnail_window.attributes("-topmost", True)
+        # self.thumbnail_window.wm_attributes("-transparent", True)
+        self.thumbnail_window.configure(fg_color="black")
+
+        self.pending_photo_icon = CTkImage(Image.open(os.path.join(self.asset_path, "pending_photo_icon.png")),
+                                           size=(200, 247))
+        self.picture_label = CTkLabel(self.thumbnail_window, text="", image=self.pending_photo_icon)
+        self.picture_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        img = cv2.cvtColor(photo, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(img)
+
+        # Resize the image to 1/7 of its original size
+        img = img.resize((int(img.width / 7), int(img.height / 7)))
+
+        img_tk = ImageTk.PhotoImage(img)
+
+        # Create a label widget to display the image
+        self.picture_label = tk.Label(self.thumbnail_window, bg="black")
+
+        # Set the picture label to the top-right of the window
+        self.picture_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER, relwidth=0.45, relheight=0.25)
+
+        # Set the image on the label widget
+        self.picture_label.configure(image=img_tk)
+        self.picture_label.image = img_tk
+
+        widget_width = 350
+        widget_height = 350
+
+        relx, rely = 0.15, 0.5
+
+        root_width = self.root.winfo_width()
+        root_height = self.root.winfo_height()
+
+        pos_x = int(root_width * relx - widget_width / 2)
+        pos_y = int(root_height * rely - widget_height / 2)
+
+        # Set the size and location of the notification window
+        self.thumbnail_window.geometry(f"{widget_width}x{widget_height}+{pos_x}+{pos_y}")
+
+        # Destroy the thumbnail window after 1.5 seconds
+        self.root.after(1500, self.destroy_thumbnail_window)
+
+    def destroy_thumbnail_window(self):
+        if self.thumbnail_window is not None:
+            self.thumbnail_window.destroy()
+            self.thumbnail_window = None
+
+
+
+
 
     def remove_warning_notification(self):
         if self.warning_notification is not None:
@@ -393,10 +446,16 @@ class App:
         self.listen_notification_from_backend()
         self.listen_gpt_feedback_from_backend()
         self.listen_progress_bar_from_backend()
+        self.listen_pending_photo_thumbnail_from_backend()
         # if SHOW_GAZE_MOVEMENT:
         #     self.listen_gaze_pos_from_backend()
         self.root.after(100, self.update_ui_based_on_timer)
 
+    def listen_pending_photo_thumbnail_from_backend(self):
+        pending_photo_thumbnail = self.system_config.pending_photo_thumbnail
+        if pending_photo_thumbnail is not None:
+            self.show_photo_thumbnail(pending_photo_thumbnail)
+            self.system_config.pending_photo_thumbnail = None
     def listen_gaze_pos_from_backend(self):
         gaze_pos = self.system_config.gaze_pos
         if gaze_pos is None:
@@ -497,7 +556,7 @@ class App:
         self.system_config.progress_bar_percentage = 1
 
         self.notification_window = customtkinter.CTkToplevel(self.root)
-        print(self.notification_window.configure(fg_color = "black"))
+        self.notification_window.configure(fg_color="black")
         self.notification_window.overrideredirect(True)
         # self.notification_window.overrideredirect(False)
         self.notification_window.attributes("-topmost", True)
@@ -579,7 +638,7 @@ class App:
         self.root.update_idletasks()
 
     def hide_button(self):
-        print("hide button")
+        # print("hide button")
         for direction, button in self.buttons.items():
             button.place_forget()
         self.root.update_idletasks()

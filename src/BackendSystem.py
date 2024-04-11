@@ -139,15 +139,6 @@ class BackendSystem:
                         self.system_status.trigger('gaze')
                         action = self.system_status.get_current_state()
                         ActionParser.parse(action, self.system_config).execute()
-                    elif self.detect_positive_tone():
-                        self.system_status.set_state('manual_photo_comments_pending')
-                        log_manipulation(self.log_path, "positive_tone")
-                        action = self.system_status.get_current_state()
-                        ActionParser.parse(action, self.system_config).execute()
-
-                        with self.system_config.notification_lock:
-                            self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
-                        self.system_config.start_non_audio_feedback_display()
                     elif self.detect_interested_audio():
                         self.system_status.set_state('audio_comments_pending')
                         log_manipulation(self.log_path, f"interested_audio: {self.system_config.interesting_audio}")
@@ -164,6 +155,16 @@ class BackendSystem:
                                                                'label': self.system_config.interesting_object,
                                                                'position': 'middle-right'}
                         self.system_config.start_non_audio_feedback_display()
+                    elif self.detect_positive_tone():
+                        self.system_status.set_state('manual_photo_comments_pending')
+                        log_manipulation(self.log_path, "positive_tone")
+                        action = self.system_status.get_current_state()
+                        ActionParser.parse(action, self.system_config).execute()
+
+                        with self.system_config.notification_lock:
+                            self.system_config.notification = {'notif_type': 'like_icon', 'position': 'middle-right'}
+                        self.system_config.start_non_audio_feedback_display()
+
 
                 # else:
 
@@ -357,7 +358,7 @@ class BackendSystem:
 
         return False
 
-    def detect_interested_object(self):
+    def detect_interested_object(self) -> bool:
         potential_interested_object = self.system_config.vision_detector.get_potential_interested_object()
         if potential_interested_object is not None:
             last_time = self.system_config.previous_interesting_object_time.get(potential_interested_object, 0)
@@ -425,11 +426,12 @@ class BackendSystem:
         with self.system_config.notification_lock:
             photo, path = PhotoCommand(self.system_config).execute()
             self.system_config.pending_task_list.append((photo, path))
-            # reduce question number when user take a photo to pending list
-            self.system_config.gpt_question_count += 1
-            self.system_config.notification = {'notif_type': 'picture_thumbnail',
-                                               'content': photo,
-                                               'position': 'middle-right', 'duration': 1.5}
+            # # reduce question number when user take a photo to pending list
+            # self.system_config.gpt_question_count += 1
+            # self.system_config.notification = {'notif_type': 'picture_thumbnail',
+            #                                    'content': photo,
+            #                                    'position': 'middle-right', 'duration': 1.5}
+            self.system_config.pending_photo_thumbnail = photo
 
     def replace_new_photo(self):
         self.silence_start_time = time.time()
