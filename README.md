@@ -3,15 +3,19 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 
 ## Publications
 - [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](https://doi.org/10.1145/3613904.3642320), CHI'2024
-  - PDF: [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](paper/PANDALens_CHI24.pdf)
-```
-Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
-and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
-on OHMD During Travels. In Proceedings of the CHI Conference on Human
-Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
-ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
+  - Full Paper Camera Ready [PDF]: [PANDALens: Towards AI-Assisted In-Context Writing on OHMD During Travels](paper/PANDALens_CHI24.pdf).
+  - ```
+    Runze Cai, Nuwan Janaka, Yang Chen, Lucia Wang, Shengdong Zhao,
+    and Can Liu. 2024. PANDALens: Towards AI-Assisted In-Context Writing
+    on OHMD During Travels. In Proceedings of the CHI Conference on Human
+    Factors in Computing Systems (CHI ’24), May 11–16, 2024, Honolulu, HI, USA.
+    ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
+    
+    ```
+  - CHI Interactivity 2024 (Demo Paper): [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf).
 
-```
+ 
+
 
 ## Contact person
 - [Runze Cai](http://runzecai.com)
@@ -19,11 +23,11 @@ ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
 
 ## Requirements
 - Python 3.9.18 (better to create a new [conda env](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) first.)
+- **Note: macOS is the preferred and verified OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs.** But feel free to replace them with other APIs when you are using another OS.
 - Install [FFmpeg](https://ffmpeg.org/) and add it to your environment path.
   - For macOS, you can use [`brew install ffmpeg`](https://formulae.brew.sh/formula/ffmpeg).
   - For Windows, you may need to [manually add it to the environment variable](https://phoenixnap.com/kb/ffmpeg-windows).
-  - **Note: macOS is the preferred and verified OS, as many functions (e.g., GPS and text-to-speech) in the release code use the macOS native APIs.** But feel free to replace them with other APIs when you using other OS.
-- An OpenAI account to access the GPT API.
+- An OpenAI account to access the GPT API, a Hugging Face account to access the BLIP API, and a Google Cloud Account to access the Vision API.
 - [Pupil Lab software](https://docs.pupil-labs.com/core/) for eye tracking.
 
 
