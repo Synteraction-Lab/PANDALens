@@ -12,7 +12,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
     ACM, New York, NY, USA, 24 pages. https://doi.org/10.1145/3613904.3642320
     
     ```
-  - CHI Interactivity 2024 (Demo Paper): [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf).
+  - CHI Interactivity 2024 (Demo Paper): [Demonstrating PANDALens: Enhancing Daily Activity Documentation with AI-assisted In-Context Writing on OHMD](https://doi.org/10.1145/3613905.3648644), Camera Ready [PDF](paper/Demonstrating_PANDALens_CHIEA24.pdf) [POSTER](paper/PANDALens_poster.pdf).
 
  
 
