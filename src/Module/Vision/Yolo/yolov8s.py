@@ -68,8 +68,8 @@ class ObjectDetector:
         self.fixation_position = (0, 0)
         self.prev_size = 0
 
-        cv2.namedWindow('YOLO Object Detection')
         if simulate:
+            cv2.namedWindow('YOLO Object Detection')
             cv2.setMouseCallback('YOLO Object Detection', self.mouse_callback)
 
         self.interested_categories = ['bird', 'cat', 'dog', 'cow', 'elephant', 'bear']
@@ -213,6 +213,9 @@ class ObjectDetector:
         if potential_interested_object != closest_object:
             self.potential_interested_object = potential_interested_object
             self.gaze_data.put_potential_interested_object(potential_interested_object)
+        else:
+            self.potential_interested_object = None
+            self.gaze_data.put_potential_interested_object(None)
 
         render = render_result(model=self.model, image=frame, result=results[0])
         frame = np.array(render.convert('RGB'))
@@ -294,9 +297,9 @@ class ObjectDetector:
                         self.gaze_position = (int(gaze_x * frame_width), int(gaze_y * frame_height))
 
                     self.process_frame(frame)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    if self.cv_imshow:
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
         except KeyboardInterrupt:
             pass
         finally:
@@ -337,7 +340,7 @@ if __name__ == '__main__':
     manager = BaseManager()
     manager.start()
     gaze_data = manager.GazeData()
-    object_detector = ObjectDetector(simulate=True, debug_info=True, cv_imshow=True,)
+    object_detector = ObjectDetector(simulate=False, cv_imshow=True,)
     thread_vision = multiprocessing.Process(target=object_detector.run, args=(gaze_data,))
     thread_vision.start()
     while True:

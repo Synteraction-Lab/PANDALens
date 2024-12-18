@@ -2,7 +2,7 @@ import concurrent.futures
 
 from src.Command.Command import Command
 from src.Module.Vision.google_vision import get_image_labels, get_image_texts
-from src.Module.Vision.huggingface_query import get_image_caption
+from src.Module.Vision.image_caption import get_image_caption
 
 from io import BytesIO
 

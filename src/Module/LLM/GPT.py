@@ -60,12 +60,13 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo"):
 def generate_gpt_response(sent_prompt, max_tokens=MAX_TOKENS, temperature=TEMPERATURE, api_key_idx=0, retry_count=3):
     try:
         openai.api_key = API_KEYS[api_key_idx]
-        model_engine = "gpt-3.5-turbo-16k-0613"
+        model_engine = "gpt-4o"
         # print(f"\nSent Prompt:\n{sent_prompt}\n")
         system_reminder = {"role": ROLE_SYSTEM, "content": SYSTEM_REMINDER}
         sent_prompt.append(system_reminder)
         token_num = num_tokens_from_messages(sent_prompt)
         print(f"total token count: {token_num}\n")
+        print(sent_prompt)
 
         max_tokens = min(max_tokens, MODEL_UPPER_TOKEN_LIMITATION - token_num)
 

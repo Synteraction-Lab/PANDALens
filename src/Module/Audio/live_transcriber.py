@@ -184,8 +184,8 @@ class LiveTranscriber:
         self.record_thread.start()
 
     def stop_transcription_and_start_emotion_classification(self):
-        with self.lock:
-            final_result = " ".join(self.transcription)
+        # with self.lock:
+        final_result = " ".join(self.transcription)
         self.full_text = ""
         self.transcription = ['']
         self.mode = "emotion_classification"
