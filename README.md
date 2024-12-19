@@ -35,7 +35,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
 
 1. Clone the repository to your local machine.
 2. Run `pip install -r requirements.txt` to install the necessary Python packages.
-3. Set your environment variables with your OpenAI API keys. You will need two keys in our case (create them here: [OpneAI Account](https://platform.openai.com/account/api-keys)), which can be set as follows:
+3. Set your environment variables with your OpenAI API keys (Note: OPENAI_API_KEY_U1 and OPENAI_API_KEY_U2 can be identical. Different keys are set to prevent invalid requests due to request limitation for one key). You will need two keys in our case (create them here: [OpneAI Account](https://platform.openai.com/account/api-keys)), which can be set as follows:
 
    - MacOS:
 
@@ -84,7 +84,7 @@ A software that enables you to write ubiquitously on OHMD with the assistance of
             Variable name: `OPENAI_API_KEY_U1`, Variable value: `<yourkey1>`
 
             Variable name: `OPENAI_API_KEY_U2`, Variable value: `<yourkey2>`
-4. Follow the same approach above; add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
+4. (Ignore this step for new version by default if you use the GPT-4o to describe image) Follow the same approach above; add `HUGGINGFACE_API_KEY` to your environment variable. See more details at [HuggingFace API](https://huggingface.co/docs/api-inference/quicktour).
 5. Set up your Google Cloud Vision following these guides: [Google Cloud Vision Setup](https://cloud.google.com/vision/docs/setup)
 and [Use Client Libraries](https://cloud.google.com/vision/docs/detect-labels-image-client-libraries)
 6. If you want to support more writing tasks, please create the task description from [OpenAI](https://platform.openai.com/playground/p/default-chat?model=text-davinci-003) first, then create {YOUR_TASK_TYPE}.txt file in ``data/task_description`` folder. 
